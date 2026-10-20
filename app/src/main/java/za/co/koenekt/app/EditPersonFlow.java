@@ -93,6 +93,11 @@ final class EditPersonFlow implements MainActivity.Flow {
             card.addView(Ui.divider(a, 16));
             card.addView(Ui.listRow(a, null, "Shift", shiftLabel(), null, this::chooseShift));
         }
+        if (active && person.has("has_clock_password")) {   // only servers that keep clock passwords send this
+            card.addView(Ui.divider(a, 16));
+            card.addView(Ui.listRow(a, null, "Clock password",
+                    person.optBoolean("has_clock_password") ? "Set · tap to change or remove" : "Not set", null, this::clockPassword));
+        }
         body.addView(card); Ui.gap(body, 22);
         EditText idField = Ui.field(body, "ID or passport number (optional)", "SA ID or passport",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
@@ -188,6 +193,44 @@ final class EditPersonFlow implements MainActivity.Flow {
             ids.add(t.optString("id")); names.add(shiftName(t.optString("id")));
         }
         Ui.choose(a, "Shift", names.toArray(new String[0]), Math.max(0, ids.indexOf(shiftId)), which -> { shiftId = ids.get(which); show(); });
+    }
+
+    /** Sets the password typed on the clock right away (not with Save), and sends it to the company's clocks. */
+    private void clockPassword() {
+        if (sending) return;
+        boolean set = person.optBoolean("has_clock_password");
+        LinearLayout view = Ui.column(a); view.setPadding(dp(24), dp(20), dp(24), dp(4));
+        view.addView(Ui.title(a, "Clock password", 20)); Ui.gap(view, 8);
+        view.addView(Ui.text(a, "Up to 8 digits that " + first + " can type on the clock instead of a fingerprint or face. "
+                + "It is sent to the clocks at " + place.name + " straight away.", 15, Ui.MUTED));
+        Ui.gap(view, 16);
+        EditText field = Ui.field(view, set ? "New clock password" : "Clock password", "Digits only",
+                InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        field.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(8)});
+        AlertDialog.Builder builder = new AlertDialog.Builder(a).setView(view).setNegativeButton("Cancel", null)
+                .setPositiveButton("Save", null);
+        if (set) builder.setNeutralButton("Remove", (d, w) -> sendClockPassword(""));
+        AlertDialog dialog = builder.show();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String digits = field.getText().toString().trim();
+            if (digits.isEmpty()) { field.setError("Enter up to 8 digits"); return; }
+            dialog.dismiss(); sendClockPassword(digits);
+        });
+    }
+    private void sendClockPassword(String digits) {
+        try {
+            JSONObject body = new JSONObject().put("frappe_url", place.url).put("company", place.name)
+                    .put("employee", person.optString("name")).put("pin", person.optString("pin")).put("password", digits);
+            sending = true; error = ""; show();
+            a.request("/api/employees/clock-password", body, data -> {
+                sending = false;
+                JSONArray queued = data.optJSONArray("devices");
+                int clocks = queued == null ? 0 : queued.length();
+                try { person.put("has_clock_password", !digits.isEmpty()); } catch (Exception ignored) { }
+                a.toast("Clock password " + (digits.isEmpty() ? "removed" : "saved") + ". Sent to " + clocks + (clocks == 1 ? " clock." : " clocks."));
+                show();
+            }, message -> { sending = false; error = message; show(); });
+        } catch (Exception e) { sending = false; error = "Could not change the clock password."; show(); }
     }
 
     private void chooseBirthDate() {

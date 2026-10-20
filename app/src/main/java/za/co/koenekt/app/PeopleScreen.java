@@ -171,6 +171,12 @@ final class PeopleScreen {
             TextView leave = Ui.quiet(a, "Mark as left", () -> { dialog.dismiss(); confirmLeave(p, place); });
             leave.setTextColor(Ui.DANGER); view.addView(leave, Ui.fill(a, 52));
         }
+        // Only the console's own people list can delete; "local" marks its rows.
+        if (!active && a.can("people_leave") && p.optBoolean("local")) {
+            Ui.gap(view, 8);
+            TextView delete = Ui.quiet(a, "Delete from People", () -> { dialog.dismiss(); confirmDelete(p, place); });
+            delete.setTextColor(Ui.DANGER); view.addView(delete, Ui.fill(a, 52));
+        }
         dialog.show();
     }
 
@@ -209,6 +215,33 @@ final class PeopleScreen {
             });
         } catch (Exception e) { a.toast("Could not mark " + name(p) + " as left."); }
     }
+    /** A leaver disappears from People; reports keep their hours and their PIN is never reused. */
+    private void confirmDelete(JSONObject p, MainActivity.Company place) {
+        LinearLayout view = Ui.column(a); view.setPadding(dp(24), dp(20), dp(24), dp(4));
+        view.addView(Ui.title(a, "Delete " + name(p) + " from People?", 20)); Ui.gap(view, 14);
+        view.addView(Ui.text(a, "They disappear from People for good. Their attendance, hours and pay history stay in reports, and PIN "
+                + p.optString("pin") + " is never given to anyone else.", 15, Ui.INK));
+        Ui.gap(view, 10);
+        view.addView(Ui.text(a, "Their ID number and birth date are erased. This can't be undone.", 15, Ui.MUTED));
+        AlertDialog dialog = new AlertDialog.Builder(a).setView(view).setNegativeButton("Cancel", null)
+                .setPositiveButton("Delete", (d, w) -> delete(p, place)).show();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Ui.DANGER);
+    }
+    private void delete(JSONObject p, MainActivity.Company place) {
+        try {
+            JSONObject payload = new JSONObject().put("frappe_url", place.url).put("company", place.name)
+                    .put("employee", p.optString("name")).put("pin", p.optString("pin"));
+            body.removeAllViews(); body.addView(Ui.loading(a)); summary.setText("");
+            a.request("/api/employees/delete", payload, data -> {
+                a.toast(name(p) + " is deleted. Their attendance history is kept.");
+                loaded = false; if (body.isAttachedToWindow()) load();
+            }, message -> {
+                if (body.isAttachedToWindow()) showList();
+                new AlertDialog.Builder(a).setTitle("Could not delete " + name(p)).setMessage(message).setPositiveButton("OK", null).show();
+            });
+        } catch (Exception e) { a.toast("Could not delete " + name(p) + "."); }
+    }
+
     private void fact(LinearLayout parent, String label, String value) {
         if (value == null || value.isEmpty()) return;
         LinearLayout r = Ui.row(a); r.setPadding(0, dp(10), 0, dp(10));

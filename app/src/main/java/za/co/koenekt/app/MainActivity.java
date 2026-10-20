@@ -27,6 +27,7 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
+import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
 import android.webkit.SslErrorHandler;
 import android.webkit.URLUtil;
@@ -80,6 +81,7 @@ public final class MainActivity extends Activity {
     private String workspace = AppPolicy.DEFAULT_WORKSPACE, displayName = "", role = "", roleLabel = "";
     private String notice = "", currentTitle = "Koenekt", exportNonce = "";
     private boolean operator = false, peopleSession = false, inWeb = false, busy = false;
+    private boolean mustChangePassword;   // after an administrator's password reset
     private int epoch = 0, tab = TAB_HOME;
     private LinearLayout root, appBar, barActions, nav;
     private View navLine;
@@ -209,6 +211,7 @@ public final class MainActivity extends Activity {
     void showTab(int which) {
         if (busy || locked) return;
         if (!peopleSession && !operator) { loginScreen(notice); return; }
+        if (peopleSession && mustChangePassword) { startPasswordChange(true); return; }
         if (!hasTab(which)) which = TAB_HOME;
         leaveWeb(); flow = null; tab = which;
         if (which == TAB_PEOPLE) { if (peopleScreen == null) peopleScreen = new PeopleScreen(this); showNav(true); peopleScreen.show(); }
@@ -230,6 +233,17 @@ public final class MainActivity extends Activity {
     void finishFlow(boolean changed) {
         flow = null; if (changed && peopleScreen != null) peopleScreen.invalidate(); showTab(TAB_PEOPLE);
     }
+    void leaveFlow(int which) { flow = null; showTab(which); }
+    void startPasswordChange(boolean forced) {
+        if (busy || locked || !peopleSession) return;
+        leaveWeb(); showNav(false); flow = new PasswordFlow(this, forced); flow.show();
+    }
+    /** The server issued a new session cookie; save it again so the next unlock doesn't use the old one. */
+    void passwordChanged() {
+        mustChangePassword = false; flow = null; toast("Your password is changed.");
+        if (vault.exists()) rememberSignIn(); else showTab(tab);
+    }
+    void accountDeleted() { signOut(); toast("Your account is deleted. The activity log keeps what it did."); }
 
     void mount(View view) {
         // A keyboard left open by the previous screen would cover the new one.
@@ -358,6 +372,17 @@ public final class MainActivity extends Activity {
             @Override public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
                 if (locked || !trusted(url)) { result.cancel(); return true; }
                 new AlertDialog.Builder(MainActivity.this).setMessage(message).setPositiveButton("Continue", (d,w) -> result.confirm())
+                        .setNegativeButton("Cancel", (d,w) -> result.cancel()).setOnCancelListener(d -> result.cancel()).show(); return true;
+            }
+            // e.g. the Users page's "Reset password" asks for the temporary password
+            @Override public boolean onJsPrompt(WebView view, String url, String message, String value, JsPromptResult result) {
+                if (locked || !trusted(url)) { result.cancel(); return true; }
+                LinearLayout box = Ui.column(MainActivity.this); box.setPadding(dp(24), dp(16), dp(24), 0);
+                box.addView(Ui.text(MainActivity.this, message, 15, Ui.INK)); Ui.gap(box, 12);
+                EditText answer = Ui.field(box, null, null, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+                if (value != null) answer.setText(value);
+                new AlertDialog.Builder(MainActivity.this).setView(box)
+                        .setPositiveButton("OK", (d,w) -> result.confirm(answer.getText().toString()))
                         .setNegativeButton("Cancel", (d,w) -> result.cancel()).setOnCancelListener(d -> result.cancel()).show(); return true;
             }
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
@@ -496,6 +521,7 @@ public final class MainActivity extends Activity {
 
     private void applyPerson(JSONObject person) {
         caps.clear(); role = person == null ? "" : person.optString("role");
+        mustChangePassword = person != null && person.optBoolean("must_change_password");
         displayName = person == null ? "Koenekt management" : person.optString("display_name", person.optString("username"));
         roleLabel = person == null ? "Licences, customers and Reporter updates" : person.optString("role_label", role);
         if (person != null) {
@@ -511,6 +537,7 @@ public final class MainActivity extends Activity {
     private void home() {
         if (busy || locked) return;
         if (!peopleSession && !operator) { loginScreen(notice); return; }
+        if (peopleSession && mustChangePassword) { startPasswordChange(true); return; }
         leaveWeb(); flow = null; tab = TAB_HOME; currentTitle = "Koenekt"; setBar(null, false); showNav(true);
         LinearLayout page = page(); page.setPadding(dp(20), dp(24), dp(20), dp(28));
         ImageView logo = new ImageView(this); logo.setImageResource(R.drawable.ic_logo); logo.setAdjustViewBounds(true);
@@ -572,11 +599,21 @@ public final class MainActivity extends Activity {
         LinearLayout card = Ui.column(this); card.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, this)); card.setClipToOutline(true);
         card.addView(Ui.listRow(this, null, "Refresh access", "Reload your companies and permissions", null, this::refreshAccess));
         card.addView(Ui.divider(this, 16));
+        boolean ownAccount = peopleSession && !role.equals("master");   // master's login is managed by Koenekt
+        if (ownAccount) {
+            card.addView(Ui.listRow(this, null, "Change password", "Other phones and browsers will need the new one", null, () -> startPasswordChange(false)));
+            card.addView(Ui.divider(this, 16));
+        }
         card.addView(Ui.listRow(this, null, "About & privacy", "How this app protects your sign-in", null, this::about));
         card.addView(Ui.divider(this, 16));
         card.addView(Ui.listRow(this, null, "Privacy policy", "Opens in your browser", null, () -> openExternal(AppPolicy.PRIVACY_URL)));
         page.addView(card); Ui.gap(page, 20);
         TextView out = Ui.secondary(this, "Sign out", this::confirmSignOut); out.setTextColor(Ui.DANGER); page.addView(out, Ui.fill(this, 52));
+        if (ownAccount) {
+            Ui.gap(page, 4);
+            TextView delete = Ui.quiet(this, "Delete my account", () -> PasswordFlow.confirmDelete(this));
+            delete.setTextColor(Ui.DANGER); page.addView(delete, Ui.fill(this, 48));
+        }
         Ui.gap(page, 20);
         TextView version = Ui.text(this, "Koenekt " + BuildConfig.VERSION_NAME, 13, Ui.MUTED); version.setGravity(Gravity.CENTER); page.addView(version);
     }
@@ -627,7 +664,7 @@ public final class MainActivity extends Activity {
 
     private void about() {
         new AlertDialog.Builder(this).setTitle("Koenekt " + BuildConfig.VERSION_NAME)
-                .setMessage("People, licences and Reporter updates.\n\nThis app connects to your existing Koenekt services over HTTPS. Server permissions determine what you can view and change.\n\nPasswords and authenticator codes are not saved. Remembered session tokens are encrypted using Android Keystore and require device authentication to restore. Unlock with a strong biometric such as fingerprint, or the phone's PIN, pattern or password. Android 8 uses the device credential. Sign out forgets the saved login. Expired or revoked server sessions require a new Koenekt sign-in.\n\nStaff, attendance, payroll and licence information stays with your Koenekt service. Exported reports are saved only to a location you select. The app has no advertising or analytics SDKs.\n\nFor account access or correction, contact your organisation's administrator. To ask for your login to be deleted, use Delete account below. Removing a login does not erase employment records that the organisation must retain.\n\nAn internet connection is required. Phone biometrics unlock this app; staff fingerprint/face enrollment still uses the connected clocks.")
+                .setMessage("People, licences and Reporter updates.\n\nThis app connects to your existing Koenekt services over HTTPS. Server permissions determine what you can view and change.\n\nPasswords and authenticator codes are not saved. Remembered session tokens are encrypted using Android Keystore and require device authentication to restore. Unlock with a strong biometric such as fingerprint, or the phone's PIN, pattern or password. Android 8 uses the device credential. Sign out forgets the saved login. Expired or revoked server sessions require a new Koenekt sign-in.\n\nStaff, attendance, payroll and licence information stays with your Koenekt service. Exported reports are saved only to a location you select. The app has no advertising or analytics SDKs.\n\nFor account access or correction, contact your organisation's administrator. To delete your login, use Account → Delete my account; if you can no longer sign in, use Delete account below. Deleting a login does not erase employment records that the organisation must retain.\n\nAn internet connection is required. Phone biometrics unlock this app; staff fingerprint/face enrollment still uses the connected clocks.")
                 .setNeutralButton("Privacy policy", (d,w) -> openExternal(AppPolicy.PRIVACY_URL))
                 .setNegativeButton("Delete account", (d,w) -> openExternal(AppPolicy.DELETE_ACCOUNT_URL))
                 .setPositiveButton("Close", null).show();
@@ -637,7 +674,7 @@ public final class MainActivity extends Activity {
         catch (Exception e) { toast("No browser is available to open " + url); }
     }
 
-    private void confirmSignOut() {
+    void confirmSignOut() {
         if (busy) return;
         new AlertDialog.Builder(this).setTitle("Sign out of this app?").setMessage("Clear the People and management sessions on this device.")
                 .setPositiveButton("Sign out", (d,w) -> signOut()).setNegativeButton("Cancel", null).show();

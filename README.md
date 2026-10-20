@@ -1,7 +1,7 @@
 # Koenekt for Android
 
 One Android app for the existing People, licensing, customer and Reporter update services.
-Version **1.5.0 (9)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
+Version **1.6.0 (10)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
 compile/target API 36. Java 17, Android Gradle Plugin 8.13.2, Gradle 8.13.
 
 Standalone public repository: [loudalley/koenekt-android](https://github.com/loudalley/koenekt-android).
@@ -26,8 +26,23 @@ Deactivate/transfer. Reporter updates uses the licence site's own Updates routes
 checks the management session, logs every action in Licence activity and refuses
 a multi-PC or fleet request without the confirmation the preview stands for. Release
 uploads, promotion and tidy-up stay on the web page (menu: "Releases and full page").
-The design kit is
-`Ui.java`; there are no third-party UI libraries.
+
+1.6.0 adds account and leaver controls (People server update installed 29 October 2026)
+(`/api/me/password`,
+`/api/me/delete`, `/api/admin/users/password`, `/api/admin/users/delete`,
+`/api/employees/delete`, `/api/employees/clock-password`):
+- **Account → Change password** and **Delete my account** (password required). A
+  deleted account keeps only its username, so the activity log stays accurate.
+- After an administrator's **Reset password** (People → Users), the person must
+  choose their own password before anything else opens; every earlier session ends.
+- **Delete from People** for leavers (Deactivate/transfer permission): hidden from
+  People for good, but reports keep their hours and the PIN is never reused.
+- **Clock password** in Edit details: set or remove the digits a person can type on
+  the clock; sent to the company's clocks straight away.
+- The WebView now answers the website's `prompt()` dialogs natively (used by Users →
+  Reset password).
+
+The design kit is `Ui.java`; there are no third-party UI libraries.
 
 Everything else (People records, reports, payroll, clocks, settings, users and the
 licence tools) runs in a restricted Android WebView connected to the existing
@@ -196,7 +211,17 @@ dependencies. They use `../koenekt-people` by default; override with
 backend source/history into this public app repository. All test data is synthetic
 and tests never contact production.
 
-## Release state, 29 October 2026 — 1.5.0
+## Release state, 29 October 2026 — 1.6.0
+
+1.6.0 adds Change password, Delete my account, the forced new-password screen after
+an administrator's reset, Delete from People for leavers and clock passwords. It needs
+the People server update installed on 29 October 2026. First tried on the Android 15
+emulator on 20 October (as an unreleased "1.4.0") against a synthetic local console:
+admin reset in Users, forced change, Delete my account, clock password, Mark as left
+then Delete from People. Rebuilt on top of 1.5.0 and retried on the emulator against a
+synthetic console matching the installed server. Not yet tried on a phone.
+
+### 1.5.0 — 29 October 2026
 
 1.5.0 splits Who's in by department (the shop, for now): a department chooser
 (remembered per company), one row per department with how many are at work and have
@@ -204,7 +229,7 @@ clocked today, the tiles counting only the chosen department, new Clocked out an
 clocked today filters, and tappable At work / Not in tiles. No server change: the app
 loads `/api/dashboard/live?presence=all` once and filters on the phone. Built, signed
 and linted on the PC and tried on the emulator against a synthetic local console with
-synthetic punches. Not yet tried on a phone.
+synthetic punches. Confirmed working on the user's phone.
 
 ### 1.4.0 — 29 October 2026
 

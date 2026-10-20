@@ -1,0 +1,5 @@
+Account controls and leavers.
+• Account: change your password, or delete your account (the activity log is kept).
+• After an administrator resets your password, choose your own before continuing.
+• People: delete a leaver. Their hours, reports and PIN stay.
+• Edit details: set or remove a person's clock password.

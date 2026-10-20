@@ -80,8 +80,9 @@ class MobileLoginContract(unittest.TestCase):
         self.assertEqual(set(self.p.get('/api/me').json()['caps']), {'people_read', 'people_hire', 'people_leave', 'reports'})
         self.assertEqual(self.p.get('/api/admin/users').status_code, 403)
         self.assertEqual(self.l.get('/licences/api/overview').status_code, 401)
-        self.assertEqual(self.l.get('/licences/api/updates/devices').status_code, 401)
-        self.assertEqual(self.l.post('/licences/api/updates/force', json={'all': True}).status_code, 401)
+        # Newer backends moved Reporter updates to a separate service (404); either way no access.
+        self.assertIn(self.l.get('/licences/api/updates/devices').status_code, (401, 404))
+        self.assertIn(self.l.post('/licences/api/updates/force', json={'all': True}).status_code, (401, 404))
 
     def test_native_edit_and_leaver_payloads(self):
         """The app's EditPersonFlow and PeopleScreen.leave() bodies, built from a directory row."""
@@ -187,6 +188,60 @@ class MobileLoginContract(unittest.TestCase):
         for key in ('at_work', 'last_time', 'department', 'seen_today'):   # Who's in filters by department and status on the phone
             self.assertIn(key, live['people'][0])
         self.assertEqual(self.p.get('/api/people/next-pin', params={'url': 'https://other.example'}).status_code, 403)
+
+    def test_account_and_leaver_calls_the_app_makes(self):
+        """PasswordFlow, Account → Delete my account, and People's Delete / clock password, against the backend."""
+        import employee_master as em
+        url = 'https://synthetic-shop.example'
+        (self.home / 'people' / 'devices.json').write_text(json.dumps({'SYN2': {'company': 'Synthetic Shop', 'frappe_url': url}}))
+        company = em.ensure_company(name='Synthetic Shop', frappe_url=url)
+        person = em.upsert_employee({'company_id': company['id'], 'device_pin': '51', 'display_name': 'Pat Example',
+                                     'status': 'Active', 'hired_on': '2026-02-01'})
+        for name, caps in (('boss', None), ('worker', ['people_read', 'people_edit'])):
+            auth.register_user(people.base_dir(), name, 'synthetic-password-123', name)
+            if caps is None:
+                auth.set_role(people.base_dir(), name, 'admin', approved_by='master')
+            else:
+                auth.set_caps(people.base_dir(), name, caps)
+            auth.set_allowed_sites(people.base_dir(), name, [url], actor_is_master=True)
+
+        def login(name, password='synthetic-password-123'):
+            self.p.cookies.clear()
+            result = self.p.post('/api/login', json={'username': name, 'password': password, 'remember_device': True})
+            self.assertEqual(result.status_code, 200, result.text)
+            return result.json()['user']
+
+        login('boss')
+        self.assertEqual(self.p.post('/api/admin/users/password', json={'username': 'worker', 'password': 'temporary-1'}).status_code, 200)
+        self.assertTrue(login('worker', 'temporary-1')['must_change_password'])
+        self.assertTrue(self.p.get('/api/me').json()['must_change_password'])      # the app checks this after sign-in
+        self.assertEqual(self.p.get('/api/companies').status_code, 403)
+        changed = self.p.post('/api/me/password', json={'current_password': 'temporary-1', 'new_password': 'worker-own-1'})
+        self.assertEqual(changed.status_code, 200, changed.text)
+        # The re-issued cookie keeps the remembered (30-day) lifetime the app asked for.
+        self.assertGreater(int(SimpleCookie(changed.headers['set-cookie'])['adms_session']['max-age']), 29 * 24 * 3600)
+        self.assertFalse(self.p.get('/api/me').json()['must_change_password'])
+
+        ref = {'frappe_url': url, 'company': 'Synthetic Shop', 'employee': person['name'], 'pin': '51'}
+        row = next(r for r in self.p.get('/api/people/directory', params={'url': url, 'status': 'all'}).json()['employees'] if r['pin'] == '51')
+        self.assertIn('has_clock_password', row)
+        self.assertTrue(row['local'])
+        result = self.p.post('/api/employees/clock-password', json={**ref, 'password': '2468'})
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertEqual(len(result.json()['devices']), 1)
+        self.assertEqual(self.p.post('/api/employees/delete', json=ref).status_code, 403)   # edit-only account
+
+        login('boss')
+        self.assertEqual(self.p.post('/api/employees/delete', json=ref).status_code, 400)   # still active
+        self.assertEqual(self.p.post('/api/employees/deactivate', json=ref).status_code, 200)
+        self.assertEqual(self.p.post('/api/employees/delete', json=ref).status_code, 200)
+        rows = self.p.get('/api/people/directory', params={'url': url, 'status': 'all'}).json()['employees']
+        self.assertNotIn('51', [r['pin'] for r in rows])
+
+        login('worker', 'worker-own-1')
+        self.assertEqual(self.p.post('/api/me/delete', json={'password': 'nope'}).status_code, 400)
+        self.assertEqual(self.p.post('/api/me/delete', json={'password': 'worker-own-1'}).status_code, 200)
+        self.assertEqual(self.p.post('/api/login', json={'username': 'worker', 'password': 'worker-own-1'}).status_code, 401)
 
     def register_customer(self):
         auth.register_user(people.base_dir(), 'remembered', 'synthetic-password-123', 'Remembered customer')

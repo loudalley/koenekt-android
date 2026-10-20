@@ -1,11 +1,11 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **29 October 2026, Claude (Windows PC) — version 1.5.0 (9), Who's in by
-department (shop) with status filters, built and signed on the PC, pushed, published on
-the self-hosted F-Droid repo and copied to Google Drive at the user's request. Installed on
-the user's phone; the user reports departments work.** People server amendment INSTALLED
-on the production People console. A separate accounts/leavers change (see the 20 October
-entry from the PC) is NOT on `main` yet and needs a server update first.
+Last updated: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
+leaver controls (change/delete your account, forced password change after an admin reset,
+delete leavers, clock passwords), BUILT AND SIGNED on the PC (`dist/1.6.0/`), tried on the
+emulator; not yet pushed, not on F-Droid or Drive. Its People server update is installed.**
+1.5.0 (9) is the latest released build (F-Droid, Drive; on the user's phone). People server
+amendment and the accounts server update are both INSTALLED on the production People console.
 
 ## Repository and current state
 
@@ -112,9 +112,13 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
-000. 1.5.0 (Who's in by department) is released and on the user's phone; they report
-   departments work. Next: the accounts/leavers work as 1.6.0 (10); its server update is now
-   INSTALLED (29 October, see the log).
+000. 1.6.0 (accounts and leavers) is built and signed (`dist/1.6.0/`), on branch
+   `accounts-1.6.0` in the build worktree. With the user's OK, push to `main`, publish to
+   F-Droid and Drive. Then on the phone: Account → Change password; an admin's Reset password
+   in Users followed by the forced change; Delete from People on a test leaver; a clock
+   password on a test person. The local `main` in `C:\Projects\koenekt-android` still has the
+   old unpushed "1.4.0" accounts commits (`70495a6`, `8c7fba2`); they are superseded by 1.6.0
+   and can be dropped once 1.6.0 is on `main`.
 00. 1.4.0 is released and on the user's phone; they report Reporter updates works. Still
    worth a careful look next time (no test sends without the user's say-so):
    check the list (names, IP, install date), a one-PC preview, then Cancel. Don't send a
@@ -478,3 +482,26 @@ and rollback on a local copy. The user ran the dry run (passed), the sudo apply 
 console-only restart. Console and receiver both active; receiver not restarted. Backend
 package and merge are in the private People worktree (`dist/accounts-update-20261029`),
 not in this repository. The app side becomes 1.6.0 (10).
+
+**29 October 2026 — Claude (1.6.0 accounts and leavers, Windows PC):** The user confirmed
+the site works after the server update and asked to build 1.6.0.
+- Cherry-picked the 20 October accounts commit (`70495a6`) onto `main` after 1.5.0, in the
+  build worktree (branch `accounts-1.6.0`). `MainActivity`, `PeopleScreen` and
+  `EditPersonFlow` merged cleanly with the Reporter updates and Who's in changes.
+- Conflicts resolved: version 1.6.0 (10); the accounts release notes moved from
+  `changelogs/8.txt` (kept as 1.4.0's) to `10.txt`, without the "needs the server update"
+  line; README; both contract tests kept in `test_mobile_login`.
+- Checks: lint "No issues found"; 48 policy checks, export checks; `test_mobile_login` (9),
+  `test_mobile_updates` (6), amendment tests (5). They ran against a scratch copy of the
+  installed server: the account branch's console with the rebuilt `adms_console.py`.
+- Emulator (debug build) against a synthetic console from the same code. The demo has
+  `ADMS_ADMIN_TOKEN` set, so its localhost no-login master mode is off.
+  - Staff: Account shows Change password and Delete my account. After an admin reset, signing
+    in with the temporary password opens "Choose your own password". Saving it goes Home.
+  - Delete my account with the password signs out and says the log is kept.
+  - Admin: a clock password was set in Edit details ("Sent to 1 clock").
+  - Delete from People for a leaver removed them from the Left list.
+  - Who's in by department still works.
+  - Typing note: with the keyboard open the footer button rides up over the third field.
+- Signed release: same certificate `3e3a0931…`, aapt 10 / 1.6.0. APK SHA-256
+  `dd0e303c…69a653`. Copied to `dist/1.6.0/` here and in the main checkout.
