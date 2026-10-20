@@ -27,7 +27,7 @@ import java.util.Locale;
  * Uses the same /api/employees call as the People website; pay, tax and clock-card details
  * stay in People records. Answers survive locking and unlocking the app.
  */
-final class AddEmployeeFlow {
+final class AddEmployeeFlow implements MainActivity.Flow {
     private static final String ADDING = "Adding…";
     private final MainActivity a;
     private int step = 1;                       // 1 name, 2 workplace, 3 PIN and confirm, 4 done
@@ -44,13 +44,13 @@ final class AddEmployeeFlow {
     private int dp(float n) { return a.dp(n); }
     private MainActivity.Company place() { return companies.get(company); }
 
-    void show() {
+    @Override public void show() {
         if (companies == null) {
             frame("Add employee", null); a.mount(Ui.loading(a));
             a.loadCompanies(list -> {
-                if (list.isEmpty()) { a.finishAddEmployee(false); return; }
+                if (list.isEmpty()) { a.finishFlow(false); return; }
                 companies = list; company = Math.min(a.companyIndex(list), list.size() - 1); show();
-            }, message -> { error = message; a.finishAddEmployee(false); });
+            }, message -> { error = message; a.finishFlow(false); });
             return;
         }
         if (step == 1) name(); else if (step == 2) workplace(); else if (step == 3) confirm(); else done();
@@ -58,11 +58,11 @@ final class AddEmployeeFlow {
 
     private void back() {
         if (sending) return;
-        if (step == 4) { a.finishAddEmployee(true); return; }
+        if (step == 4) { a.finishFlow(true); return; }
         if (step > 1) { step--; error = ""; show(); return; }
-        if (first.isEmpty() && last.isEmpty()) { a.finishAddEmployee(false); return; }
+        if (first.isEmpty() && last.isEmpty()) { a.finishFlow(false); return; }
         new AlertDialog.Builder(a).setTitle("Discard this new employee?")
-                .setPositiveButton("Discard", (d, w) -> a.finishAddEmployee(false)).setNegativeButton("Keep editing", null).show();
+                .setPositiveButton("Discard", (d, w) -> a.finishFlow(false)).setNegativeButton("Keep editing", null).show();
     }
 
     /** Screen skeleton: progress, heading, scrolling body and a footer that stays above the keyboard. */
@@ -224,7 +224,7 @@ final class AddEmployeeFlow {
         body.addView(Ui.text(a, clocks > 0 ? "Sent to " + clocks + (clocks == 1 ? " clock." : " clocks.")
                 : "Not sent to the clocks yet. Use People records to send when you're ready.", 15, Ui.MUTED));
         if (clocks > 0) { Ui.gap(body, 6); body.addView(Ui.text(a, "Enrol their fingerprint or face on the clock as usual.", 15, Ui.MUTED)); }
-        f[1].addView(Ui.primary(a, "Done", () -> a.finishAddEmployee(true)), Ui.fill(a, 54));
+        f[1].addView(Ui.primary(a, "Done", () -> a.finishFlow(true)), Ui.fill(a, 54));
         f[1].addView(Ui.quiet(a, "Add another person", () -> {
             first = ""; last = ""; jobTitle = ""; pin = ""; pinFor = ""; error = ""; result = null;
             hireDate = LocalDate.now().toString(); step = 1; show();

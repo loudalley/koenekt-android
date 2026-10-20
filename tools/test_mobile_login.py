@@ -83,6 +83,52 @@ class MobileLoginContract(unittest.TestCase):
         self.assertEqual(self.l.get('/licences/api/updates/devices').status_code, 401)
         self.assertEqual(self.l.post('/licences/api/updates/force', json={'all': True}).status_code, 401)
 
+    def test_native_edit_and_leaver_payloads(self):
+        """The app's EditPersonFlow and PeopleScreen.leave() bodies, built from a directory row."""
+        import employee_master as em
+        import people_extras
+        url = 'https://synthetic-bakery.example'
+        (self.home / 'people' / 'devices.json').write_text(json.dumps({'SYN1': {'company': 'Synthetic Bakery', 'frappe_url': url}}))
+        company = em.ensure_company(name='Synthetic Bakery', frappe_url=url)
+        em.ensure_department(company['id'], 'Kitchen')
+        hired = em.upsert_employee({'company_id': company['id'], 'device_pin': '41', 'display_name': 'Sam Example',
+                                    'department': 'Kitchen', 'status': 'Active', 'hired_on': '2026-02-01', 'privilege': 14})
+        people_extras.set_extras(people.base_dir(), hired['name'], {'id_number': 'A1234567'})
+        for name, caps in (('editor', ['people_read', 'people_edit']), ('leaver', ['people_read', 'people_leave'])):
+            auth.register_user(people.base_dir(), name, 'synthetic-password-123', name)
+            auth.set_caps(people.base_dir(), name, caps)
+            auth.set_allowed_sites(people.base_dir(), name, [url], actor_is_master=True)
+
+        def login(name):
+            self.p.cookies.clear()
+            self.assertEqual(self.p.post('/api/login', json={'username': name, 'password': 'synthetic-password-123'}).status_code, 200)
+            rows = self.p.get('/api/people/directory', params={'url': url, 'status': 'all'}).json()['employees']
+            return next(r for r in rows if r['pin'] == '41')
+
+        row = login('editor')
+        edit = {'frappe_url': url, 'company': 'Synthetic Bakery', 'employee': row['name'], 'pin': row['pin'],
+                'first_name': 'Sam', 'last_name': 'Renamed', 'department': '', 'job_title': 'Baker',
+                'hire_date': '2026-03-01', 'status': row['status'], 'privilege': row.get('privilege', 0),
+                'card_no': row.get('card_no', ''), 'push_device': False, 'push_all_company': True}
+        result = self.p.post('/api/employees', json=edit)
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertFalse(result.json()['created'])
+        self.assertEqual(self.p.post('/api/employees', json={**edit, 'pin': '42'}).status_code, 400)   # PINs are permanent
+        leave = {'frappe_url': url, 'company': 'Synthetic Bakery', 'employee': row['name'], 'pin': row['pin']}
+        self.assertEqual(self.p.post('/api/employees/deactivate', json=leave).status_code, 403)
+        row = login('editor')
+        self.assertEqual((row['employee_name'], row['job_title'], row['hire_date'], row['department'], row['privilege']),
+                         ('Sam Renamed', 'Baker', '2026-03-01', '', 14))
+        self.assertEqual(people_extras.get_extras(people.base_dir(), row['name']).get('id_number'), 'A1234567')
+
+        login('leaver')
+        result = self.p.post('/api/employees/deactivate', json=leave)
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertEqual(len(result.json()['devices']), 1)   # removal queued for the company's clock
+        row = login('leaver')
+        self.assertEqual(row['status'], 'Inactive')
+        self.assertTrue(row['left_on'])
+
     def register_customer(self):
         auth.register_user(people.base_dir(), 'remembered', 'synthetic-password-123', 'Remembered customer')
         return {'username': 'remembered', 'password': 'synthetic-password-123'}

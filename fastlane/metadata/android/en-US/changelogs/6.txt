@@ -1,0 +1,5 @@
+Edit people and record leavers on your phone.
+• Edit details: change a person's name, department, job title or start date in a short form.
+• Choose whether to send a new name to the clocks.
+• Mark as left: confirm, and their PIN is removed from the company's clocks.
+• Attendance history is kept, and leavers stay in People under Left.

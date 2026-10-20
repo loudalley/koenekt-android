@@ -19,6 +19,7 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -152,12 +153,57 @@ final class PeopleScreen {
         fact(view, "Clock PIN", p.optString("pin"));
         fact(view, "Department", p.optString("department"));
         fact(view, "Started", AddEmployeeFlow.pretty(p.optString("hire_date")));
-        fact(view, "Status", "Active".equalsIgnoreCase(p.optString("status")) ? "Active" : "Left" + (p.optString("left_on").isEmpty() ? "" : " on " + p.optString("left_on")));
+        fact(view, "Status", "Active".equalsIgnoreCase(p.optString("status")) ? "Active" : "Left" + (p.optString("left_on").isEmpty() ? "" : " on " + AddEmployeeFlow.pretty(p.optString("left_on"))));
         fact(view, "ID / passport", p.optString("id_number"));
-        AlertDialog.Builder dialog = new AlertDialog.Builder(a).setView(view).setPositiveButton("Close", null);
-        if (a.can("people_edit") || a.can("people_leave"))
-            dialog.setNeutralButton("Edit in People records", (d, w) -> a.openWeb("People records", "/people"));
+        AlertDialog dialog = new AlertDialog.Builder(a).setView(view).setPositiveButton("Close", null).create();
+        MainActivity.Company place = companies.get(company);
+        boolean active = "Active".equalsIgnoreCase(p.optString("status"));
+        if (a.can("people_edit")) {
+            Ui.gap(view, 18);
+            view.addView(Ui.secondary(a, "Edit details", () -> { dialog.dismiss(); a.editPerson(p, place); }), Ui.fill(a, 52));
+        }
+        if (active && a.can("people_leave")) {
+            Ui.gap(view, 8);
+            TextView leave = Ui.quiet(a, "Mark as left", () -> { dialog.dismiss(); confirmLeave(p, place); });
+            leave.setTextColor(Ui.DANGER); view.addView(leave, Ui.fill(a, 52));
+        }
         dialog.show();
+    }
+
+    /** Same call as the website's Deactivate: the person stays in People as "Left" and is removed from this company's clocks. */
+    private void confirmLeave(JSONObject p, MainActivity.Company place) {
+        String who = name(p), today = AddEmployeeFlow.pretty(LocalDate.now().toString());
+        LinearLayout view = Ui.column(a); view.setPadding(dp(24), dp(20), dp(24), dp(4));
+        view.addView(Ui.title(a, "Mark " + who + " as left?", 20)); Ui.gap(view, 14);
+        LinearLayout card = Ui.column(a); card.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 18, a)); card.setClipToOutline(true);
+        card.addView(Ui.listRow(a, null, "Leave date", "Today, " + today, null, null));
+        view.addView(card); Ui.gap(view, 14);
+        view.addView(Ui.text(a, "They're marked as left from today. Their clock PIN " + p.optString("pin")
+                + " is removed from the clocks at " + place.name + ", so it stops working.", 15, Ui.INK));
+        Ui.gap(view, 10);
+        view.addView(Ui.text(a, "Their attendance history and hours are kept, and they stay in People under Left.", 15, Ui.MUTED));
+        AlertDialog dialog = new AlertDialog.Builder(a).setView(view).setNegativeButton("Cancel", null)
+                .setPositiveButton("Mark as left", (d, w) -> leave(p, place)).show();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Ui.DANGER);
+    }
+    private void leave(JSONObject p, MainActivity.Company place) {
+        try {
+            JSONObject payload = new JSONObject().put("frappe_url", place.url).put("company", place.name)
+                    .put("employee", p.optString("name")).put("pin", p.optString("pin"));
+            body.removeAllViews(); body.addView(Ui.loading(a)); summary.setText("");
+            a.request("/api/employees/deactivate", payload, data -> {
+                JSONArray queued = data.optJSONArray("devices");
+                int clocks = queued == null ? 0 : queued.length();
+                a.toast(name(p) + " is marked as left." + (clocks > 0 ? " Removal sent to " + clocks + (clocks == 1 ? " clock." : " clocks.") : ""));
+                loaded = false; if (body.isAttachedToWindow()) load();
+            }, message -> {
+                // The server can mark them as left and then fail to reach the clocks, so show the list as it is now.
+                loaded = false; if (body.isAttachedToWindow()) load();
+                new AlertDialog.Builder(a).setTitle("Could not finish marking " + name(p) + " as left").setMessage(message
+                        + "\n\nIf they now show as Left, only the clock removal failed. Remove them from the clocks in People records.")
+                        .setPositiveButton("OK", null).show();
+            });
+        } catch (Exception e) { a.toast("Could not mark " + name(p) + " as left."); }
     }
     private void fact(LinearLayout parent, String label, String value) {
         if (value == null || value.isEmpty()) return;

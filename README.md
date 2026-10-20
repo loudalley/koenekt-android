@@ -1,7 +1,7 @@
 # Koenekt for Android
 
 One Android app for the existing People, licensing, customer and Reporter update services.
-Version **1.1.0 (5)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
+Version **1.2.0 (6)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
 compile/target API 36. Java 17, Android Gradle Plugin 8.13.2, Gradle 8.13.
 
 Standalone public repository: [loudalley/koenekt-android](https://github.com/loudalley/koenekt-android).
@@ -11,10 +11,13 @@ For Cursor, Claude and Codex, start with `AGENTS.md` and `README-HANDOFF.md`.
 
 The everyday screens are native: sign-in, a Home with quick actions and tools, a
 bottom bar (Home, People, Who's in, Account), a searchable People list with person
-summaries, a three-step **Add employee** (name, workplace, suggested clock PIN) and
-a **Who's in** live board. They call the same People endpoints as the website
-(`/api/companies`, `/api/people/directory`, `/api/people/next-pin`, `/api/employees`,
-`/api/dashboard/live`), so server permissions apply unchanged. The design kit is
+summaries, a three-step **Add employee** (name, workplace, suggested clock PIN),
+**Edit details** (name, department, job title, start date; the clock PIN is shown
+but permanent), **Mark as left** and a **Who's in** live board. They call the same
+People endpoints as the website (`/api/companies`, `/api/people/directory`,
+`/api/people/next-pin`, `/api/frappe/departments`, `/api/employees`,
+`/api/employees/deactivate`, `/api/dashboard/live`), so server permissions apply
+unchanged: Edit details needs Edit people, Mark as left needs Deactivate/transfer. The design kit is
 `Ui.java`; there are no third-party UI libraries.
 
 Everything else (People records, reports, payroll, clocks, settings, users and the
@@ -79,7 +82,12 @@ accounts do not automatically receive hiring or removal rights. Keep unrelated
 companies and global permissions unassigned.
 
 Removing a staff member follows the existing leaver/deactivation workflow. It
-preserves attendance history and clock identity. PINs are not renumbered.
+preserves attendance history and clock identity. PINs are not renumbered. The
+server records the leave date as the day it is marked; it has no field for an
+earlier date. Editing a leaver never sends them back to the clocks. A native edit
+sends the person's clock privilege and card back unchanged and leaves ID number,
+pay, shift and tax details alone (the website's full form resets privilege and card
+to the form's blank defaults).
 Biometric enrollment uses the functions available on the connected clocks;
 the app does not capture fingerprint templates through the phone sensor.
 An internet connection is required. No background Reporter installation runs on
@@ -177,7 +185,18 @@ dependencies. They use `../koenekt-people` by default; override with
 backend source/history into this public app repository. All test data is synthetic
 and tests never contact production.
 
-## Release state, 20 October 2026 — 1.1.0
+## Release state, 20 October 2026 — 1.2.0
+
+1.2.0 adds native **Edit details** and **Mark as left** to the person summary,
+replacing the button that opened the full People records form. Tried on the Android
+15 emulator against a local People console with synthetic data: edit with "Save and
+update clocks" (one clock update queued with the new name), "Save without updating
+clocks" (nothing queued), department and date pickers, the discard prompt, Mark as
+left (status Left, today's date, clock removal queued), and editing a leaver (Save
+only, nothing queued). A new contract test checks the app's exact payloads against
+the People backend. Not tested on a physical phone or against production.
+
+### 1.1.0
 
 1.1.0 redesigns the app: native Home, People, Add employee and Who's in screens,
 an Account tab, a bottom bar, your brand logo and an adaptive launcher icon, and

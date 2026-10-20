@@ -103,7 +103,10 @@ public final class MainActivity extends Activity {
     private List<Company> companies;
     private PeopleScreen peopleScreen;
     private LiveScreen liveScreen;
-    private AddEmployeeFlow addFlow;
+    private Flow flow;
+
+    /** A full-screen task (add or edit a person) that keeps its answers across locking and unlocking. */
+    interface Flow { void show(); }
 
     /** A People company/site the signed-in account may use. */
     static final class Company {
@@ -205,7 +208,7 @@ public final class MainActivity extends Activity {
         if (busy || locked) return;
         if (!peopleSession && !operator) { loginScreen(notice); return; }
         if (!hasTab(which)) which = TAB_HOME;
-        leaveWeb(); addFlow = null; tab = which;
+        leaveWeb(); flow = null; tab = which;
         if (which == TAB_PEOPLE) { if (peopleScreen == null) peopleScreen = new PeopleScreen(this); showNav(true); peopleScreen.show(); }
         else if (which == TAB_LIVE) { if (liveScreen == null) liveScreen = new LiveScreen(this); showNav(true); liveScreen.show(); }
         else if (which == TAB_ACCOUNT) accountTab();
@@ -215,10 +218,14 @@ public final class MainActivity extends Activity {
 
     void startAddEmployee() {
         if (busy || locked || !peopleSession || !caps.contains("people_hire")) return;
-        leaveWeb(); showNav(false); addFlow = new AddEmployeeFlow(this); addFlow.show();
+        leaveWeb(); showNav(false); flow = new AddEmployeeFlow(this); flow.show();
     }
-    void finishAddEmployee(boolean added) {
-        addFlow = null; if (added && peopleScreen != null) peopleScreen.invalidate(); showTab(TAB_PEOPLE);
+    void editPerson(JSONObject person, Company company) {
+        if (busy || locked || !peopleSession || !caps.contains("people_edit")) return;
+        leaveWeb(); showNav(false); flow = new EditPersonFlow(this, person, company); flow.show();
+    }
+    void finishFlow(boolean changed) {
+        flow = null; if (changed && peopleScreen != null) peopleScreen.invalidate(); showTab(TAB_PEOPLE);
     }
 
     void mount(View view) {
@@ -412,7 +419,7 @@ public final class MainActivity extends Activity {
     }
 
     private void loginScreen(String message) {
-        leaveWeb(); addFlow = null; currentTitle = "Koenekt"; setBar(null, false); showNav(false);
+        leaveWeb(); flow = null; currentTitle = "Koenekt"; setBar(null, false); showNav(false);
         LinearLayout page = page(); page.setPadding(dp(24), dp(44), dp(24), dp(28));
         ((View) page.getParent()).setBackgroundColor(Ui.SURFACE);
         ImageView logo = new ImageView(this); logo.setImageResource(R.drawable.ic_logo); logo.setAdjustViewBounds(true);
@@ -495,7 +502,7 @@ public final class MainActivity extends Activity {
     private void home() {
         if (busy || locked) return;
         if (!peopleSession && !operator) { loginScreen(notice); return; }
-        leaveWeb(); addFlow = null; tab = TAB_HOME; currentTitle = "Koenekt"; setBar(null, false); showNav(true);
+        leaveWeb(); flow = null; tab = TAB_HOME; currentTitle = "Koenekt"; setBar(null, false); showNav(true);
         LinearLayout page = page(); page.setPadding(dp(20), dp(24), dp(20), dp(28));
         ImageView logo = new ImageView(this); logo.setImageResource(R.drawable.ic_logo); logo.setAdjustViewBounds(true);
         logo.setContentDescription("Koenekt"); page.addView(logo, new LinearLayout.LayoutParams(dp(104), -2));
@@ -630,7 +637,7 @@ public final class MainActivity extends Activity {
         if (authentication != null) authentication.cancel();
         vault.clear(); locked = false; hideShield(); pendingFileRequest = 0; pendingFileResult = null;
         epoch++; operator = false; peopleSession = false; caps.clear(); notice = "";
-        companies = null; peopleScreen = null; liveScreen = null; addFlow = null; tab = TAB_HOME;
+        companies = null; peopleScreen = null; liveScreen = null; flow = null; tab = TAB_HOME;
         web.stopLoading(); web.loadUrl("about:blank"); web.clearHistory(); web.clearCache(true); web.clearFormData();
         WebStorage.getInstance().deleteAllData(); cancelExport();
         if (uploadCallback != null) { uploadCallback.onReceiveValue(null); uploadCallback = null; }
@@ -963,7 +970,7 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private void toast(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
+    void toast(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
     private void showError(String message) {
         if (locked) return;
         progress.setVisibility(View.GONE);
@@ -975,13 +982,13 @@ public final class MainActivity extends Activity {
         if (backAction != null) { backAction.run(); return; }
         if (inWeb && web.canGoBack()) web.goBack();
         else if (inWeb) showTab(tab);
-        else if (addFlow != null) finishAddEmployee(false);
+        else if (flow != null) finishFlow(false);
         else if (tab != TAB_HOME && (peopleSession || operator)) showTab(TAB_HOME);
         else finish();
     }
-    /** After unlocking: the add-employee flow keeps its answers; tabs reload their data. */
+    /** After unlocking: an add or edit flow keeps its answers; tabs reload their data. */
     private void resumeScreen() {
-        if (addFlow != null && peopleSession) { showNav(false); addFlow.show(); }
+        if (flow != null && peopleSession) { showNav(false); flow.show(); }
         else showTab(tab);
     }
     // API 33+ uses the registered OnBackInvokedCallback; older Android uses this callback.

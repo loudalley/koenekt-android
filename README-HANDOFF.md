@@ -1,8 +1,10 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **20 October 2026, Claude — version 1.1.0 (5) redesign built/signed and
-pushed; People server amendment INSTALLED on the production People console.
-No device test or Play publication has occurred.**
+Last updated: **20 October 2026, Claude — version 1.2.0 (6) (native Edit details and
+Mark as left) built/signed and committed locally, NOT pushed and NOT on F-Droid
+(the user has to approve both). 1.1.0 (5) is the last pushed version. People server
+amendment INSTALLED on the production People console. No physical-phone test or
+Play publication has occurred.**
 
 ## Repository and current state
 
@@ -22,8 +24,8 @@ No device test or Play publication has occurred.**
   (fingerprint `C6F6570B…D231577F`), serving 1.0.3 (4) with release notes, logo icon
   and banner. Publish with `tools/fdroid_repo.py`; details in `fdroid/README.md`.
   Repo key in ignored `.signing/fdroid/` (back it up with `.signing/`).
-- Signed release files are kept locally under `dist/1.1.0/` (ignored; APK, AAB
-  and SHA256SUMS); `dist/1.0.3/` is the previous build. `dist/1.0.1/` is older; its server-amendment ZIP holds the
+- Signed release files are kept locally under `dist/1.2.0/` (ignored; APK, AAB
+  and SHA256SUMS); `dist/1.1.0/` and `dist/1.0.3/` are the previous builds. `dist/1.0.1/` is older; its server-amendment ZIP holds the
   patcher without the server-helper check, so do not use that copy.
   Build products are under `app/build/outputs/`. Local SDK configuration is
   ignored. A clean clone must configure its own SDK and signing credentials.
@@ -109,6 +111,8 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
+0. 1.2.0 is committed locally but not pushed. With the user's OK: push `main`,
+   then publish `dist/1.2.0` with `tools/fdroid_repo.py publish --push`.
 1. Open this repository and read AGENTS.md, then inspect actual Git state.
 2. Server amendment is installed (see above). On the phone, sign out once and
    sign in again, then confirm the session survives more than 30 minutes. If login
@@ -230,3 +234,44 @@ F-Droid release notes did not render properly.
   rendering was not seen in the F-Droid app; the user was asked for a screenshot.
 - Not tested on a physical phone or with production data. Next: install 1.1.0 on
   a phone and check the new screens with a real account.
+
+**20 October 2026 — Claude (1.2.0 edit and leaver):** Asked by the session that
+built 1.1.0: replace the summary's "Edit in People records" button with native screens.
+- Person summary now has **Edit details** (needs people_edit) and **Mark as left**
+  (needs people_leave, active people only). New `EditPersonFlow`: name, department
+  picker, job title, start date; the clock PIN is shown but cannot be changed.
+- Edit uses the website's `/api/employees` update with the `employee` key. "Save and
+  update clocks" sends push_device true; "Save without updating clocks" sends false.
+  A leaver only gets "Save" (false), because pushing their name would put them back
+  on the clocks. Differences from the website's form: the app does not send ID number,
+  birth date, shift, rates or extras, so the server keeps them. It sends the
+  directory's privilege and card number back unchanged. The website's form resets
+  both to blank defaults on every save (pre-existing website behaviour, not changed).
+- Mark as left: a confirmation dialog, then `/api/employees/deactivate` with
+  url/company/employee/pin, the same as the website. The endpoint has no leave-date
+  field (local mode stores the server's today; Frappe mode only sets Inactive), so
+  the dialog shows "Today" instead of a date picker. Picking an earlier date would
+  need server work. If the server marks someone left but can't queue the clock removal
+  (502, e.g. a company with no clocks), the app reloads the list and explains.
+- `MainActivity.Flow` generalises the add flow, so edit answers also survive
+  lock/unlock (not exercised: the emulator has no screen lock).
+- Emulator (debug, `-PdevOrigin`) against the previous session's synthetic local
+  console: every case below worked and the synthetic database matched.
+  - Edit and save to clocks: one USERINFO update queued with the new name.
+  - Save without updating clocks: nothing queued.
+  - Department and date pickers, and the discard prompt.
+  - Mark as left: status left, today's date, DELETE USERINFO queued.
+  - A leaver's edit: Save only, nothing queued.
+  The error dialog after a failed leave and the people_edit-without-people_leave view
+  were not tried on the emulator. The backend covers that permission split, and so
+  does the new contract test.
+- New contract test `test_native_edit_and_leaver_payloads` in
+  `tools/test_mobile_login.py` checks four things against the real backend: the
+  app's exact payloads, PIN permanence, that ID number and privilege are kept, and
+  that edit and leave need separate permissions.
+- Checks: `assembleRelease bundleRelease lintDebug` passed and lint reports "No issues
+  found". 48 policy checks, the export checks, 7 contract tests and 5 amendment tests
+  passed. The APK is signed with the same certificate (`3e3a0931…501d75`), and aapt
+  reports versionCode 6 / 1.2.0. Copied to `dist/1.2.0/`. Changelog
+  `fastlane/.../changelogs/6.txt` written.
+- Not done: no push, no F-Droid publish (waiting for the user), no physical-phone test.
