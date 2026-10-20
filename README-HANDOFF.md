@@ -3,8 +3,9 @@
 Last updated: **20 October 2026, Claude — version 1.2.0 (6) (native Edit details and
 Mark as left) built/signed and committed locally, NOT pushed and NOT on F-Droid
 (the user has to approve both). 1.1.0 (5) is the last pushed version. People server
-amendment INSTALLED on the production People console. No physical-phone test or
-Play publication has occurred.**
+amendment INSTALLED on the production People console. 1.1.0 is installed on the
+user's phone (from Google Drive) and the user approved the new look; no other device
+checks were reported. 1.2.0 has not been on a phone. No Play publication has occurred.**
 
 ## Repository and current state
 
@@ -274,4 +275,9 @@ built 1.1.0: replace the summary's "Edit in People records" button with native s
   passed. The APK is signed with the same certificate (`3e3a0931…501d75`), and aapt
   reports versionCode 6 / 1.2.0. Copied to `dist/1.2.0/`. Changelog
   `fastlane/.../changelogs/6.txt` written.
-- Not done: no push, no F-Droid publish (waiting for the user), no physical-phone test.
+- Phone feedback relayed by the main session: 1.1.0 is installed on the user's phone
+  (from Google Drive). The user said the general theme "looks very good", but that
+  "Edit in People records" brought the web version back into play. That is what 1.2.0
+  replaces. No other device checks were reported.
+- Not done: no push, no F-Droid publish (waiting for the user), 1.2.0 not tried on
+  a phone.
