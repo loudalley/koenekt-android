@@ -1,0 +1,47 @@
+plugins { id 'com.android.application' }
+
+def signingFile = rootProject.file('.signing/signing.properties')
+def signingProps = new Properties()
+if (signingFile.exists()) signingFile.withInputStream { signingProps.load(it) }
+
+android {
+    namespace 'za.co.koenekt.app'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'za.co.koenekt.app'
+        minSdk 26
+        targetSdk 36
+        versionCode 2
+        versionName '1.0.1'
+    }
+    signingConfigs {
+        release {
+            if (signingFile.exists()) {
+                storeFile rootProject.file('.signing/koenekt-upload.jks')
+                storePassword signingProps['storePassword']
+                keyAlias signingProps['keyAlias']
+                keyPassword signingProps['keyPassword']
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint { abortOnError true }
+}
+
+tasks.register('verifyReleaseSigning') {
+    doLast {
+        if (!signingFile.exists()) throw new GradleException('Create the private upload key first; see README.md.')
+    }
+}
+tasks.configureEach {
+    if (name == 'assembleRelease' || name == 'bundleRelease') dependsOn 'verifyReleaseSigning'
+}

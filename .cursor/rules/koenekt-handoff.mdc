@@ -1,0 +1,9 @@
+---
+description: Shared rules and handoff for the standalone Koenekt Android repository
+alwaysApply: true
+---
+
+Read `AGENTS.md` and `README-HANDOFF.md` before continuing. They are the single
+shared rules/status source for Codex, Cursor and Claude. Update the same handoff
+before returning work. This is a public repository; never publish `.signing/`,
+credentials, backend checkouts/history or customer/staff data.
