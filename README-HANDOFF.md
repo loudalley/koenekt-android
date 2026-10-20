@@ -99,3 +99,9 @@ amendment fixtures, an optional sibling-backend integration path, shared rules,
 this handoff and thin assistant entry points. Internal deployment identifiers are
 removed from public instructions. No backend source/history, data or secrets are
 published; the original private repository gets a migration pointer and handoff.
+GitHub publication is verified: visibility PUBLIC, default branch main, with
+initial app-source commit `75d5b3e`. The original People repository remains private;
+its Android removal/migration pointer is committed and pushed there. The new
+checkout is clean after reviewed source/documentation commits; local credentials,
+SDK config, logs and release copies are ignored. Optional backend-test skipping
+without a backend checkout was also checked successfully.

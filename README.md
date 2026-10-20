@@ -165,7 +165,7 @@ are unchanged in 1.0.1. No production login,
 customer, licence, update instruction or clock mutation was used for verification.
 Public HTTPS checks returned 200 for People branding, the admin page and updates.js.
 
-**Not yet device-tested or published.** Automatic approval review blocked starting
+**Not yet device-tested or published to Play.** Automatic approval review blocked starting
 the Android emulator (reason returned: "blocked by policy"). A real phone check
 is still required for fingerprint/PIN success/cancel, process restart, background
 locking, lock-setting changes, imports/exports after unlock, expiry and logout.

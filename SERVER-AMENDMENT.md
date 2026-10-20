@@ -33,8 +33,9 @@ writing and is safe to rerun. It never restarts services.
 
 ## Transfer the amendment
 
-Extract `Koenekt-Server-Amendment-1.0.1.zip` on the PC. It contains this guide and
-`apply_remembered_sessions.py`. From PowerShell in the extracted folder:
+Use `server-amendment/apply_remembered_sessions.py` from this checkout, or the
+same script from the standalone support ZIP. From PowerShell in the
+`server-amendment` folder (or extracted support folder):
 
 ```powershell
 ssh deploy-user@YOUR_SERVER "mkdir -p /home/deploy-user/mobile-session-20261020"
