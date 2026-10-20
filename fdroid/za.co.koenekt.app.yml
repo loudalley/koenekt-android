@@ -1,0 +1,13 @@
+# Metadata for the self-hosted Koenekt F-Droid repository (binary repo; see fdroid/README.md).
+# Name, summary, description, release notes and images come from fastlane/metadata/android/.
+Categories:
+  - Time
+AuthorName: Koenekt (Pty) Ltd
+AuthorEmail: william@koenekt.co.za
+WebSite: https://loudalley.github.io/koenekt-android/
+SourceCode: https://github.com/loudalley/koenekt-android
+IssueTracker: https://github.com/loudalley/koenekt-android/issues
+License: Proprietary
+AntiFeatures:
+  NonFreeNet:
+    en-US: Requires a Koenekt account on the Koenekt People and licence services.

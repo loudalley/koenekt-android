@@ -132,6 +132,10 @@ when enrolling the bundle. Play installs use Play's app-signing certificate and
 may not replace a directly installed APK signed by the upload key; uninstall the
 test APK before switching to the Play build if Android reports a signature mismatch.
 
+F-Droid: each release is also published to the self-hosted repository
+`https://loudalley.github.io/koenekt-fdroid/repo`, with release notes from
+`fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`. See `fdroid/README.md`.
+
 Build output:
 
 - `app/build/outputs/apk/release/app-release.apk`

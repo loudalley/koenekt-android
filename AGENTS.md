@@ -37,4 +37,6 @@ Codex, Cursor and Claude share this file and `README-HANDOFF.md`. Claude's
    build/lint and JVM/Python checks are not proof of fingerprint/PIN behaviour.
 
 Build/check commands and optional backend integration setup are in README.md.
-There is no configured automation/CI deployment or Play publication workflow.
+There is no CI deployment or Play publication workflow. The self-hosted F-Droid
+repository is published from this machine with `tools/fdroid_repo.py` (see
+`fdroid/README.md`); its signing key stays in ignored `.signing/fdroid/`.

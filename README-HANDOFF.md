@@ -18,6 +18,10 @@ No device test or Play publication has occurred.**
 - Local Android upload credentials moved with the app into ignored/restricted
   `.signing/`; their certificate matches the existing 1.0.0/1.0.1 APKs. Never
   regenerate them for an ordinary update, commit them or include them in releases.
+- Self-hosted F-Droid repository LIVE: `https://loudalley.github.io/koenekt-fdroid/repo`
+  (fingerprint `C6F6570B…D231577F`), serving 1.0.3 (4) with release notes, logo icon
+  and banner. Publish with `tools/fdroid_repo.py`; details in `fdroid/README.md`.
+  Repo key in ignored `.signing/fdroid/` (back it up with `.signing/`).
 - Signed release files are kept locally under `dist/1.0.3/` (ignored; APK, AAB
   and SHA256SUMS); `dist/1.0.2/` is the previous build. `dist/1.0.1/` is older; its server-amendment ZIP holds the
   patcher without the server-helper check, so do not use that copy.
@@ -172,3 +176,24 @@ published HTTPS pages and open outside the trusted WebView. Version 1.0.3 (4); r
 build/lint clean, same signing certificate, 43 policy checks plus export, amendment
 (5) and backend contract (6) suites pass. Copied to ignored `dist/1.0.3/`.
 Not device-tested.
+
+**20 October 2026 — Claude (F-Droid):** The user chose a self-hosted F-Droid repo
+over the official F-Droid store (which builds from source, needs an open-source
+licence and uses its own signing key).
+- Added fastlane metadata (title, descriptions, release notes for versionCodes 3
+  and 4, icon and 1024×500 banner rendered from the user's vector logo
+  `koenekt-logo.svg`) and `fdroid/za.co.koenekt.app.yml`.
+- `tools/fdroid_repo.py` has two commands. `init` creates the PKCS12 repo key in
+  `.signing/fdroid/` and refuses replacement; `publish` adds the APK and notes,
+  runs fdroidserver 2.4.5 from `build/fdroid-venv` and mirrors the result to
+  `../koenekt-fdroid`.
+- Windows workarounds: `apksigner.bat`, forward-slash glob/walk paths, `status/`
+  excluded.
+- Created public repo `loudalley/koenekt-fdroid` with Pages from main root.
+- Verified live: the index checksum matches the signed `entry.json`, the APK is
+  byte-identical to `dist/1.0.3`, and the signer is the existing upload
+  certificate, so it updates directly installed copies.
+- A second push (adding `.gitattributes` `* -text` to the site) was blocked by the
+  auto-mode permission policy; the next `publish --push` includes it. The current
+  live files were checked byte-for-byte and are correct.
+- Not yet tried in the F-Droid app on a phone.
