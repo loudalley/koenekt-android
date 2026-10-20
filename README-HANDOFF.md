@@ -1,9 +1,9 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
 Last updated: **20 October 2026, Claude — version 1.3.0 (7) (shift, ID number and
-birth date in Edit details) built/signed and committed locally; NOT pushed, NOT on
-F-Droid or Drive yet (the user is being asked). 1.2.0 (6) is pushed, on F-Droid and on
-the user's Google Drive (`My Drive/Koenekt Android/`), and installed on their phone. People server
+birth date in Edit details) pushed, published on the self-hosted F-Droid repo and
+copied to the user's Google Drive (`My Drive/Koenekt Android/`), at the user's request.
+Not yet on their phone; 1.2.0 (6) is. People server
 amendment INSTALLED on the production People console. 1.1.0 is installed on the
 user's phone (from Google Drive) and the user approved the new look; no other device
 checks were reported. 1.2.0 has not been on a phone. No Play publication has occurred.**
@@ -113,10 +113,8 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
-0. With the user's OK, release 1.3.0: push `main`, run
-   `tools/fdroid_repo.py publish --push`, copy `dist/1.3.0/Koenekt-1.3.0.apk` to
-   `G:\My Drive\Koenekt Android\`. Then check the new fields on the phone with a
-   test person.
+0. Install 1.3.0 on the phone (F-Droid or Drive) and check shift, ID number and
+   birth date with a test person.
 1. Open this repository and read AGENTS.md, then inspect actual Git state.
 2. Server amendment is installed (see above). On the phone, sign out once and
    sign in again, then confirm the session survives more than 30 minutes. If login
@@ -322,3 +320,7 @@ date and shift.
 - Contract test extended (set, invalid, clear as an edit-only user).
 - Note for the backend (not changed): `PUT /api/shifts/assign` checks people_edit but
   not the employee's company, unlike `/api/people/extras`.
+- Released at the user's request: pushed `main` (`85c5bc7`) and published to F-Droid
+  (`koenekt-fdroid` `589c57f`). The live index lists 1.3.0 (7), and the APK downloads
+  with SHA-256 `4a56ce1f…f2b17e8f`, matching `dist/1.3.0`. The same APK is copied to
+  `G:\My Drive\Koenekt Android\` (hash checked).
