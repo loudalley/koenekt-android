@@ -1,8 +1,9 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **20 October 2026, Claude — version 1.2.0 (6) (native Edit details and
-Mark as left) pushed, published on the self-hosted F-Droid repo and copied to the
-user's Google Drive (`My Drive/Koenekt Android/`), at the user's request. People server
+Last updated: **20 October 2026, Claude — version 1.3.0 (7) (shift, ID number and
+birth date in Edit details) built/signed and committed locally; NOT pushed, NOT on
+F-Droid or Drive yet (the user is being asked). 1.2.0 (6) is pushed, on F-Droid and on
+the user's Google Drive (`My Drive/Koenekt Android/`), and installed on their phone. People server
 amendment INSTALLED on the production People console. 1.1.0 is installed on the
 user's phone (from Google Drive) and the user approved the new look; no other device
 checks were reported. 1.2.0 has not been on a phone. No Play publication has occurred.**
@@ -25,8 +26,8 @@ checks were reported. 1.2.0 has not been on a phone. No Play publication has occ
   (fingerprint `C6F6570B…D231577F`), serving 1.0.3 (4) with release notes, logo icon
   and banner. Publish with `tools/fdroid_repo.py`; details in `fdroid/README.md`.
   Repo key in ignored `.signing/fdroid/` (back it up with `.signing/`).
-- Signed release files are kept locally under `dist/1.2.0/` (ignored; APK, AAB
-  and SHA256SUMS); `dist/1.1.0/` and `dist/1.0.3/` are the previous builds. `dist/1.0.1/` is older; its server-amendment ZIP holds the
+- Signed release files are kept locally under `dist/1.3.0/` (ignored; APK, AAB
+  and SHA256SUMS); `dist/1.2.0/`, `dist/1.1.0/` and `dist/1.0.3/` are the previous builds. `dist/1.0.1/` is older; its server-amendment ZIP holds the
   patcher without the server-helper check, so do not use that copy.
   Build products are under `app/build/outputs/`. Local SDK configuration is
   ignored. A clean clone must configure its own SDK and signing credentials.
@@ -112,8 +113,10 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
-0. Install 1.2.0 on the phone (from F-Droid or Drive). Try Edit details and Mark as
-   left on a test person, not on real staff.
+0. With the user's OK, release 1.3.0: push `main`, run
+   `tools/fdroid_repo.py publish --push`, copy `dist/1.3.0/Koenekt-1.3.0.apk` to
+   `G:\My Drive\Koenekt Android\`. Then check the new fields on the phone with a
+   test person.
 1. Open this repository and read AGENTS.md, then inspect actual Git state.
 2. Server amendment is installed (see above). On the phone, sign out once and
    sign in again, then confirm the session survives more than 30 minutes. If login
@@ -290,3 +293,32 @@ built 1.1.0: replace the summary's "Edit in People records" button with native s
   department, job title and start date by design. Ask which other fields they want
   (ID number, birth date, shift, staff category, pay/tax, card, company transfer).
   Mark as left not yet reported.
+
+**20 October 2026 — Claude (1.3.0 shift, ID, birth date):** On the phone, 1.2.0's
+Edit worked but "not all fields were there". The user chose to add ID number, birth
+date and shift.
+- `EditPersonFlow` now has Shift (Automatic or a template; templates come from the
+  directory's `shift_templates`), ID or passport number, and Birth date (picker limited
+  to 1920 through today, with Clear). The person summary also shows Birth date and
+  Shift today.
+- Saving uses the website's own calls:
+  - ID number and birth date ride on the `/api/employees` update, sent only when the
+    directory listed them.
+  - The shift goes through `PUT /api/shifts/assign`, and only when it changed.
+  - The update ignores an empty birth date, so clearing one also calls
+    `PUT /api/people/extras` with `{employee, birth_date: ""}`. That endpoint merges, so
+    pay, tax and category are untouched.
+  - If a follow-up call fails, the form stays open and says the details were saved but
+    the shift or birth date was not.
+- `MainActivity.request` takes a method (for PUT).
+- The form keeps its scroll position when it redraws after a picker, and scrolls to an
+  error.
+- Emulator, against the synthetic console (debug build), checked against the synthetic
+  files:
+  - Setting all three, then reopening: the values show.
+  - Invalid ID `AB.12`: the server's "letters and digits only" message is shown.
+  - Clearing all three: the extras row is removed and the shift assignment is gone.
+  Found and fixed on the way: a cleared birth date wasn't saved at first.
+- Contract test extended (set, invalid, clear as an edit-only user).
+- Note for the backend (not changed): `PUT /api/shifts/assign` checks people_edit but
+  not the employee's company, unlike `/api/people/extras`.

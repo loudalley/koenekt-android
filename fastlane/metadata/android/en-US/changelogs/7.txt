@@ -1,0 +1,5 @@
+More details on the phone's Edit screen.
+• Add or change a person's ID or passport number and birth date.
+• Choose their shift, or leave it on Automatic to follow the shift rules.
+• The person summary now shows their birth date and today's shift.
+• The edit form keeps its place when you pick a date or shift.

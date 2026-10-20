@@ -121,6 +121,22 @@ class MobileLoginContract(unittest.TestCase):
                          ('Sam Renamed', 'Baker', '2026-03-01', '', 14))
         self.assertEqual(people_extras.get_extras(people.base_dir(), row['name']).get('id_number'), 'A1234567')
 
+        # ID number, birth date and shift, as EditPersonFlow sends them.
+        templates = self.p.get('/api/people/directory', params={'url': url, 'status': 'all'}).json()['shift_templates']
+        shift = templates[0]['id']
+        more = {**edit, 'last_name': 'Renamed', 'id_number': 'B7654321', 'birth_date': '1990-05-04'}
+        self.assertEqual(self.p.post('/api/employees', json=more).status_code, 200)
+        self.assertEqual(self.p.put('/api/shifts/assign', json={'employee': row['name'], 'shift_id': shift}).status_code, 200)
+        row = login('editor')
+        self.assertEqual((row['id_number'], row['birth_date'], row['shift_id']), ('B7654321', '1990-05-04', shift))
+        self.assertEqual(self.p.post('/api/employees', json={**more, 'id_number': 'AB.12'}).status_code, 400)
+        # Clearing: an empty ID goes with the update; an empty birth date needs the extras call; '' unassigns the shift.
+        self.assertEqual(self.p.post('/api/employees', json={**more, 'id_number': '', 'birth_date': ''}).status_code, 200)
+        self.assertEqual(self.p.put('/api/people/extras', json={'employee': row['name'], 'birth_date': ''}).status_code, 200)
+        self.assertEqual(self.p.put('/api/shifts/assign', json={'employee': row['name'], 'shift_id': ''}).status_code, 200)
+        row = login('editor')
+        self.assertEqual((row['id_number'], row['birth_date'], row['shift_id']), ('', '', ''))
+
         login('leaver')
         result = self.p.post('/api/employees/deactivate', json=leave)
         self.assertEqual(result.status_code, 200, result.text)

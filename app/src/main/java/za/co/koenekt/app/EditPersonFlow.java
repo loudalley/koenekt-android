@@ -3,6 +3,7 @@ package za.co.koenekt.app;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.text.Editable;
+import android.text.InputType;
 import android.text.TextWatcher;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -13,28 +14,32 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Short native edit form: name, department, job title and start date. Saves with the same
- * /api/employees update as the People website (its "employee" key marks an update). The clock
- * PIN is the person's permanent identity on the clocks, so it is shown but never editable.
- * Answers are kept as they are typed, so they survive locking and unlocking the app.
+ * Short native edit form: name, department, job title, start date, shift, ID / passport and birth
+ * date. Saves with the same calls as the People website: the /api/employees update (its "employee"
+ * key marks an update; it also stores ID number and birth date), then PUT /api/shifts/assign when
+ * the shift changed. The clock PIN is the person's permanent identity on the clocks, so it is shown
+ * but never editable. Answers are kept as they are typed, so they survive locking and unlocking.
  */
 final class EditPersonFlow implements MainActivity.Flow {
     private static final String SAVING = "Saving…";
     private final MainActivity a;
     private final JSONObject person;
     private final MainActivity.Company place;
+    private final JSONArray shifts;
     private final boolean active;
     private final String original;
-    private String first, last, department, jobTitle, hireDate, error = "";
+    private String first, last, department, jobTitle, hireDate, idNumber, birthDate, shiftId, error = "";
     private List<String> departments;
     private boolean sending;
+    private int scrollY;   // Kept so a picker or error redraw doesn't jump back to the top
 
-    EditPersonFlow(MainActivity activity, JSONObject person, MainActivity.Company place) {
-        a = activity; this.person = person; this.place = place;
+    EditPersonFlow(MainActivity activity, JSONObject person, MainActivity.Company place, JSONArray shifts) {
+        a = activity; this.person = person; this.place = place; this.shifts = shifts;
         active = "Active".equalsIgnoreCase(person.optString("status", "Active"));
         first = person.optString("first_name").trim(); last = person.optString("last_name").trim();
         if (first.isEmpty() && last.isEmpty()) {   // Same split as the website when only a display name exists.
@@ -42,13 +47,14 @@ final class EditPersonFlow implements MainActivity.Flow {
             first = parts[0]; last = parts.length > 1 ? parts[1] : "";
         }
         department = person.optString("department").trim(); jobTitle = person.optString("job_title").trim();
-        hireDate = person.optString("hire_date").trim();
-        if (hireDate.length() > 10) hireDate = hireDate.substring(0, 10);
+        hireDate = day(person.optString("hire_date")); birthDate = day(person.optString("birth_date"));
+        idNumber = person.optString("id_number").trim(); shiftId = person.optString("shift_id").trim();
         original = answers();
     }
+    private static String day(String value) { value = value.trim(); return value.length() > 10 ? value.substring(0, 10) : value; }
     private int dp(float n) { return a.dp(n); }
 
-    private String answers() { return String.join("\n", first, last, department, jobTitle, hireDate); }
+    private String answers() { return String.join("\n", first, last, department, jobTitle, hireDate, idNumber, birthDate, shiftId); }
 
     private void back() {
         if (sending) return;
@@ -61,6 +67,7 @@ final class EditPersonFlow implements MainActivity.Flow {
         a.setBar("Edit details", true); a.onBack(this::back);
         LinearLayout screen = Ui.column(a);
         ScrollView scroll = new ScrollView(a); scroll.setFillViewport(true);
+        scroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> scrollY = y);
         LinearLayout body = Ui.column(a); body.setPadding(dp(20), dp(4), dp(20), dp(20)); scroll.addView(body);
         screen.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
@@ -82,10 +89,20 @@ final class EditPersonFlow implements MainActivity.Flow {
         EditText jobField = Ui.field(body, "Job title (optional)", "e.g. Baker", Ui.textInput()); jobField.setText(jobTitle);
         LinearLayout card = Ui.column(a); card.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 18, a)); card.setClipToOutline(true);
         card.addView(Ui.listRow(a, null, "Start date", hireDate.isEmpty() ? "Not set" : AddEmployeeFlow.pretty(hireDate), null, this::chooseDate));
-        body.addView(card);
+        if (shifts.length() > 0) {
+            card.addView(Ui.divider(a, 16));
+            card.addView(Ui.listRow(a, null, "Shift", shiftLabel(), null, this::chooseShift));
+        }
+        body.addView(card); Ui.gap(body, 22);
+        EditText idField = Ui.field(body, "ID or passport number (optional)", "SA ID or passport",
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        idField.setText(idNumber);
+        LinearLayout born = Ui.column(a); born.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 18, a)); born.setClipToOutline(true);
+        born.addView(Ui.listRow(a, null, "Birth date", birthDate.isEmpty() ? "Not set" : AddEmployeeFlow.pretty(birthDate), null, this::chooseBirthDate));
+        body.addView(born);
         if (!error.isEmpty()) { Ui.gap(body, 16); body.addView(Ui.notice(a, error, true)); }
         Ui.gap(body, 14);
-        body.addView(Ui.text(a, active ? "Pay, tax and ID details stay in People records."
+        body.addView(Ui.text(a, active ? "Pay and tax details stay in People records."
                 : "They have left, so saving won't add them back to the clocks.", 13.5f, Ui.MUTED));
 
         LinearLayout footer = Ui.column(a); footer.setPadding(dp(20), dp(10), dp(20), dp(14)); footer.setBackgroundColor(Ui.BG);
@@ -95,13 +112,14 @@ final class EditPersonFlow implements MainActivity.Flow {
         footer.addView(save, Ui.fill(a, 54));
         TextView quiet = null;
         if (active) { quiet = Ui.quiet(a, "Save without updating clocks", () -> submit(false)); footer.addView(quiet, Ui.fill(a, 48)); }
-        a.mount(screen);
+        a.mount(screen); scroll.post(() -> scroll.scrollTo(0, error.isEmpty() ? scrollY : body.getBottom()));   // Show any error
 
         TextView[] buttons = {save, quiet};
         Runnable check = () -> { for (TextView b : buttons) if (b != null) Ui.enable(b, !sending && !first.isEmpty()); };
         watch(firstField, s -> { first = s; check.run(); });
         watch(lastField, s -> last = s);
         watch(jobField, s -> jobTitle = s);
+        watch(idField, s -> idNumber = s);
         check.run();
         if (sending) save.setText(SAVING);
     }
@@ -147,25 +165,83 @@ final class EditPersonFlow implements MainActivity.Flow {
                 d.getYear(), d.getMonthValue() - 1, d.getDayOfMonth()).show();
     }
 
+    /** The person's own shift, or "Automatic" with the shift the rules pick for today. */
+    private String shiftLabel() {
+        if (!shiftId.isEmpty()) return shiftName(shiftId);
+        String today = person.optString("shift_name").trim();
+        return "Automatic" + (today.isEmpty() || !person.optString("shift_id").trim().isEmpty() ? "" : " · today " + today);
+    }
+    private String shiftName(String id) {
+        for (int i = 0; i < shifts.length(); i++) {
+            JSONObject t = shifts.optJSONObject(i);
+            if (t != null && id.equals(t.optString("id"))) return t.optString("name").isEmpty() ? id : t.optString("name");
+        }
+        return id;
+    }
+    private void chooseShift() {
+        if (sending) return;
+        List<String> ids = new ArrayList<>(), names = new ArrayList<>();
+        ids.add(""); names.add("Automatic (from the shift rules)");
+        for (int i = 0; i < shifts.length(); i++) {
+            JSONObject t = shifts.optJSONObject(i);
+            if (t == null || t.optString("id").isEmpty()) continue;
+            ids.add(t.optString("id")); names.add(shiftName(t.optString("id")));
+        }
+        Ui.choose(a, "Shift", names.toArray(new String[0]), Math.max(0, ids.indexOf(shiftId)), which -> { shiftId = ids.get(which); show(); });
+    }
+
+    private void chooseBirthDate() {
+        if (sending) return;
+        LocalDate d;
+        try { d = LocalDate.parse(birthDate); } catch (Exception e) { d = LocalDate.now().minusYears(30); }
+        DatePickerDialog picker = new DatePickerDialog(a, (view, y, m, dayOfMonth) -> { birthDate = LocalDate.of(y, m + 1, dayOfMonth).toString(); show(); },
+                d.getYear(), d.getMonthValue() - 1, d.getDayOfMonth());
+        // The server accepts 1920 up to today.
+        picker.getDatePicker().setMinDate(LocalDate.of(1920, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli());
+        picker.getDatePicker().setMaxDate(System.currentTimeMillis());
+        if (!birthDate.isEmpty()) picker.setButton(DatePickerDialog.BUTTON_NEUTRAL, "Clear", (dialog, w) -> { birthDate = ""; show(); });
+        picker.show();
+    }
+
     private void submit(boolean sendToClocks) {
         if (sending || first.isEmpty()) return;
         try {
-            // Same shape as the website's update. ID number and birth date are left out so the server keeps
-            // them; the clock privilege and card are sent back unchanged so a name update doesn't reset them.
+            // Same shape as the website's update. The clock privilege and card are sent back unchanged so a name
+            // update doesn't reset them. ID number and birth date are sent only when the server listed them.
             JSONObject body = new JSONObject().put("frappe_url", place.url).put("company", place.name)
                     .put("employee", person.optString("name")).put("pin", person.optString("pin"))
                     .put("first_name", first).put("last_name", last).put("department", department).put("job_title", jobTitle)
                     .put("hire_date", hireDate).put("status", person.optString("status", "Active"))
                     .put("privilege", person.optInt("privilege", 0)).put("card_no", person.optString("card_no"))
                     .put("push_device", sendToClocks).put("push_all_company", true);
+            if (person.has("id_number") || !idNumber.isEmpty()) body.put("id_number", idNumber);
+            if (person.has("birth_date") || !birthDate.isEmpty()) body.put("birth_date", birthDate);
             sending = true; error = ""; show();
             a.request("/api/employees", body, data -> {
-                sending = false;
                 JSONArray queued = data.optJSONArray("devices");
                 int clocks = queued == null ? 0 : queued.length();
-                a.toast((first + " " + last).trim() + " is saved." + (clocks > 0 ? " Sent to " + clocks + (clocks == 1 ? " clock." : " clocks.") : ""));
-                a.finishFlow(true);
+                String key = data.optString("employee", person.optString("name"));
+                Runnable saved = () -> {
+                    sending = false;
+                    a.toast((first + " " + last).trim() + " is saved." + (clocks > 0 ? " Sent to " + clocks + (clocks == 1 ? " clock." : " clocks.") : ""));
+                    a.finishFlow(true);
+                };
+                Runnable shift = () -> {
+                    if (shiftId.equals(person.optString("shift_id").trim())) { saved.run(); return; }
+                    then("PUT", "/api/shifts/assign", key, "shift_id", shiftId, "the shift didn't change", saved);
+                };
+                // /api/employees ignores an empty birth date, so clearing one takes the website's extras call.
+                if (birthDate.isEmpty() && !day(person.optString("birth_date")).isEmpty())
+                    then("PUT", "/api/people/extras", key, "birth_date", "", "the birth date wasn't cleared", shift);
+                else shift.run();
             }, message -> { sending = false; error = message; show(); });
         } catch (Exception e) { sending = false; error = e.getMessage() == null ? "Could not save these details." : e.getMessage(); show(); }
+    }
+    /** A follow-up call after the main save; on failure the form stays open and says what is missing. */
+    private void then(String method, String path, String employee, String field, String value, String failure, Runnable next) {
+        try {
+            a.request(method, path, new JSONObject().put("employee", employee).put(field, value), done -> next.run(),
+                    message -> { sending = false; error = "Details are saved, but " + failure + ": " + message; show(); });
+        } catch (Exception e) { sending = false; error = "Details are saved, but " + failure + "."; show(); }
     }
 }

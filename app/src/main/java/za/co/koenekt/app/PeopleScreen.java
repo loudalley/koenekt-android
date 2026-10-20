@@ -38,6 +38,7 @@ final class PeopleScreen {
     private TextView summary;
     private FrameLayout body;
     private BaseAdapter adapter;
+    private JSONArray shifts = new JSONArray();   // Shift templates sent with the directory, for the edit form
 
     PeopleScreen(MainActivity activity) { a = activity; }
     void invalidate() { loaded = false; }
@@ -98,6 +99,7 @@ final class PeopleScreen {
         String path = "/api/people/directory?url=" + MainActivity.query(companies.get(company).url) + "&status=" + STATUS_VALUES[status];
         a.request(path, null, data -> {
             all.clear();
+            shifts = data.optJSONArray("shift_templates") == null ? new JSONArray() : data.optJSONArray("shift_templates");
             JSONArray rows = data.optJSONArray("employees");
             if (rows != null) for (int i = 0; i < rows.length(); i++) if (rows.optJSONObject(i) != null) all.add(rows.optJSONObject(i));
             all.sort((x, y) -> name(x).compareToIgnoreCase(name(y)));
@@ -155,12 +157,14 @@ final class PeopleScreen {
         fact(view, "Started", AddEmployeeFlow.pretty(p.optString("hire_date")));
         fact(view, "Status", "Active".equalsIgnoreCase(p.optString("status")) ? "Active" : "Left" + (p.optString("left_on").isEmpty() ? "" : " on " + AddEmployeeFlow.pretty(p.optString("left_on"))));
         fact(view, "ID / passport", p.optString("id_number"));
+        fact(view, "Birth date", AddEmployeeFlow.pretty(p.optString("birth_date")));
+        fact(view, "Shift today", p.optString("shift_name"));
         AlertDialog dialog = new AlertDialog.Builder(a).setView(view).setPositiveButton("Close", null).create();
         MainActivity.Company place = companies.get(company);
         boolean active = "Active".equalsIgnoreCase(p.optString("status"));
         if (a.can("people_edit")) {
             Ui.gap(view, 18);
-            view.addView(Ui.secondary(a, "Edit details", () -> { dialog.dismiss(); a.editPerson(p, place); }), Ui.fill(a, 52));
+            view.addView(Ui.secondary(a, "Edit details", () -> { dialog.dismiss(); a.editPerson(p, place, shifts); }), Ui.fill(a, 52));
         }
         if (active && a.can("people_leave")) {
             Ui.gap(view, 8);

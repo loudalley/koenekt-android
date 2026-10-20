@@ -220,9 +220,9 @@ public final class MainActivity extends Activity {
         if (busy || locked || !peopleSession || !caps.contains("people_hire")) return;
         leaveWeb(); showNav(false); flow = new AddEmployeeFlow(this); flow.show();
     }
-    void editPerson(JSONObject person, Company company) {
+    void editPerson(JSONObject person, Company company, JSONArray shifts) {
         if (busy || locked || !peopleSession || !caps.contains("people_edit")) return;
-        leaveWeb(); showNav(false); flow = new EditPersonFlow(this, person, company); flow.show();
+        leaveWeb(); showNav(false); flow = new EditPersonFlow(this, person, company, shifts); flow.show();
     }
     void finishFlow(boolean changed) {
         flow = null; if (changed && peopleScreen != null) peopleScreen.invalidate(); showTab(TAB_PEOPLE);
@@ -276,11 +276,13 @@ public final class MainActivity extends Activity {
 
     interface Done { void accept(JSONObject data); }
     /** People API call on the worker; results are dropped if the session changed or the app locked meanwhile. */
-    void request(String path, JSONObject body, Done ok, Consumer<String> failed) {
+    void request(String path, JSONObject body, Done ok, Consumer<String> failed) { request("POST", path, body, ok, failed); }
+    /** As above with an explicit method for a body (the website's PUT endpoints). */
+    void request(String method, String path, JSONObject body, Done ok, Consumer<String> failed) {
         int attempt = epoch; String url = workspace + path;
         worker.execute(() -> {
             try {
-                JSONObject data = api(url, body);
+                JSONObject data = api(url, method, body);
                 runOnUiThread(() -> { if (attempt == epoch && !isDestroyed()) ok.accept(data); });
             } catch (Exception e) {
                 boolean expired = e instanceof SessionRejected && ((SessionRejected) e).status == 401;
@@ -810,7 +812,8 @@ public final class MainActivity extends Activity {
                 .setOnCancelListener(d -> { setupInProgress = false; if (locked) requestUnlock(); }).show();
     }
 
-    private JSONObject api(String url, JSONObject payload) throws Exception {
+    private JSONObject api(String url, JSONObject payload) throws Exception { return api(url, "POST", payload); }
+    private JSONObject api(String url, String method, JSONObject payload) throws Exception {
         if (!(AppPolicy.sameOrigin(workspace, url) || AppPolicy.sameOrigin(AppPolicy.ADMIN, url))) throw new Exception("Untrusted service address.");
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setConnectTimeout(15000); c.setReadTimeout(20000); c.setInstanceFollowRedirects(false);
@@ -819,7 +822,7 @@ public final class MainActivity extends Activity {
         if (cookies != null) c.setRequestProperty("Cookie", cookies);
         try {
             if (payload != null) {
-                c.setRequestMethod("POST"); c.setDoOutput(true); c.setRequestProperty("Content-Type", "application/json");
+                c.setRequestMethod(method); c.setDoOutput(true); c.setRequestProperty("Content-Type", "application/json");
                 try (OutputStream out = c.getOutputStream()) { out.write(payload.toString().getBytes(StandardCharsets.UTF_8)); }
             }
             int status = c.getResponseCode();
