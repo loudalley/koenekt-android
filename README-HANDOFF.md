@@ -1,8 +1,8 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
 Last updated: **20 October 2026, Claude — version 1.2.0 (6) (native Edit details and
-Mark as left) built/signed and committed locally, NOT pushed and NOT on F-Droid
-(the user has to approve both). 1.1.0 (5) is the last pushed version. People server
+Mark as left) pushed, published on the self-hosted F-Droid repo and copied to the
+user's Google Drive (`My Drive/Koenekt Android/`), at the user's request. People server
 amendment INSTALLED on the production People console. 1.1.0 is installed on the
 user's phone (from Google Drive) and the user approved the new look; no other device
 checks were reported. 1.2.0 has not been on a phone. No Play publication has occurred.**
@@ -112,8 +112,8 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
-0. 1.2.0 is committed locally but not pushed. With the user's OK: push `main`,
-   then publish `dist/1.2.0` with `tools/fdroid_repo.py publish --push`.
+0. Install 1.2.0 on the phone (from F-Droid or Drive). Try Edit details and Mark as
+   left on a test person, not on real staff.
 1. Open this repository and read AGENTS.md, then inspect actual Git state.
 2. Server amendment is installed (see above). On the phone, sign out once and
    sign in again, then confirm the session survives more than 30 minutes. If login
@@ -279,5 +279,10 @@ built 1.1.0: replace the summary's "Edit in People records" button with native s
   (from Google Drive). The user said the general theme "looks very good", but that
   "Edit in People records" brought the web version back into play. That is what 1.2.0
   replaces. No other device checks were reported.
-- Not done: no push, no F-Droid publish (waiting for the user), 1.2.0 not tried on
-  a phone.
+- Released at the user's request: pushed `main`, and `tools/fdroid_repo.py publish
+  --push` published it (`koenekt-fdroid` commit `76ac4d4`). The live index lists 1.2.0
+  (6), and the downloaded APK's SHA-256 `d134d2f8…6bf91d7` matches `dist/1.2.0`.
+  Copied the same APK to the Google Drive for desktop folder
+  `G:\My Drive\Koenekt Android\` (next to 1.0.3 and 1.1.0; hash checked).
+  The API connector returned 401, so the copy went through the sync folder.
+  Not yet tried on a phone.
