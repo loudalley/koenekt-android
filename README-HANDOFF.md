@@ -285,4 +285,8 @@ built 1.1.0: replace the summary's "Edit in People records" button with native s
   Copied the same APK to the Google Drive for desktop folder
   `G:\My Drive\Koenekt Android\` (next to 1.0.3 and 1.1.0; hash checked).
   The API connector returned 401, so the copy went through the sync folder.
-  Not yet tried on a phone.
+- The user installed 1.2.0 on their phone and reports Edit details works. They are
+  double-checking because "not all fields were there". The native form has only name,
+  department, job title and start date by design. Ask which other fields they want
+  (ID number, birth date, shift, staff category, pay/tax, card, company transfer).
+  Mark as left not yet reported.
