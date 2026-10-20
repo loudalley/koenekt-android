@@ -28,8 +28,9 @@ Codex, Cursor and Claude share this file and `README-HANDOFF.md`. Claude's
 6. People and licence/update services enforce actual permissions. Device unlock
    must not bypass server checks. Never store passwords, OTPs or raw biometrics;
    keep session tokens encrypted with device-authentication-bound Keystore keys.
-7. The server amendment is prepared, NOT installed. The user asked for
-   instructions rather than live deployment. Do not restart clocks/receivers,
+7. The People server amendment was installed on the production People console
+   on 20 October 2026 at the user's request (see the handoff). Further server work
+   needs a fresh, explicit user request. Do not restart clocks/receivers,
    enable drain, alter production records or send Reporter update commands as
    tests. Use synthetic data. Do not weaken password/MFA/replay checks.
 8. Run checks appropriate to changes. The app has not been device-tested; Android

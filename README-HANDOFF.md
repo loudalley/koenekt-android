@@ -1,8 +1,8 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **20 October 2026, Claude — version 1.0.2 (3): patcher safety
-check plus two app lifecycle fixes. App built/signed; no device test, server
-install or Play publication has occurred.**
+Last updated: **20 October 2026, Claude — version 1.0.2 (3) built/signed and
+pushed; People server amendment INSTALLED on the production People console.
+No device test or Play publication has occurred.**
 
 ## Repository and current state
 
@@ -13,7 +13,8 @@ install or Play publication has occurred.**
   history; the private People backend and its history were not imported.
 - Previous Android code was in `koenekt-people/android-app` on a private feature
   branch. That location is retired. The People backend amendment remains in the
-  separate backend repository, prepared/tested and not deployed.
+  separate backend repository (feature branch); the live console was patched
+  directly with the surgical patcher, not from that branch.
 - Local Android upload credentials moved with the app into ignored/restricted
   `.signing/`; their certificate matches the existing 1.0.0/1.0.1 APKs. Never
   regenerate them for an ordinary update, commit them or include them in releases.
@@ -52,7 +53,7 @@ and recent-app previews. HTTPS/origin rules, mixed-content blocking and no nativ
 JavaScript bridge are retained. Target API 36, minimum 26, app ID
 `za.co.koenekt.app`; AGP 8.13.2, Gradle 8.13, Java source 17.
 
-## Server work — instructions only
+## Server work — installed 20 October 2026
 
 People's default session is 30 minutes. The supplied surgical amendment enables
 strict boolean HTTPS `remember_device: true` after the normal authentication
@@ -66,9 +67,19 @@ patcher defaults to dry-run, refuses changed/partial login code, preserves other
 source, writes a backup and never restarts services itself. Since 1.0.2 it also
 refuses (no change) unless the target imports `console_auth as cauth`, defines
 `https_session`, and the sibling `console_auth.issue_session` accepts `seconds=`;
-previously an older server would accept the patch and then fail every login. The user requested
-instructions, not deployment. No server has been amended/restarted. Sign out/in
-once after applying the amendment to get a new longer token. Rollback does not
+previously an older server would accept the patch and then fail every login.
+
+Installed at the user's request on 20 October 2026, 11:12 SAST, on the production
+People server's single People console. Claude did the read-only checks, copied the
+patcher to the admin's home folder and ran the dry run, which passed (including the
+helper check). The user ran the sudo apply and the console-only restart. Claude then
+verified: new console process, receiver process ID unchanged, all three services
+active, repeat run "Already amended", no console warnings, `/api/brand` 200,
+unauthenticated `/api/me` 401. Backup for rollback:
+`/opt/koenekt/app/console/adms_console.py.before-mobile-20261020T091240287865Z`.
+The tenant name and server address are in the admin's SSH config, not in this
+public repo. Not yet confirmed: an actual 30-day login (needs the phone). Sign out/in
+once in the app to get a new longer token. Rollback does not
 revoke previously issued signed tokens.
 
 ## Verification and remaining work
@@ -95,12 +106,9 @@ the repository move.
 Next actions for Cursor/Claude:
 
 1. Open this repository and read AGENTS.md, then inspect actual Git state.
-2. Apply the server amendment on srv1 using `SERVER-AMENDMENT.md` and this
-   checkout's patcher (not the 1.0.1 ZIP copy). The user asked Claude on
-   20 October to apply it, but Claude's SSH probe of srv1 was blocked by the
-   auto-mode permission policy, so nothing ran on the server. Next step: the user
-   runs the guide's dry run/apply/console-only restart, or allows srv1 SSH for an
-   agent. Start with the dry run; stop if it refuses.
+2. Server amendment is installed (see above). On the phone, sign out once and
+   sign in again, then confirm the session survives more than 30 minutes. If login
+   breaks, roll back using the backup above and `SERVER-AMENDMENT.md`.
 3. On a test phone, install/upgrade the signed 1.0.2 app; verify initial login, biometric
    and PIN success/cancel, background/process restart, changed device lock,
    permissions, report/import picker return, expiry/revocation and sign-out.
@@ -136,3 +144,11 @@ unlock went Home and lost the open page. Bumped to 1.0.2 (3), built/signed with 
 existing upload key and copied to ignored `dist/1.0.2/`. Server NOT applied: the
 read-only SSH probe of srv1 was denied by the permission policy, and nothing was
 copied or run there. Not device-tested.
+
+**20 October 2026 — Claude (server):** User asked to apply the server fix on srv1.
+The srv1 key needed the Windows ssh-agent; the user started it and added the key.
+Read-only check found one People console tenant, the expected source path, no
+earlier backups, and sudo requiring a password. Copied the 1.0.2 patcher (hash
+matches the repo) and the dry run passed. The user ran the apply and restart with
+sudo; Claude verified the result (details under "Server work"). No receiver, clock,
+drain, data or licence-service change. Next: phone sign-out/sign-in test.

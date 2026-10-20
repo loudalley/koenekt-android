@@ -1,7 +1,8 @@
 # People server amendment for remembered Android sign-in
 
-**Prepared and tested on 20 October 2026. NOT applied to the live server.**
-Server installation is a separate operator action; only instructions are supplied.
+**Prepared and tested, then applied to the production People console on
+20 October 2026** (see "Installation record" below). These instructions remain for
+other consoles, reinstallation and rollback.
 
 The updated APK is Koenekt **1.0.2 (3)** (1.0.1 (2) needs the same amendment). It removes the workspace field and saves
 session tokens encrypted by Android Keystore after fingerprint/device-PIN
@@ -155,7 +156,19 @@ patch result, unrelated-change preservation, refusal, refusal of older
 `console_auth`/`https_session` helpers, dry-run, backup and repeat application.
 The dry run also passed against the real pre-amendment People source and its
 `console_auth.py` in the private backend checkout. 37 existing focused People auth/permission/identity tests and 39 Java
-policy checks pass. No live server was amended or restarted.
+policy checks pass.
+
+## Installation record
+
+20 October 2026, 11:12 SAST: on the production People server, the dry run of this
+checkout's patcher (SHA-256 `d9657a11…2296bffd`) passed the server-helper check.
+The operator then applied it with sudo and restarted only the one People console.
+Backup: `adms_console.py.before-mobile-20261020T091240287865Z` beside the console
+source. Afterwards the console, receiver and licence services were active, the
+receiver process ID was unchanged, a repeat run reported "Already amended", there
+were no console warnings, `/api/brand` returned 200 and an unauthenticated
+`/api/me` returned 401. The 30-day path runs only after a successful login, so it
+is confirmed by the first phone sign-in, not by these checks.
 
 Real phone fingerprint/PIN/Keystore and lifecycle behaviour still need device
 verification. The previous emulator-start attempt was blocked by automatic review;

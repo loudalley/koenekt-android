@@ -175,8 +175,8 @@ Public HTTPS checks returned 200 for People branding, the admin page and updates
 the Android emulator (reason returned: "blocked by policy"). A real phone check
 is still required for fingerprint/PIN success/cancel, process restart, background
 locking, lock-setting changes, imports/exports after unlock, expiry and logout.
-The supplied People server amendment is **prepared and tested, not installed**,
-as requested. See `SERVER-AMENDMENT.md` for exact commands and rollback.
+The People server amendment was **applied to the production People console on
+20 October 2026**. See `SERVER-AMENDMENT.md` for the commands and rollback.
 
 Before Play submission: confirm the application ID/name, complete the developer
 account and store listing, publish an actual privacy-policy URL with the correct
