@@ -86,7 +86,7 @@ public final class MainActivity extends Activity {
     private SessionVault vault;
     private FrameLayout shell;
     private View shield;
-    private boolean locked, authInProgress, foreground, setupInProgress, pinPromptActive;
+    private boolean locked, authInProgress, foreground, setupInProgress, pinPromptActive, externalTask;
     private CancellationSignal authentication;
     private Runnable afterUnlock;
     private int authAttempt, pinAttempt, pendingAuthAttempt;
@@ -162,7 +162,7 @@ public final class MainActivity extends Activity {
         s.setAllowFileAccess(false); s.setAllowContentAccess(false); s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         s.setCacheMode(WebSettings.LOAD_NO_CACHE); s.setBuiltInZoomControls(true); s.setDisplayZoomControls(false);
         s.setSupportMultipleWindows(true); s.setJavaScriptCanOpenWindowsAutomatically(false);
-        s.setUserAgentString(s.getUserAgentString() + " KoenektAndroid/1.0.1");
+        s.setUserAgentString(s.getUserAgentString() + " KoenektAndroid/" + BuildConfig.VERSION_NAME);
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, false);
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -214,7 +214,8 @@ public final class MainActivity extends Activity {
                 String[] accepts = params.getAcceptTypes();
                 if (accepts.length > 0 && !accepts[0].isEmpty() && !accepts[0].startsWith(".")) i.putExtra(Intent.EXTRA_MIME_TYPES, accepts);
                 i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, params.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE);
-                try { startActivityForResult(i, PICK_FILE); } catch (Exception e) { callback.onReceiveValue(null); uploadCallback = null; }
+                try { externalTask = true; startActivityForResult(i, PICK_FILE); }
+                catch (Exception e) { externalTask = false; callback.onReceiveValue(null); uploadCallback = null; }
                 return true;
             }
             @Override public boolean onCreateWindow(WebView view, boolean dialog, boolean gesture, android.os.Message message) {
@@ -240,6 +241,10 @@ public final class MainActivity extends Activity {
     }
 
     private boolean trusted(String url) { return url != null && AppPolicy.allowed(workspace, operator, url); }
+    /** An open People page needs a live People session; licence pages already need the operator session. */
+    private boolean resumable(String url) {
+        return inWeb && trusted(url) && (peopleSession || !AppPolicy.sameOrigin(workspace, url));
+    }
 
     private boolean route(String url, boolean mainFrame) {
         if (locked) return true;
@@ -400,7 +405,10 @@ public final class MainActivity extends Activity {
         if (inWeb) {
             p.getMenu().add("Refresh page").setOnMenuItemClickListener(i -> { web.reload(); return true; });
             p.getMenu().add("Print / save page as PDF").setOnMenuItemClickListener(i -> {
-                if (trusted(web.getUrl())) ((PrintManager) getSystemService(PRINT_SERVICE)).print(currentTitle, web.createPrintDocumentAdapter(currentTitle), null);
+                if (trusted(web.getUrl())) {
+                    externalTask = true;
+                    ((PrintManager) getSystemService(PRINT_SERVICE)).print(currentTitle, web.createPrintDocumentAdapter(currentTitle), null);
+                }
                 return true;
             });
         }
@@ -410,7 +418,7 @@ public final class MainActivity extends Activity {
     }
 
     private void about() {
-        new AlertDialog.Builder(this).setTitle("Koenekt 1.0.1")
+        new AlertDialog.Builder(this).setTitle("Koenekt " + BuildConfig.VERSION_NAME)
                 .setMessage("People, licences and Reporter updates.\n\nThis app connects to your existing Koenekt services over HTTPS. Server permissions determine what you can view and change.\n\nPasswords and authenticator codes are not saved. Remembered session tokens are encrypted using Android Keystore and require device authentication to restore. Unlock with a strong biometric such as fingerprint, or the phone's PIN, pattern or password. Android 8 uses the device credential. Sign out forgets the saved login. Expired or revoked server sessions require a new Koenekt sign-in.\n\nStaff, attendance, payroll and licence information stays with your Koenekt service. Exported reports are saved only to a location you select. The app has no advertising or analytics SDKs.\n\nFor account access, correction or removal, contact your organisation's administrator. Removing a login does not erase employment records that the organisation must retain.\n\nAn internet connection is required. Phone biometrics unlock this app; staff fingerprint/face enrollment still uses the connected clocks.")
                 .setPositiveButton("Close", null).show();
     }
@@ -557,9 +565,11 @@ public final class MainActivity extends Activity {
                     signOut(); toast("Your Koenekt session expired or was revoked. Sign in again."); return;
                 }
                 peopleSession = account != null; operator = admin; applyPerson(account); notice = message;
-                boolean resumeFile = pendingFileRequest != 0;
+                // Return to the open page when its service session is still valid; otherwise re-list sections.
+                boolean resumeFile = pendingFileRequest != 0, stay = resumeFile || resumable(web.getUrl());
                 releaseLock();
-                if (!resumeFile) home();
+                if (!stay) home();
+                else if (!resumeFile && !locked && web.getProgress() < 100) web.reload();
             });
         });
         // Wait for both asynchronous CookieManager writes before making native requests.
@@ -595,7 +605,7 @@ public final class MainActivity extends Activity {
         if (!(AppPolicy.sameOrigin(workspace, url) || AppPolicy.sameOrigin(AppPolicy.ADMIN, url))) throw new Exception("Untrusted service address.");
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setConnectTimeout(15000); c.setReadTimeout(20000); c.setInstanceFollowRedirects(false);
-        c.setRequestProperty("Accept", "application/json"); c.setRequestProperty("User-Agent", "KoenektAndroid/1.0.1");
+        c.setRequestProperty("Accept", "application/json"); c.setRequestProperty("User-Agent", "KoenektAndroid/" + BuildConfig.VERSION_NAME);
         String cookies = CookieManager.getInstance().getCookie(url);
         if (cookies != null) c.setRequestProperty("Cookie", cookies);
         try {
@@ -694,8 +704,8 @@ public final class MainActivity extends Activity {
             Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
                     .setType(mime == null || mime.isEmpty() ? "application/octet-stream" : mime.split(";")[0])
                     .putExtra(Intent.EXTRA_TITLE, name);
-            startActivityForResult(i, SAVE_FILE);
-        } catch (Exception e) { cancelExport(); toast("Could not save file. " + friendly(e)); }
+            externalTask = true; startActivityForResult(i, SAVE_FILE);
+        } catch (Exception e) { externalTask = false; cancelExport(); toast("Could not save file. " + friendly(e)); }
     }
 
     private void cancelExport() { if (pendingExport != null) { pendingExport.delete(); pendingExport = null; } }
@@ -756,7 +766,7 @@ public final class MainActivity extends Activity {
     @Override public void onBackPressed() { handleBack(); }
     @Override protected void onPause() { super.onPause(); if (web != null) web.onPause(); }
     @Override protected void onResume() {
-        super.onResume(); foreground = true;
+        super.onResume(); foreground = true; externalTask = false;
         if (pendingAuthAttempt != 0) { int attempt = pendingAuthAttempt; pendingAuthAttempt = 0; authenticated(attempt); }
         else if (locked && root != null) root.post(this::requestUnlock);
         else if (web != null && inWeb) web.onResume();
@@ -765,8 +775,10 @@ public final class MainActivity extends Activity {
         super.onStop(); foreground = false;
         if (authInProgress || root == null) return;
         if (vault.exists() || peopleSession || operator) {
+            // Without a screen lock the return cannot be protected, so sign out, except while
+            // the user is in a file picker, Save dialog or print screen this app opened.
+            if (!vault.deviceSecured()) { if (!externalTask) signOut(); return; }
             epoch++; busy = false;
-            if (!vault.deviceSecured()) { signOut(); return; }
             showLock("Unlock to continue.");
             web.stopLoading(); web.onPause(); web.pauseTimers();
             CookieManager.getInstance().removeAllCookies(null);

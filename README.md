@@ -1,7 +1,7 @@
 # Koenekt for Android
 
 One Android app for the existing People, licensing, customer and Reporter update services.
-Version **1.0.1 (2)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
+Version **1.0.2 (3)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
 compile/target API 36. Java 17, Android Gradle Plugin 8.13.2, Gradle 8.13.
 
 Standalone public repository: [loudalley/koenekt-android](https://github.com/loudalley/koenekt-android).
@@ -154,14 +154,20 @@ dependencies. They use `../koenekt-people` by default; override with
 backend source/history into this public app repository. All test data is synthetic
 and tests never contact production.
 
-## Release state, 20 October 2026 — 1.0.1
+## Release state, 20 October 2026 — 1.0.2
 
-Signed APK and AAB built; the final Android lint report has no issues.
-APK signature verified; bundletool 1.18.3 validates the AAB.
-39 Java policy checks, the export-script checks, six mobile/session contract
-tests, four surgical-amendment tests and 37 focused People backend tests passed.
+1.0.2 keeps a phone with no screen lock signed in while it is in a file picker,
+Save dialog or print screen opened by the app. After unlocking, the app returns to the
+page that was open when its session is still valid instead of always going Home.
+The server patcher now refuses servers whose login helpers are too old for it.
+
+Signed APK and AAB built with the existing upload key (same certificate as
+1.0.1); the Android lint report has no issues. 39 Java policy checks, the
+export-script checks, six mobile/session contract tests and five
+surgical-amendment tests passed. bundletool and the 37 focused People backend
+tests were last run for 1.0.1 and were not rerun for 1.0.2.
 The previous 1.0.0 release also passed 40 licence/update GUI tests; those services
-are unchanged in 1.0.1. No production login,
+are unchanged. No production login,
 customer, licence, update instruction or clock mutation was used for verification.
 Public HTTPS checks returned 200 for People branding, the admin page and updates.js.
 

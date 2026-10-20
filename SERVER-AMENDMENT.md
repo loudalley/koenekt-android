@@ -3,7 +3,7 @@
 **Prepared and tested on 20 October 2026. NOT applied to the live server.**
 Server installation is a separate operator action; only instructions are supplied.
 
-The updated APK is Koenekt **1.0.1 (2)**. It removes the workspace field and saves
+The updated APK is Koenekt **1.0.2 (3)** (1.0.1 (2) needs the same amendment). It removes the workspace field and saves
 session tokens encrypted by Android Keystore after fingerprint/device-PIN
 validation. Returning to the app requires another device unlock and live session
 validation. No Koenekt password, authenticator secret/code or phone PIN is saved.
@@ -31,11 +31,19 @@ anchors and preserves unrelated runtime edits. It refuses changed/partial login
 implementations, writes a timestamped backup, compiles the changed source before
 writing and is safe to rerun. It never restarts services.
 
+It also refuses, changing nothing, unless the installed console already imports
+`console_auth as cauth` and defines `https_session`, and the `console_auth.py`
+beside it has an `issue_session` that accepts `seconds=`. Those names are only
+resolved at login time, so without this check an older installation would accept
+the patch and then fail every People login. If `console_auth.py` lives elsewhere,
+pass its real path with `--auth`. If the check refuses, update that server's
+People source deliberately first; do not edit around the check.
+
 ## Transfer the amendment
 
-Use `server-amendment/apply_remembered_sessions.py` from this checkout, or the
-same script from the standalone support ZIP. From PowerShell in the
-`server-amendment` folder (or extracted support folder):
+Use `server-amendment/apply_remembered_sessions.py` from this checkout. Do not use
+the copy in the older `Koenekt-Server-Amendment-1.0.1.zip`; it predates the
+server-helper check described above. From PowerShell in the `server-amendment` folder:
 
 ```powershell
 ssh deploy-user@YOUR_SERVER "mkdir -p /home/deploy-user/mobile-session-20261020"
@@ -95,7 +103,7 @@ update, one at a time. The amendment does not create or migrate tenants.
 
 ## Phone check after installation
 
-1. Install the signed 1.0.1 APK over the directly installed 1.0.0 APK.
+1. Install the signed 1.0.2 APK over the directly installed 1.0.0/1.0.1 APK.
 2. Sign out once, then sign in with the existing account/password (master also
    uses its authenticator code). Previously issued 30-minute tokens stay short;
    a new sign-in after the amendment is required for the longer session.
@@ -142,9 +150,11 @@ rotate session/signing secrets as a routine rollback.
 Release build and Android lint pass; APK signature and bundle structure are
 checked separately with the deliverables. Six mobile/server contract tests cover
 default vs remembered lifetime, HTTPS/strict opt-in, two-hour restore, 31-day
-expiry, disabled accounts and master MFA/replay. Four amendment tests cover exact
-patch result, unrelated-change preservation, refusal, dry-run, backup and repeat
-application. 37 existing focused People auth/permission/identity tests and 39 Java
+expiry, disabled accounts and master MFA/replay. Five amendment tests cover exact
+patch result, unrelated-change preservation, refusal, refusal of older
+`console_auth`/`https_session` helpers, dry-run, backup and repeat application.
+The dry run also passed against the real pre-amendment People source and its
+`console_auth.py` in the private backend checkout. 37 existing focused People auth/permission/identity tests and 39 Java
 policy checks pass. No live server was amended or restarted.
 
 Real phone fingerprint/PIN/Keystore and lifecycle behaviour still need device

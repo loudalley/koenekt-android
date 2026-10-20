@@ -26,10 +26,28 @@ OLD_AGE = '"max_age": cookie_max_age_for_role(role),'
 NEW_AGE = '"max_age": cookie_max_age_for_role(role) if max_age is None else max_age,'
 
 
-def amend(source):
+def check_dependencies(tree, functions, auth_source):
+    """The amended login calls helpers that must already exist on the target server.
+
+    compile() cannot catch a missing name or keyword argument, so verify them here;
+    otherwise an older installation would accept the patch and then fail every login.
+    """
+    imports_auth = any(isinstance(node, ast.Import) and any(a.name == 'console_auth' and a.asname == 'cauth' for a in node.names)
+                       for node in tree.body)
+    if not imports_auth or 'https_session' not in functions:
+        raise ValueError('Installed console lacks the console_auth import or https_session helper. No change made.')
+    if auth_source is None: raise ValueError('console_auth.py was not found beside the console. No change made.')
+    auth = {node.name: node for node in ast.parse(auth_source.replace('\r\n', '\n')).body if isinstance(node, ast.FunctionDef)}
+    issue = auth.get('issue_session')
+    if issue is None or 'seconds' not in [a.arg for a in issue.args.args + issue.args.kwonlyargs]:
+        raise ValueError('Installed console_auth.issue_session does not accept seconds=. Update it first. No change made.')
+
+
+def amend(source, auth_source):
     text = source.replace('\r\n', '\n')
     tree = ast.parse(text)
     functions = {node.name: node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    check_dependencies(tree, functions, auth_source)
     for name in ('api_login', '_set_session_cookie'):
         if name not in functions: raise ValueError('Expected People login functions were not found. No change made.')
     lines = text.splitlines(keepends=True)
@@ -60,11 +78,14 @@ def amend(source):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--console', type=Path, default=Path('/opt/koenekt/app/console/adms_console.py'))
+    parser.add_argument('--auth', type=Path, help='console_auth.py imported by the console (default: beside --console)')
     parser.add_argument('--apply', action='store_true', help='Write a backup and amend the one console source file')
     args = parser.parse_args()
     path = args.console.resolve(strict=True)
+    auth_path = args.auth or path.with_name('console_auth.py')
     original = path.read_text(encoding='utf-8')
-    updated, changed = amend(original)
+    auth_source = auth_path.read_text(encoding='utf-8') if auth_path.is_file() else None
+    updated, changed = amend(original, auth_source)
     if not changed: print('Already amended; no file or service changed.'); return
     if not args.apply:
         print('Dry run passed. Would add HTTPS opt-in 30-day remembered sessions; ordinary logins remain 30 minutes.')
