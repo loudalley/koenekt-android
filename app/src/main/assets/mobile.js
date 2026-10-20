@@ -43,7 +43,8 @@
       if (a) { event.preventDefault(); window.__koenektExportBlob(a.href, a.download); }
     }, true);
     const style = document.createElement('style');
-    style.textContent = '@media(max-width:640px){input,select,textarea{font-size:16px!important}button,.b{min-height:42px}.modal-bg{padding:12px!important}.modal{max-width:100%!important}main{padding:12px!important}table{display:block;overflow-x:auto;max-width:100%}.waiting{grid-template-columns:minmax(0,1fr)!important}}';
+    // The app supplies its own title bar and navigation, so the website's header is hidden inside the app.
+    style.textContent = 'header.kp-header{display:none!important}body{background:#f6f8f5}@media(max-width:640px){input,select,textarea{font-size:16px!important}button,.b{min-height:42px}.modal-bg{padding:12px!important}.modal{max-width:100%!important}main{padding:12px!important}table{display:block;overflow-x:auto;max-width:100%}.waiting{grid-template-columns:minmax(0,1fr)!important}}';
     document.head.appendChild(style);
     window.__koenektSelectTab = () => {
       if (!location.pathname.startsWith('/licences')) return;

@@ -42,6 +42,15 @@ public class PolicyChecks {
             check(page.startsWith("https://loudalley.github.io/koenekt-android/"), "policy page is the published HTTPS site: " + page);
             check(!AppPolicy.allowed(AppPolicy.DEFAULT_WORKSPACE, true, page), "policy page opens outside the trusted WebView: " + page);
         }
+        // Development origin: never active unless a debug build sets it, and only the emulator host.
+        check(!AppPolicy.sameOrigin("http://10.0.2.2:8765", "http://10.0.2.2:8765/people"), "plain HTTP rejected by default");
+        boolean rejected = false;
+        try { AppPolicy.allowDevOrigin("http://evil.example:80"); } catch (IllegalArgumentException e) { rejected = true; }
+        check(rejected, "development origin limited to the emulator host");
+        AppPolicy.allowDevOrigin("http://10.0.2.2:8765");
+        check(AppPolicy.sameOrigin("http://10.0.2.2:8765", "http://10.0.2.2:8765/people"), "development origin allowed once set");
+        check(!AppPolicy.sameOrigin("http://10.0.2.2:8765", "http://10.0.2.2:9999/"), "other local ports still rejected");
+        check(!AppPolicy.sameOrigin(AppPolicy.DEFAULT_WORKSPACE, "http://people.koenekt.co.za/"), "production stays HTTPS-only");
         System.out.println("Policy checks passed: " + checks);
     }
 }

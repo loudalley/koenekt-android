@@ -4,11 +4,13 @@ Sign in to your workspace to manage staff, add new starters, update employee det
 
 Koenekt management accounts can also manage customers and licences and control Reporter updates across enrolled PCs.
 
-* Existing Koenekt accounts and permissions
-* Remembered login protected by fingerprint or device PIN
-* Customer access limited to the companies their account can manage
-* Staff import and export with Android file selection
-* Attendance reports and payslips saved to a location you choose
+• Quick, three-step Add employee and a searchable People list
+• Who's in: live attendance at a glance
+• Existing Koenekt accounts and permissions
+• Remembered login protected by fingerprint or device PIN
+• Customer access limited to the companies their account can manage
+• Staff import and export with Android file selection
+• Attendance reports and payslips saved to a location you choose
 
 A configured Koenekt workspace and internet connection are required. Available features depend on the permissions and services enabled for your account. No advertising or analytics.
 

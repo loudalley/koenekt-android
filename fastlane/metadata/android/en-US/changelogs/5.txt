@@ -1,0 +1,6 @@
+A fresh, simpler design.
+• Home shows quick actions and your tools, with a bottom bar for Home, People, Who's in and Account.
+• People: search and filter your staff in a compact list.
+• Add employee in three short steps: name, where they work, and a suggested clock PIN.
+• Who's in: see who is at work right now.
+• Reports, payroll and other web screens no longer show a second header.

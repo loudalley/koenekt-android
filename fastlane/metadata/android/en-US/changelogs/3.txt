@@ -1,3 +1,2 @@
-1.0.2
-* Phones without a screen lock stay signed in during import, save and print.
-* Unlocking returns to the page you were on instead of Home.
+• Phones without a screen lock stay signed in during import, save and print.
+• Unlocking returns to the page you were on instead of Home.

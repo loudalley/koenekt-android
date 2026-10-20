@@ -1,6 +1,6 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **20 October 2026, Claude — version 1.0.3 (4) built/signed and
+Last updated: **20 October 2026, Claude — version 1.1.0 (5) redesign built/signed and
 pushed; People server amendment INSTALLED on the production People console.
 No device test or Play publication has occurred.**
 
@@ -22,8 +22,8 @@ No device test or Play publication has occurred.**
   (fingerprint `C6F6570B…D231577F`), serving 1.0.3 (4) with release notes, logo icon
   and banner. Publish with `tools/fdroid_repo.py`; details in `fdroid/README.md`.
   Repo key in ignored `.signing/fdroid/` (back it up with `.signing/`).
-- Signed release files are kept locally under `dist/1.0.3/` (ignored; APK, AAB
-  and SHA256SUMS); `dist/1.0.2/` is the previous build. `dist/1.0.1/` is older; its server-amendment ZIP holds the
+- Signed release files are kept locally under `dist/1.1.0/` (ignored; APK, AAB
+  and SHA256SUMS); `dist/1.0.3/` is the previous build. `dist/1.0.1/` is older; its server-amendment ZIP holds the
   patcher without the server-helper check, so do not use that copy.
   Build products are under `app/build/outputs/`. Local SDK configuration is
   ignored. A clean clone must configure its own SDK and signing credentials.
@@ -113,7 +113,7 @@ Next actions for Cursor/Claude:
 2. Server amendment is installed (see above). On the phone, sign out once and
    sign in again, then confirm the session survives more than 30 minutes. If login
    breaks, roll back using the backup above and `SERVER-AMENDMENT.md`.
-3. On a test phone, install/upgrade the signed 1.0.3 app; verify initial login, biometric
+3. On a test phone, install/upgrade the signed 1.1.0 app; verify initial login, biometric
    and PIN success/cancel, background/process restart, changed device lock,
    permissions, report/import picker return, expiry/revocation and sign-out.
    Also check 1.0.2: unlock returns to the open page; with no screen lock,
@@ -197,3 +197,36 @@ licence and uses its own signing key).
   auto-mode permission policy; the next `publish --push` includes it. The current
   live files were checked byte-for-byte and are correct.
 - Not yet tried in the F-Droid app on a phone.
+
+**20 October 2026 — Claude (1.1.0 redesign):** The user said the app felt cramped,
+like the mobile website squeezed into an app; adding an employee was hard; and the
+F-Droid release notes did not render properly.
+- First actual rendering: an Android 15 emulator (AVD `koenekt-test` in the local
+  SDK) plus the People console run locally with synthetic data (scratch launcher;
+  nothing added to either repo). Release builds block screenshots via FLAG_SECURE,
+  so use debug builds.
+- Findings: two stacked headers. People showed no employee on the first screen
+  (filters, six buttons, bulk panel). The Add form had 25 fields, starting with
+  clock PIN and privilege. The server only needs name, company and PIN.
+- The user chose native everyday screens. Added `Ui.java` (design kit),
+  `PeopleScreen`, `AddEmployeeFlow` (three steps; same `/api/employees` payload as
+  the website: push_device true or "save only", push_all_company true) and
+  `LiveScreen`.
+- MainActivity now has an app bar, a bottom bar and Home/Account screens, keeps
+  every lock, vault, cookie and routing rule, and shows server error details
+  (FastAPI `detail`). After unlock, tabs reload and the add flow keeps its answers.
+- mobile.js hides `header.kp-header`. The web People page is renamed "People
+  records".
+- Brand vectors (`ic_logo`, `ic_brand_mark`) and an adaptive launcher icon now
+  come from the user's `koenekt-logo.svg`.
+- Debug-only `-PdevOrigin` lets a debug build use `http://10.0.2.2:<port>` (policy
+  checks prove the default stays HTTPS-only). The release BuildConfig has
+  DEBUG=false and DEV_ORIGIN="", and the release manifest has no debug network
+  config.
+- Emulator walkthrough passed (see README release state). A bug it found was
+  fixed: the keyboard stayed open across screens.
+- F-Droid notes: no version-heading line, `•` bullets, one sentence per line (the
+  description is HTML-rendered with newlines turned into breaks). The changelog
+  rendering was not seen in the F-Droid app; the user was asked for a screenshot.
+- Not tested on a physical phone or with production data. Next: install 1.1.0 on
+  a phone and check the new screens with a real account.

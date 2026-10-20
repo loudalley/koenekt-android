@@ -1,8 +1,5 @@
 <resources>
-    <string name="brand">koenekt</string>
-    <string name="welcome_subtitle">One place to manage your work</string>
     <string name="credentials_required">Enter your username and password.</string>
     <string name="signing_in">Signing in…</string>
     <string name="sign_in">Sign in</string>
-    <string name="workspace_user">koenekt · %1$s</string>
 </resources>

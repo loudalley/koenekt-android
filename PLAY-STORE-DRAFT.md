@@ -1,6 +1,6 @@
 # Play Store publication draft
 
-**Version:** Koenekt 1.0.3 (4). Package: `za.co.koenekt.app`.
+**Version:** Koenekt 1.1.0 (5). Package: `za.co.koenekt.app`.
 This is a submission preparation note, not a claim of store approval.
 
 ## Listing text

@@ -11,8 +11,9 @@ android {
         applicationId 'za.co.koenekt.app'
         minSdk 26
         targetSdk 36
-        versionCode 4
-        versionName '1.0.3'
+        versionCode 5
+        versionName '1.1.0'
+        buildConfigField 'String', 'DEV_ORIGIN', '""'
     }
     signingConfigs {
         release {
@@ -25,6 +26,10 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // Optional: -PdevOrigin=http://10.0.2.2:8765 points a debug build at a local People console.
+            buildConfigField 'String', 'DEV_ORIGIN', "\"${project.findProperty('devOrigin') ?: ''}\""
+        }
         release {
             signingConfig signingConfigs.release
             minifyEnabled false

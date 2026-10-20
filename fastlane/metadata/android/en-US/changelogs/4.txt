@@ -1,4 +1,4 @@
-1.0.3
-* About & privacy: new Privacy policy and Delete account buttons.
-* Includes 1.0.2: phones without a screen lock stay signed in during import, save and print; unlocking returns to the page you were on.
+• About & privacy now has Privacy policy and Delete account buttons.
+• Phones without a screen lock stay signed in during import, save and print.
+• Unlocking returns to the page you were on.
 After updating, sign out once and sign in again to get the longer remembered session.

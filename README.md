@@ -1,7 +1,7 @@
 # Koenekt for Android
 
 One Android app for the existing People, licensing, customer and Reporter update services.
-Version **1.0.3 (4)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
+Version **1.1.0 (5)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
 compile/target API 36. Java 17, Android Gradle Plugin 8.13.2, Gradle 8.13.
 
 Standalone public repository: [loudalley/koenekt-android](https://github.com/loudalley/koenekt-android).
@@ -9,10 +9,17 @@ For Cursor, Claude and Codex, start with `AGENTS.md` and `README-HANDOFF.md`.
 
 ## What is implemented
 
-The app supplies a native sign-in, permissions-based home, workspace switching,
-back navigation, connection errors, file picker, report saving and Android printing.
-Product screens run in a restricted Android WebView connected to the existing
-HTTPS services. That preserves the complete current website workflows and makes
+The everyday screens are native: sign-in, a Home with quick actions and tools, a
+bottom bar (Home, People, Who's in, Account), a searchable People list with person
+summaries, a three-step **Add employee** (name, workplace, suggested clock PIN) and
+a **Who's in** live board. They call the same People endpoints as the website
+(`/api/companies`, `/api/people/directory`, `/api/people/next-pin`, `/api/employees`,
+`/api/dashboard/live`), so server permissions apply unchanged. The design kit is
+`Ui.java`; there are no third-party UI libraries.
+
+Everything else (People records, reports, payroll, clocks, settings, users and the
+licence tools) runs in a restricted Android WebView connected to the existing
+HTTPS services, with the website's own header hidden inside the app. That preserves the complete current website workflows and makes
 future server-side product improvements available without duplicating their rules.
 
 | Access | Available workflows, when the service grants them |
@@ -151,6 +158,18 @@ python tools/test_mobile_login.py -q
 python tools/test_server_amendment.py -q
 ```
 
+**UI testing without production data:** a debug build can point at a People
+console running locally with synthetic data, seen from the emulator as
+`10.0.2.2`. Release builds ignore this, and plain HTTP stays blocked there.
+
+```powershell
+.\gradlew.bat assembleDebug -PdevOrigin=http://10.0.2.2:8765
+```
+
+Without `-PdevOrigin`, debug builds behave like release builds apart from allowing
+screenshots. Debug builds include a network config that permits HTTP only to
+`10.0.2.2`; it is not in the release manifest.
+
 The Java, JavaScript and amendment tests are self-contained. The optional mobile
 contract tests require a separate People backend checkout and its FastAPI/test
 dependencies. They use `../koenekt-people` by default; override with
@@ -158,7 +177,18 @@ dependencies. They use `../koenekt-people` by default; override with
 backend source/history into this public app repository. All test data is synthetic
 and tests never contact production.
 
-## Release state, 20 October 2026 — 1.0.3
+## Release state, 20 October 2026 — 1.1.0
+
+1.1.0 redesigns the app: native Home, People, Add employee and Who's in screens,
+an Account tab, a bottom bar, your brand logo and an adaptive launcher icon, and
+web screens without the duplicate header. It was tried on an Android 15 emulator
+against a local People console with synthetic data: sign-in, Home, People list
+and search, person summary, the full Add employee flow (created and queued to a
+clock), Who's in, Account and Reports. Release build signed with the same key;
+lint clean; 48 policy checks and the other suites passed. Not tested on a
+physical phone or against production.
+
+### 1.0.3
 
 1.0.3 adds Privacy policy and Delete account buttons to About & privacy. They open
 the published pages (`docs/`, GitHub Pages) in the phone's browser. Built, signed

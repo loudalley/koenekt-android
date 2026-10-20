@@ -8,6 +8,7 @@ import android.hardware.biometrics.BiometricPrompt;
 import android.hardware.biometrics.BiometricManager;
 import android.content.ClipData;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -16,7 +17,10 @@ import android.net.http.SslError;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.print.PrintManager;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,10 +39,10 @@ import android.webkit.WebSettings;
 import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
@@ -55,6 +59,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
@@ -63,21 +69,23 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
-/** Native navigation and login, using the existing authenticated product workflows. */
+/** Native navigation, sign-in and everyday screens; the remaining product workflows run in a restricted WebView. */
 public final class MainActivity extends Activity {
-    private static final int GREEN = Color.rgb(18, 52, 41), LIME = Color.rgb(122, 193, 66);
-    private static final int BG = Color.rgb(243, 246, 241), INK = Color.rgb(26, 31, 28);
+    static final int TAB_HOME = 0, TAB_PEOPLE = 1, TAB_LIVE = 2, TAB_ACCOUNT = 3;
     private static final int PICK_FILE = 20, SAVE_FILE = 21, DEVICE_UNLOCK = 22, MAX_EXPORT = 20 * 1024 * 1024;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final Set<String> caps = new HashSet<>();
-    private String workspace = AppPolicy.DEFAULT_WORKSPACE, displayName = "", role = "";
+    private String workspace = AppPolicy.DEFAULT_WORKSPACE, displayName = "", role = "", roleLabel = "";
     private String notice = "", currentTitle = "Koenekt", exportNonce = "";
     private boolean operator = false, peopleSession = false, inWeb = false, busy = false;
-    private int epoch = 0;
-    private LinearLayout root, toolbar;
+    private int epoch = 0, tab = TAB_HOME;
+    private LinearLayout root, appBar, barActions, nav;
+    private View navLine;
+    private ImageView backButton;
     private FrameLayout content;
-    private TextView title, subtitle;
+    private TextView barTitle;
     private ProgressBar progress;
     private WebView web;
     private ValueCallback<Uri[]> uploadCallback;
@@ -88,10 +96,20 @@ public final class MainActivity extends Activity {
     private View shield;
     private boolean locked, authInProgress, foreground, setupInProgress, pinPromptActive, externalTask;
     private CancellationSignal authentication;
-    private Runnable afterUnlock;
+    private Runnable afterUnlock, backAction;
     private int authAttempt, pinAttempt, pendingAuthAttempt;
     private Intent pendingFileResult;
     private int pendingFileRequest, pendingFileStatus;
+    private List<Company> companies;
+    private PeopleScreen peopleScreen;
+    private LiveScreen liveScreen;
+    private AddEmployeeFlow addFlow;
+
+    /** A People company/site the signed-in account may use. */
+    static final class Company {
+        final String name, url;
+        Company(String name, String url) { this.name = name; this.url = url; }
+    }
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -106,47 +124,35 @@ public final class MainActivity extends Activity {
         if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0)
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         workspace = getPreferences(MODE_PRIVATE).getString("workspace", AppPolicy.DEFAULT_WORKSPACE);
+        // Debug builds given -PdevOrigin talk to a local People console; release builds never do.
+        if (BuildConfig.DEBUG && !BuildConfig.DEV_ORIGIN.isEmpty()) { AppPolicy.allowDevOrigin(BuildConfig.DEV_ORIGIN); workspace = BuildConfig.DEV_ORIGIN; }
         try { workspace = AppPolicy.workspace(workspace); } catch (Exception e) { workspace = AppPolicy.DEFAULT_WORKSPACE; }
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().removeAllCookies(ignored -> buildShell());
     }
 
-    private int dp(float n) { return Math.round(n * getResources().getDisplayMetrics().density); }
-    private GradientDrawable rounded(int color) {
-        GradientDrawable shape = new GradientDrawable(); shape.setColor(color); shape.setCornerRadius(dp(14)); return shape;
-    }
-    private TextView text(String value, int size, int color) {
-        TextView t = new TextView(this); t.setText(value); t.setTextSize(size); t.setTextColor(color); return t;
-    }
-    private LinearLayout column() {
-        LinearLayout l = new LinearLayout(this); l.setOrientation(LinearLayout.VERTICAL); return l;
-    }
-    private void gap(LinearLayout l, int height) { View v = new View(this); l.addView(v, new LinearLayout.LayoutParams(1, dp(height))); }
-    private Button button(String label, Runnable action) {
-        Button b = new Button(this); b.setText(label); b.setAllCaps(false); b.setTextColor(GREEN);
-        b.setOnClickListener(v -> action.run()); b.setMinHeight(dp(48)); return b;
-    }
+    int dp(float n) { return Ui.dp(this, n); }
 
     private void buildShell() {
-        root = column(); root.setBackgroundColor(BG);
+        root = Ui.column(this); root.setBackgroundColor(Ui.SURFACE);
         root.setOnApplyWindowInsetsListener((v, insets) -> {
             root.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
                     insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
             return insets.consumeSystemWindowInsets();
         });
-        toolbar = new LinearLayout(this); toolbar.setGravity(Gravity.CENTER_VERTICAL);
-        toolbar.setPadding(dp(10), dp(7), dp(10), dp(7)); toolbar.setBackgroundColor(GREEN);
-        Button home = button("⌂", this::home); home.setContentDescription("Home"); home.setTextColor(Color.WHITE);
-        home.setBackgroundColor(Color.TRANSPARENT); toolbar.addView(home, new LinearLayout.LayoutParams(dp(52), dp(52)));
-        LinearLayout words = column(); title = text("koenekt", 22, Color.WHITE); title.setTypeface(null, Typeface.BOLD);
-        subtitle = text("People · Licences · Reporter", 11, LIME); words.addView(title); words.addView(subtitle);
-        toolbar.addView(words, new LinearLayout.LayoutParams(0, -2, 1));
-        Button menu = button("⋮", () -> menu()); menu.setContentDescription("More options"); menu.setTextSize(25);
-        menu.setTextColor(Color.WHITE); menu.setBackgroundColor(Color.TRANSPARENT);
-        toolbar.addView(menu, new LinearLayout.LayoutParams(dp(48), dp(52)));
-        root.addView(toolbar); progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        progress.setMax(100); progress.setVisibility(View.GONE); root.addView(progress, new LinearLayout.LayoutParams(-1, dp(3)));
-        content = new FrameLayout(this); root.addView(content, new LinearLayout.LayoutParams(-1, 0, 1));
+        appBar = Ui.row(this); appBar.setPadding(dp(8), dp(4), dp(8), dp(4)); appBar.setMinimumHeight(dp(64));
+        backButton = Ui.iconButton(this, R.drawable.ic_back, "Back", this::handleBack); appBar.addView(backButton);
+        barTitle = Ui.title(this, "", 24); barTitle.setSingleLine(true); barTitle.setEllipsize(TextUtils.TruncateAt.END);
+        appBar.addView(barTitle, new LinearLayout.LayoutParams(0, -2, 1));
+        barActions = Ui.row(this); appBar.addView(barActions);
+        root.addView(appBar); progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        progress.setMax(100); progress.setVisibility(View.GONE); progress.setProgressTintList(ColorStateList.valueOf(Ui.LIME));
+        root.addView(progress, new LinearLayout.LayoutParams(-1, dp(3)));
+        content = new FrameLayout(this); content.setBackgroundColor(Ui.BG); root.addView(content, new LinearLayout.LayoutParams(-1, 0, 1));
+        navLine = new View(this); navLine.setBackgroundColor(Ui.LINE);
+        root.addView(navLine, new LinearLayout.LayoutParams(-1, Math.max(1, dp(0.5f))));
+        nav = Ui.row(this); nav.setBackgroundColor(Ui.SURFACE); nav.setPadding(0, dp(8), 0, dp(6));
+        root.addView(nav, new LinearLayout.LayoutParams(-1, -2));
         shell = new FrameLayout(this); shell.addView(root); setContentView(shell);
         createWebView(); loginScreen(""); root.requestApplyInsets();
         if (vault.exists()) showLock("Unlock your saved sign-in.");
@@ -154,10 +160,141 @@ public final class MainActivity extends Activity {
         else if (locked) root.post(this::requestUnlock);
     }
 
+    /** App bar: optional back arrow, large title and trailing actions. A null title hides the bar. */
+    void setBar(String title, boolean back, View... actions) {
+        appBar.setVisibility(title == null ? View.GONE : View.VISIBLE);
+        backButton.setVisibility(back ? View.VISIBLE : View.GONE);
+        barTitle.setPadding(back ? dp(4) : dp(12), 0, dp(4), 0); barTitle.setText(title == null ? "" : title);
+        barActions.removeAllViews(); for (View action : actions) barActions.addView(action);
+        backAction = null;
+    }
+    /** Overrides the next Back press for the current screen (cleared by setBar). */
+    void onBack(Runnable action) { backAction = action; }
+
+    private boolean hasTab(int which) {
+        if (which == TAB_PEOPLE) return peopleSession && caps.contains("people_read");
+        if (which == TAB_LIVE) return peopleSession && caps.contains("dashboard");
+        return true;
+    }
+    private void showNav(boolean visible) {
+        nav.setVisibility(visible ? View.VISIBLE : View.GONE); navLine.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (!visible) return;
+        nav.removeAllViews();
+        int[] tabs = {TAB_HOME, TAB_PEOPLE, TAB_LIVE, TAB_ACCOUNT};
+        int[] icons = {R.drawable.ic_home, R.drawable.ic_people, R.drawable.ic_live, R.drawable.ic_account};
+        String[] names = {"Home", "People", "Who's in", "Account"};
+        for (int i = 0; i < tabs.length; i++) {
+            if (!hasTab(tabs[i])) continue;
+            boolean selected = tabs[i] == tab;
+            LinearLayout cell = Ui.column(this); cell.setGravity(Gravity.CENTER_HORIZONTAL);
+            ImageView icon = Ui.icon(this, icons[i], selected ? Ui.BRAND : Ui.MUTED, 24);
+            icon.setPadding(dp(18), dp(4), dp(18), dp(4)); icon.setLayoutParams(new LinearLayout.LayoutParams(dp(60), dp(32)));
+            if (selected) icon.setBackground(Ui.shape(Ui.TINT, 16, this));
+            cell.addView(icon);
+            TextView label = Ui.text(this, names[i], 12, selected ? Ui.BRAND : Ui.MUTED); label.setPadding(0, dp(4), 0, 0); label.setGravity(Gravity.CENTER);
+            if (selected) label.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            cell.addView(label);
+            cell.setContentDescription(names[i]); cell.setClickable(true); cell.setFocusable(true);
+            cell.setBackground(Ui.pressable(Ui.shape(Color.TRANSPARENT, 16, this), 16, this));
+            final int target = tabs[i]; cell.setOnClickListener(v -> showTab(target));
+            nav.addView(cell, new LinearLayout.LayoutParams(0, -2, 1));
+        }
+    }
+
+    void showTab(int which) {
+        if (busy || locked) return;
+        if (!peopleSession && !operator) { loginScreen(notice); return; }
+        if (!hasTab(which)) which = TAB_HOME;
+        leaveWeb(); addFlow = null; tab = which;
+        if (which == TAB_PEOPLE) { if (peopleScreen == null) peopleScreen = new PeopleScreen(this); showNav(true); peopleScreen.show(); }
+        else if (which == TAB_LIVE) { if (liveScreen == null) liveScreen = new LiveScreen(this); showNav(true); liveScreen.show(); }
+        else if (which == TAB_ACCOUNT) accountTab();
+        else home();
+    }
+    private void leaveWeb() { if (inWeb) { web.stopLoading(); web.onPause(); inWeb = false; } }
+
+    void startAddEmployee() {
+        if (busy || locked || !peopleSession || !caps.contains("people_hire")) return;
+        leaveWeb(); showNav(false); addFlow = new AddEmployeeFlow(this); addFlow.show();
+    }
+    void finishAddEmployee(boolean added) {
+        addFlow = null; if (added && peopleScreen != null) peopleScreen.invalidate(); showTab(TAB_PEOPLE);
+    }
+
+    void mount(View view) {
+        // A keyboard left open by the previous screen would cover the new one.
+        View focused = getCurrentFocus();
+        if (focused != null) ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(focused.getWindowToken(), 0);
+        content.removeAllViews();
+        if (view.getParent() instanceof ViewGroup parent) parent.removeView(view);
+        content.addView(view, new FrameLayout.LayoutParams(-1, -1));
+    }
+    /** Scrolling page with comfortable side margins. */
+    LinearLayout page() {
+        ScrollView scroll = new ScrollView(this); scroll.setFillViewport(true);
+        LinearLayout l = Ui.column(this); l.setPadding(dp(20), dp(8), dp(20), dp(28)); scroll.addView(l); mount(scroll); return l;
+    }
+
+    boolean can(String cap) { return caps.contains(cap); }
+    String displayName() { return displayName; }
+
+    /** Companies/sites the account can use, from the same endpoints as the People website. Cached until sign-out. */
+    void loadCompanies(Consumer<List<Company>> done, Consumer<String> failed) {
+        if (companies != null) { done.accept(companies); return; }
+        request("/api/companies", null, data -> {
+            List<Company> list = new ArrayList<>(); JSONArray rows = data.optJSONArray("companies");
+            if (rows != null) for (int i = 0; i < rows.length(); i++) {
+                JSONObject c = rows.optJSONObject(i); if (c == null) continue;
+                String url = c.optString("frappe_url").replaceAll("/+$", "");
+                if (!url.isEmpty()) list.add(new Company(c.optString("name", c.optString("frappe_company", url)), url));
+            }
+            if (!list.isEmpty()) { companies = list; done.accept(list); return; }
+            request("/api/sites", null, sites -> {
+                JSONArray s = sites.optJSONArray("sites");
+                if (s != null) for (int i = 0; i < s.length(); i++) {
+                    JSONObject c = s.optJSONObject(i); if (c == null) continue;
+                    String url = c.optString("frappe_url", c.optString("url")).replaceAll("/+$", "");
+                    if (!url.isEmpty()) list.add(new Company(c.optString("company", c.optString("site", url)), url));
+                }
+                companies = list; done.accept(list);
+            }, failed);
+        }, failed);
+    }
+    int companyIndex(List<Company> list) {
+        String saved = getPreferences(MODE_PRIVATE).getString("company_url", "");
+        for (int i = 0; i < list.size(); i++) if (list.get(i).url.equals(saved)) return i;
+        return 0;
+    }
+    void rememberCompany(Company company) { getPreferences(MODE_PRIVATE).edit().putString("company_url", company.url).apply(); }
+
+    interface Done { void accept(JSONObject data); }
+    /** People API call on the worker; results are dropped if the session changed or the app locked meanwhile. */
+    void request(String path, JSONObject body, Done ok, Consumer<String> failed) {
+        int attempt = epoch; String url = workspace + path;
+        worker.execute(() -> {
+            try {
+                JSONObject data = api(url, body);
+                runOnUiThread(() -> { if (attempt == epoch && !isDestroyed()) ok.accept(data); });
+            } catch (Exception e) {
+                boolean expired = e instanceof SessionRejected && ((SessionRejected) e).status == 401;
+                String message = friendly(e);
+                runOnUiThread(() -> {
+                    if (attempt != epoch || isDestroyed()) return;
+                    if (expired) { peopleSession = false; caps.clear(); notice = "Your People session ended. Sign in again to continue."; showTab(TAB_HOME); }
+                    else failed.accept(message);
+                });
+            }
+        });
+    }
+    static String query(String value) {
+        try { return URLEncoder.encode(value, "UTF-8"); }   // Charset overload needs API 33
+        catch (java.io.UnsupportedEncodingException e) { throw new IllegalStateException(e); }
+    }
+
     // All product workflows require JS. Navigation is origin-restricted; there is no native JS bridge.
     @SuppressLint("SetJavaScriptEnabled")
     private void createWebView() {
-        web = new WebView(this); web.setBackgroundColor(BG); web.setSaveEnabled(false);
+        web = new WebView(this); web.setBackgroundColor(Ui.BG); web.setSaveEnabled(false);
         WebSettings s = web.getSettings(); s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true);
         s.setAllowFileAccess(false); s.setAllowContentAccess(false); s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         s.setCacheMode(WebSettings.LOAD_NO_CACHE); s.setBuiltInZoomControls(true); s.setDisplayZoomControls(false);
@@ -188,7 +325,8 @@ public final class MainActivity extends Activity {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 // Keep subframes/resources from reaching file, content or unencrypted URLs.
                 String scheme = request.getUrl().getScheme();
-                if ("http".equals(scheme) || "file".equals(scheme) || "content".equals(scheme)) {
+                boolean devHttp = AppPolicy.isDevOrigin(workspace) && AppPolicy.sameOrigin(workspace, request.getUrl().toString());
+                if (("http".equals(scheme) && !devHttp) || "file".equals(scheme) || "content".equals(scheme)) {
                     return new WebResourceResponse("text/plain", "UTF-8", new java.io.ByteArrayInputStream(new byte[0]));
                 }
                 return null;
@@ -273,39 +411,37 @@ public final class MainActivity extends Activity {
         return true;
     }
 
-    private void mount(View view) {
-        content.removeAllViews();
-        if (view.getParent() instanceof ViewGroup parent) parent.removeView(view);
-        content.addView(view, new FrameLayout.LayoutParams(-1, -1));
-    }
-    private LinearLayout page() {
-        ScrollView scroll = new ScrollView(this); scroll.setFillViewport(true);
-        LinearLayout l = column(); l.setPadding(dp(22), dp(24), dp(22), dp(28)); scroll.addView(l); mount(scroll); return l;
-    }
-
-    private EditText field(LinearLayout page, String label, String hint, int type) {
-        TextView caption = text(label, 13, GREEN); caption.setTypeface(null, Typeface.BOLD); page.addView(caption);
-        EditText f = new EditText(this); f.setHint(hint); f.setTextSize(16); f.setSingleLine(true); f.setInputType(type);
-        f.setMinHeight(dp(54)); f.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO); page.addView(f);
-        gap(page, 14); return f;
-    }
-
     private void loginScreen(String message) {
-        inWeb = false; currentTitle = "Koenekt"; title.setText(R.string.brand); subtitle.setText(R.string.welcome_subtitle);
-        LinearLayout page = page(); TextView heading = text("Welcome back", 30, GREEN); heading.setTypeface(null, Typeface.BOLD); page.addView(heading);
-        gap(page, 8); page.addView(text("Sign in with your Koenekt account. Your access follows your login.", 16, INK)); gap(page, 26);
-        EditText user = field(page, "Username", "Your username", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        EditText pw = field(page, "Password", "Password", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        EditText code = field(page, "Authenticator code (master login)", "6-digit code, if required", InputType.TYPE_CLASS_NUMBER);
-        TextView error = text(message, 14, Color.rgb(146, 48, 34)); page.addView(error); gap(page, 10);
-        Button signIn = button("Sign in", () -> {}); signIn.setBackground(rounded(LIME)); signIn.setTextColor(GREEN);
-        page.addView(signIn, new LinearLayout.LayoutParams(-1, dp(54)));
+        leaveWeb(); addFlow = null; currentTitle = "Koenekt"; setBar(null, false); showNav(false);
+        LinearLayout page = page(); page.setPadding(dp(24), dp(44), dp(24), dp(28));
+        ((View) page.getParent()).setBackgroundColor(Ui.SURFACE);
+        ImageView logo = new ImageView(this); logo.setImageResource(R.drawable.ic_logo); logo.setAdjustViewBounds(true);
+        logo.setContentDescription("Koenekt"); page.addView(logo, new LinearLayout.LayoutParams(dp(150), -2));
+        Ui.gap(page, 44); page.addView(Ui.title(this, "Sign in", 32)); Ui.gap(page, 8);
+        page.addView(Ui.text(this, "Use your Koenekt account. You'll see the companies and tools your account allows.", 16, Ui.MUTED));
+        Ui.gap(page, 28);
+        EditText user = Ui.field(page, "Username", "Your username", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        EditText pw = Ui.field(page, "Password", "Password", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        // Only the master login needs an authenticator code, so the field appears just for it.
+        LinearLayout codeBox = Ui.column(this);
+        EditText code = Ui.field(codeBox, "Authenticator code", "6-digit code", InputType.TYPE_CLASS_NUMBER);
+        codeBox.setVisibility(View.GONE); page.addView(codeBox);
+        user.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(Editable s) {
+                codeBox.setVisibility(s.toString().trim().equalsIgnoreCase("master") ? View.VISIBLE : View.GONE);
+            }
+        });
+        TextView error = Ui.text(this, message, 14, Ui.DANGER); page.addView(error); Ui.gap(page, 12);
+        TextView signIn = Ui.primary(this, getString(R.string.sign_in), () -> {});
+        page.addView(signIn, Ui.fill(this, 54));
         signIn.setOnClickListener(v -> {
             if (busy) return;
             String origin = workspace;
             String username = user.getText().toString().trim(), password = pw.getText().toString(), otp = code.getText().toString().trim();
             if (username.isEmpty() || password.isEmpty()) { error.setText(R.string.credentials_required); return; }
-            busy = true; signIn.setEnabled(false); signIn.setText(R.string.signing_in); error.setText("");
+            busy = true; Ui.enable(signIn, false); signIn.setText(R.string.signing_in); error.setText("");
             ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(pw.getWindowToken(), 0);
             int attempt = ++epoch; workspace = origin;
             boolean remember = vault.deviceSecured();
@@ -326,22 +462,26 @@ public final class MainActivity extends Activity {
                     if (attempt != epoch || isFinishing() || isDestroyed()) return;
                     busy = false; pw.setText(""); code.setText("");
                     if (!gotPeople && !gotAdmin) {
-                        signIn.setEnabled(true); signIn.setText(R.string.sign_in); error.setText(msg); return;
+                        Ui.enable(signIn, true); signIn.setText(R.string.sign_in); error.setText(msg); return;
                     }
-                    operator = gotAdmin; peopleSession = gotPeople; applyPerson(account);
+                    operator = gotAdmin; peopleSession = gotPeople; applyPerson(account); companies = null;
                     notice = msg.isEmpty() ? "" : msg + "\nAvailable sections are shown below. Sign in again to retry the other service.";
                     getPreferences(MODE_PRIVATE).edit().putString("workspace", workspace).apply();
                     rememberSignIn();
                 });
             });
         });
-        gap(page, 22); page.addView(text("Sign in once, then reopen with your fingerprint or device PIN. Master access also opens licences, customers and Reporter updates.", 13, Color.DKGRAY));
-        page.addView(button("About & privacy", this::about));
+        Ui.gap(page, 24);
+        page.addView(Ui.text(this, "After signing in, open the app with your fingerprint or phone PIN. Your password is never stored on this phone.", 13.5f, Ui.MUTED));
+        Ui.gap(page, 4);
+        TextView about = Ui.quiet(this, "About & privacy", this::about); about.setPadding(0, 0, 0, 0); about.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        page.addView(about, new LinearLayout.LayoutParams(-2, dp(48)));
     }
 
     private void applyPerson(JSONObject person) {
         caps.clear(); role = person == null ? "" : person.optString("role");
         displayName = person == null ? "Koenekt management" : person.optString("display_name", person.optString("username"));
+        roleLabel = person == null ? "Licences, customers and Reporter updates" : person.optString("role_label", role);
         if (person != null) {
             JSONArray list = person.optJSONArray("caps");
             if (list != null) for (int i=0; i<list.length(); i++) caps.add(list.optString(i));
@@ -355,31 +495,85 @@ public final class MainActivity extends Activity {
     private void home() {
         if (busy || locked) return;
         if (!peopleSession && !operator) { loginScreen(notice); return; }
-        web.stopLoading(); web.onPause(); inWeb = false; currentTitle = "Koenekt";
-        title.setText(R.string.brand); subtitle.setText(operator ? "Management" : "Your account");
-        LinearLayout page = page(); TextView welcome = text(displayName, 27, GREEN); welcome.setTypeface(null, Typeface.BOLD); page.addView(welcome);
-        gap(page, 18);
-        if (!notice.isEmpty()) { page.addView(text(notice, 14, Color.rgb(129, 82, 14))); gap(page, 18); }
-        List<AppPolicy.Feature> features = AppPolicy.features(caps, operator);
-        if (features.isEmpty()) page.addView(text("Your account has no enabled sections yet. Ask your workspace administrator to grant company access and permissions.", 16, INK));
-        for (AppPolicy.Feature feature : features) {
-            LinearLayout card = column(); card.setPadding(dp(18), dp(17), dp(18), dp(17)); card.setBackground(rounded(Color.WHITE));
-            TextView name = text(feature.name() + "  ›", 19, GREEN); name.setTypeface(null, Typeface.BOLD); card.addView(name);
-            gap(card, 5); card.addView(text(feature.description(), 14, Color.DKGRAY));
-            card.setFocusable(true); card.setClickable(true); card.setContentDescription(feature.name() + ". " + feature.description());
-            card.setOnClickListener(v -> open(feature)); page.addView(card, new LinearLayout.LayoutParams(-1, -2)); gap(page, 12);
+        leaveWeb(); addFlow = null; tab = TAB_HOME; currentTitle = "Koenekt"; setBar(null, false); showNav(true);
+        LinearLayout page = page(); page.setPadding(dp(20), dp(24), dp(20), dp(28));
+        ImageView logo = new ImageView(this); logo.setImageResource(R.drawable.ic_logo); logo.setAdjustViewBounds(true);
+        logo.setContentDescription("Koenekt"); page.addView(logo, new LinearLayout.LayoutParams(dp(104), -2));
+        Ui.gap(page, 28);
+        String first = displayName.trim().isEmpty() ? "" : displayName.trim().split("\\s+")[0];
+        page.addView(Ui.title(this, greeting() + (first.isEmpty() ? "" : ",\n" + first), 30)); Ui.gap(page, 4);
+        page.addView(Ui.text(this, roleLabel, 15, Ui.MUTED)); Ui.gap(page, 24);
+        if (!notice.isEmpty()) { page.addView(Ui.notice(this, notice, false)); Ui.gap(page, 20); }
+        LinearLayout quick = Ui.row(this); quick.setGravity(Gravity.TOP);
+        if (peopleSession && can("people_hire")) addQuick(quick, R.drawable.ic_add, "Add employee", "Name, company and clock PIN", this::startAddEmployee);
+        if (hasTab(TAB_LIVE)) addQuick(quick, R.drawable.ic_live, "Who's in", "Live attendance right now", () -> showTab(TAB_LIVE));
+        if (quick.getChildCount() > 0) { page.addView(quick); Ui.gap(page, 28); }
+        List<AppPolicy.Feature> tools = new ArrayList<>();
+        for (AppPolicy.Feature f : AppPolicy.features(caps, operator))
+            if (!(f.path().equals("/dashboard") && hasTab(TAB_LIVE))) tools.add(f);   // native Who's in replaces the web board
+        if (tools.isEmpty() && quick.getChildCount() == 0) {
+            page.addView(Ui.text(this, "Your account has no enabled sections yet. Ask your workspace administrator to grant company access and permissions.", 16, Ui.INK));
+            return;
         }
-        gap(page, 8); page.addView(button("Refresh access", this::refreshAccess));
-        page.addView(button("Sign out", this::confirmSignOut));
+        if (tools.isEmpty()) return;
+        page.addView(Ui.title(this, "Tools", 18)); Ui.gap(page, 10);
+        LinearLayout card = Ui.column(this); card.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, this)); card.setClipToOutline(true);
+        for (int i = 0; i < tools.size(); i++) {
+            AppPolicy.Feature f = tools.get(i);
+            if (i > 0) card.addView(Ui.divider(this, 16));
+            card.addView(Ui.listRow(this, null, f.name(), f.description(), null, () -> open(f)));
+        }
+        page.addView(card);
+    }
+    private void addQuick(LinearLayout row, int icon, String title, String subtitle, Runnable action) {
+        LinearLayout tile = Ui.card(this); tile.setMinimumHeight(dp(132));
+        ImageView i = Ui.icon(this, icon, Ui.BRAND, 44); i.setPadding(dp(10), dp(10), dp(10), dp(10));
+        GradientDrawable circle = new GradientDrawable(); circle.setShape(GradientDrawable.OVAL); circle.setColor(Ui.TINT); i.setBackground(circle);
+        tile.addView(i); Ui.gap(tile, 14); tile.addView(Ui.title(this, title, 17)); Ui.gap(tile, 2);
+        tile.addView(Ui.text(this, subtitle, 13, Ui.MUTED));
+        tile.setBackground(Ui.pressable(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, this), 20, this));
+        tile.setClickable(true); tile.setFocusable(true); tile.setContentDescription(title + ". " + subtitle); tile.setOnClickListener(v -> action.run());
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, -2, 1);
+        if (row.getChildCount() > 0) p.leftMargin = dp(12);
+        row.addView(tile, p);
+    }
+    private static String greeting() {
+        int hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY);
+        return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    }
+
+    private void accountTab() {
+        tab = TAB_ACCOUNT; currentTitle = "Account"; setBar("Account", false); showNav(true);
+        LinearLayout page = page();
+        LinearLayout who = Ui.row(this); who.addView(Ui.avatar(this, displayName, 56));
+        LinearLayout words = Ui.column(this); words.setPadding(dp(16), 0, 0, 0);
+        words.addView(Ui.title(this, displayName, 20)); words.addView(Ui.text(this, roleLabel, 14, Ui.MUTED));
+        String host = Uri.parse(peopleSession ? workspace : AppPolicy.ADMIN).getHost();
+        if (host != null) words.addView(Ui.text(this, host, 13, Ui.MUTED));
+        who.addView(words, new LinearLayout.LayoutParams(0, -2, 1)); page.addView(who); Ui.gap(page, 24);
+        LinearLayout card = Ui.column(this); card.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, this)); card.setClipToOutline(true);
+        card.addView(Ui.listRow(this, null, "Refresh access", "Reload your companies and permissions", null, this::refreshAccess));
+        card.addView(Ui.divider(this, 16));
+        card.addView(Ui.listRow(this, null, "About & privacy", "How this app protects your sign-in", null, this::about));
+        card.addView(Ui.divider(this, 16));
+        card.addView(Ui.listRow(this, null, "Privacy policy", "Opens in your browser", null, () -> openExternal(AppPolicy.PRIVACY_URL)));
+        page.addView(card); Ui.gap(page, 20);
+        TextView out = Ui.secondary(this, "Sign out", this::confirmSignOut); out.setTextColor(Ui.DANGER); page.addView(out, Ui.fill(this, 52));
+        Ui.gap(page, 20);
+        TextView version = Ui.text(this, "Koenekt " + BuildConfig.VERSION_NAME, 13, Ui.MUTED); version.setGravity(Gravity.CENTER); page.addView(version);
     }
 
     private void open(AppPolicy.Feature feature) {
         if (locked) return;
         String url = feature.path().startsWith("https:") ? feature.path() : workspace + feature.path();
         if (!trusted(url)) return;
-        inWeb = true; currentTitle = feature.name(); title.setText(currentTitle); subtitle.setText(getString(R.string.workspace_user, displayName));
+        inWeb = true; currentTitle = feature.name(); showNav(false);
+        setBar(currentTitle, true, Ui.iconButton(this, R.drawable.ic_refresh, "Refresh page", () -> web.reload()),
+                Ui.iconButton(this, R.drawable.ic_more, "More options", this::webMenu));
         mount(web); web.onResume(); web.loadUrl(url);
     }
+    /** Opens a People website page (e.g. full records) inside the app. */
+    void openWeb(String title, String path) { open(new AppPolicy.Feature(title, "", path)); }
 
     private void refreshAccess() {
         if (busy || locked) return;
@@ -393,27 +587,23 @@ public final class MainActivity extends Activity {
             final JSONObject p = person; final boolean a = adminOk; final String m = msg;
             runOnUiThread(() -> {
                 if (epoch != attempt || isDestroyed()) return;
-                busy = false; peopleSession = p != null; operator = a; applyPerson(p); notice = m.trim(); home();
+                busy = false; peopleSession = p != null; operator = a; applyPerson(p); notice = m.trim();
+                companies = null; peopleScreen = null; liveScreen = null; home();
             });
         });
     }
 
-    private void menu() {
-        if (locked) return;
-        PopupMenu p = new PopupMenu(this, toolbar.getChildAt(toolbar.getChildCount()-1));
-        p.getMenu().add("Home").setOnMenuItemClickListener(i -> { home(); return true; });
-        if (inWeb) {
-            p.getMenu().add("Refresh page").setOnMenuItemClickListener(i -> { web.reload(); return true; });
-            p.getMenu().add("Print / save page as PDF").setOnMenuItemClickListener(i -> {
-                if (trusted(web.getUrl())) {
-                    externalTask = true;
-                    ((PrintManager) getSystemService(PRINT_SERVICE)).print(currentTitle, web.createPrintDocumentAdapter(currentTitle), null);
-                }
-                return true;
-            });
-        }
-        p.getMenu().add("About & privacy").setOnMenuItemClickListener(i -> { about(); return true; });
-        if (peopleSession || operator) p.getMenu().add("Sign out").setOnMenuItemClickListener(i -> { confirmSignOut(); return true; });
+    private void webMenu() {
+        if (locked || !inWeb) return;
+        PopupMenu p = new PopupMenu(this, barActions.getChildAt(barActions.getChildCount() - 1));
+        p.getMenu().add("Print / save page as PDF").setOnMenuItemClickListener(i -> {
+            if (trusted(web.getUrl())) {
+                externalTask = true;
+                ((PrintManager) getSystemService(PRINT_SERVICE)).print(currentTitle, web.createPrintDocumentAdapter(currentTitle), null);
+            }
+            return true;
+        });
+        p.getMenu().add("Back to Home").setOnMenuItemClickListener(i -> { showTab(TAB_HOME); return true; });
         p.show();
     }
 
@@ -440,6 +630,7 @@ public final class MainActivity extends Activity {
         if (authentication != null) authentication.cancel();
         vault.clear(); locked = false; hideShield(); pendingFileRequest = 0; pendingFileResult = null;
         epoch++; operator = false; peopleSession = false; caps.clear(); notice = "";
+        companies = null; peopleScreen = null; liveScreen = null; addFlow = null; tab = TAB_HOME;
         web.stopLoading(); web.loadUrl("about:blank"); web.clearHistory(); web.clearCache(true); web.clearFormData();
         WebStorage.getInstance().deleteAllData(); cancelExport();
         if (uploadCallback != null) { uploadCallback.onReceiveValue(null); uploadCallback = null; }
@@ -448,7 +639,8 @@ public final class MainActivity extends Activity {
     }
 
     private static final class SessionRejected extends Exception {
-        SessionRejected(String message) { super(message); }
+        final int status;
+        SessionRejected(int status, String message) { super(message); this.status = status; }
     }
 
     private void rememberSignIn() {
@@ -473,15 +665,18 @@ public final class MainActivity extends Activity {
         if (shell == null) return;
         locked = true; root.setVisibility(View.INVISIBLE);
         if (shield != null) shell.removeView(shield);
-        LinearLayout panel = column(); panel.setPadding(dp(28), dp(70), dp(28), dp(36));
-        panel.setGravity(Gravity.CENTER_VERTICAL); panel.setBackgroundColor(BG);
-        TextView brand = text("koenekt", 34, GREEN); brand.setTypeface(null, Typeface.BOLD); panel.addView(brand);
-        gap(panel, 16); panel.addView(text(message, 17, INK)); gap(panel, 26);
-        panel.addView(button("Unlock with fingerprint or PIN", this::requestUnlock));
-        panel.addView(button("Sign out", () -> {
+        LinearLayout panel = Ui.column(this); panel.setPadding(dp(28), dp(70), dp(28), dp(36));
+        panel.setGravity(Gravity.CENTER); panel.setBackgroundColor(Ui.BG);
+        ImageView mark = new ImageView(this); mark.setImageResource(R.drawable.ic_brand_mark); mark.setContentDescription("Koenekt");
+        panel.addView(mark, new LinearLayout.LayoutParams(dp(54), dp(74)));
+        Ui.gap(panel, 28); TextView heading = Ui.title(this, "Koenekt is locked", 26); heading.setGravity(Gravity.CENTER); panel.addView(heading);
+        Ui.gap(panel, 10); TextView body = Ui.text(this, message, 16, Ui.MUTED); body.setGravity(Gravity.CENTER); panel.addView(body);
+        Ui.gap(panel, 36); panel.addView(Ui.primary(this, "Unlock", this::requestUnlock), Ui.fill(this, 54));
+        Ui.gap(panel, 8);
+        panel.addView(Ui.quiet(this, "Sign out", () -> {
             new AlertDialog.Builder(this).setTitle("Forget this saved login?")
                     .setPositiveButton("Sign out", (d,w) -> signOut()).setNegativeButton("Cancel", null).show();
-        }));
+        }), Ui.fill(this, 48));
         shield = panel; shell.addView(shield, new FrameLayout.LayoutParams(-1, -1));
     }
     private void hideShield() {
@@ -574,7 +769,7 @@ public final class MainActivity extends Activity {
                 // Return to the open page when its service session is still valid; otherwise re-list sections.
                 boolean resumeFile = pendingFileRequest != 0, stay = resumeFile || resumable(web.getUrl());
                 releaseLock();
-                if (!stay) home();
+                if (!stay) resumeScreen();
                 else if (!resumeFile && !locked && web.getProgress() < 100) web.reload();
             });
         });
@@ -585,7 +780,8 @@ public final class MainActivity extends Activity {
             if (!ok) { busy = false; signOut(); toast("Saved session could not be restored. Sign in again."); return; }
             if (--remaining[0] == 0) verify.run();
         };
-        if (!p.isEmpty()) CookieManager.getInstance().setCookie(workspace + "/", p + "; Path=/; Secure; HttpOnly; SameSite=Lax", installed);
+        String secure = AppPolicy.isDevOrigin(workspace) ? "" : " Secure;";   // local HTTP console in debug builds only
+        if (!p.isEmpty()) CookieManager.getInstance().setCookie(workspace + "/", p + "; Path=/;" + secure + " HttpOnly; SameSite=Lax", installed);
         if (!a.isEmpty()) CookieManager.getInstance().setCookie(AppPolicy.ADMIN + "/licences/", a + "; Path=/licences; Secure; HttpOnly; SameSite=Strict", installed);
     }
 
@@ -625,13 +821,24 @@ public final class MainActivity extends Activity {
                     for (String cookie : entry.getValue()) CookieManager.getInstance().setCookie(url, cookie, null);
             }
             if (status < 200 || status >= 300) {
-                if (status == 401) throw new SessionRejected("Sign-in failed or expired. Check your password and authenticator code.");
-                if (status == 403) throw new SessionRejected("This account does not have access.");
+                if (status == 401) throw new SessionRejected(401, "Sign-in failed or expired. Check your password and authenticator code.");
+                if (status == 403) throw new SessionRejected(403, "This account does not have access.");
                 if (status == 429) throw new Exception("Too many attempts. Wait 15 minutes before retrying.");
-                throw new Exception("Service unavailable (" + status + "). Try again later.");
+                // Validation errors (e.g. "PIN already in use") carry the server's explanation; show it.
+                String detail = status >= 400 && status < 500 ? errorDetail(c) : "";
+                throw new Exception(detail.isEmpty() ? "Service unavailable (" + status + "). Try again later." : detail);
             }
             try (InputStream in = c.getInputStream()) { return new JSONObject(new String(readLimited(in, 4 * 1024 * 1024), StandardCharsets.UTF_8)); }
         } finally { c.disconnect(); }
+    }
+
+    /** FastAPI's {"detail": "..."} message from an error response, or "". */
+    private String errorDetail(HttpURLConnection c) {
+        try (InputStream in = c.getErrorStream()) {
+            if (in == null) return "";
+            Object detail = new JSONObject(new String(readLimited(in, 16 * 1024), StandardCharsets.UTF_8)).opt("detail");
+            return detail instanceof String text ? text.trim() : "";
+        } catch (Exception e) { return ""; }
     }
 
     private String friendly(Exception e) {
@@ -765,7 +972,17 @@ public final class MainActivity extends Activity {
     }
     private void handleBack() {
         if (locked) { finish(); return; }
-        if (inWeb && web.canGoBack()) web.goBack(); else if (inWeb) home(); else finish();
+        if (backAction != null) { backAction.run(); return; }
+        if (inWeb && web.canGoBack()) web.goBack();
+        else if (inWeb) showTab(tab);
+        else if (addFlow != null) finishAddEmployee(false);
+        else if (tab != TAB_HOME && (peopleSession || operator)) showTab(TAB_HOME);
+        else finish();
+    }
+    /** After unlocking: the add-employee flow keeps its answers; tabs reload their data. */
+    private void resumeScreen() {
+        if (addFlow != null && peopleSession) { showNav(false); addFlow.show(); }
+        else showTab(tab);
     }
     // API 33+ uses the registered OnBackInvokedCallback; older Android uses this callback.
     @SuppressLint("GestureBackNavigation")

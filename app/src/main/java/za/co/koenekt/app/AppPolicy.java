@@ -14,6 +14,15 @@ public final class AppPolicy {
     public static final String DELETE_ACCOUNT_URL = "https://loudalley.github.io/koenekt-android/delete-account.html";
     private AppPolicy() {}
 
+    /** Debug builds only (-PdevOrigin): a local People console on this PC, seen from the emulator. */
+    private static String devOrigin = "";
+    public static void allowDevOrigin(String origin) {
+        if (!origin.matches("http://(10\\.0\\.2\\.2|127\\.0\\.0\\.1):[0-9]{2,5}"))
+            throw new IllegalArgumentException("A development origin must be the emulator host.");
+        devOrigin = origin;
+    }
+    public static boolean isDevOrigin(String origin) { return !devOrigin.isEmpty() && devOrigin.equals(origin); }
+
     public static String setupWorkspace(String link) {
         try {
             URI uri = new URI(link);
@@ -39,6 +48,7 @@ public final class AppPolicy {
 
     public static String workspace(String input) {
         String value = input.trim().toLowerCase(java.util.Locale.ROOT);
+        if (isDevOrigin(value)) return devOrigin;
         if (value.isEmpty()) return DEFAULT_WORKSPACE;
         if (value.matches("[a-z0-9]+(?:-[a-z0-9]+)*")) {
             value = value.equals("people") ? DEFAULT_WORKSPACE : "https://" + value + ".people.koenekt.co.za";
@@ -62,7 +72,8 @@ public final class AppPolicy {
     public static boolean sameOrigin(String origin, String candidate) {
         try {
             URI a = new URI(origin), b = new URI(candidate);
-            return "https".equals(b.getScheme()) && b.getRawUserInfo() == null
+            boolean secure = "https".equals(b.getScheme()) || (isDevOrigin(origin) && "http".equals(b.getScheme()));
+            return secure && b.getRawUserInfo() == null
                     && a.getHost().equals(b.getHost()) && a.getPort() == b.getPort();
         } catch (Exception e) { return false; }
     }
@@ -77,7 +88,7 @@ public final class AppPolicy {
 
     public static List<Feature> features(Set<String> caps, boolean operator) {
         List<Feature> out = new ArrayList<>();
-        if (caps.contains("people_read")) out.add(new Feature("People", "Staff, hiring, leavers, transfers, imports and clock enrollment", "/people"));
+        if (caps.contains("people_read")) out.add(new Feature("People records", "Edit records, leavers, transfers, imports and exports", "/people"));
         if (caps.contains("reports")) out.add(new Feature("Reports", "Attendance, hours and PDF, Excel or CSV exports", "/reports"));
         if (caps.contains("dashboard")) out.add(new Feature("Live attendance", "Who is in, who is out and today's activity", "/dashboard"));
         if (caps.contains("payroll")) out.add(new Feature("Payroll", "Pay runs, adjustments, payslips and summaries", "/payroll"));
