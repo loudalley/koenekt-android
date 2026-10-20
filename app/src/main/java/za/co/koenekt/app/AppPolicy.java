@@ -9,6 +9,9 @@ import java.util.Set;
 public final class AppPolicy {
     public static final String ADMIN = "https://admin.koenekt.co.za";
     public static final String DEFAULT_WORKSPACE = "https://people.koenekt.co.za";
+    /** Public policy pages (GitHub Pages from docs/); opened in the browser, never inside the WebView. */
+    public static final String PRIVACY_URL = "https://loudalley.github.io/koenekt-android/privacy.html";
+    public static final String DELETE_ACCOUNT_URL = "https://loudalley.github.io/koenekt-android/delete-account.html";
     private AppPolicy() {}
 
     public static String setupWorkspace(String link) {

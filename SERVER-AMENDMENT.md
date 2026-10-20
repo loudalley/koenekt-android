@@ -4,7 +4,7 @@
 20 October 2026** (see "Installation record" below). These instructions remain for
 other consoles, reinstallation and rollback.
 
-The updated APK is Koenekt **1.0.2 (3)** (1.0.1 (2) needs the same amendment). It removes the workspace field and saves
+The current APK is Koenekt **1.0.3 (4)**; 1.0.1 and later all use this amendment. It removes the workspace field and saves
 session tokens encrypted by Android Keystore after fingerprint/device-PIN
 validation. Returning to the app requires another device unlock and live session
 validation. No Koenekt password, authenticator secret/code or phone PIN is saved.

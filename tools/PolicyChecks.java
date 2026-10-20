@@ -38,6 +38,10 @@ public class PolicyChecks {
         check(AppPolicy.sessionCookie("kls_session=sample", "adms_session").isEmpty(), "do not interchange operator/client cookies");
         check(AppPolicy.sessionCookie("adms_session=x\r\nHost: evil", "adms_session").isEmpty(), "reject cookie header injection");
         check(AppPolicy.sessionCookie("adms_session=", "adms_session").isEmpty(), "reject empty token");
+        for (String page : new String[]{AppPolicy.PRIVACY_URL, AppPolicy.DELETE_ACCOUNT_URL}) {
+            check(page.startsWith("https://loudalley.github.io/koenekt-android/"), "policy page is the published HTTPS site: " + page);
+            check(!AppPolicy.allowed(AppPolicy.DEFAULT_WORKSPACE, true, page), "policy page opens outside the trusted WebView: " + page);
+        }
         System.out.println("Policy checks passed: " + checks);
     }
 }

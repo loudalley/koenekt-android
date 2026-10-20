@@ -1,7 +1,7 @@
 # Koenekt for Android
 
 One Android app for the existing People, licensing, customer and Reporter update services.
-Version **1.0.2 (3)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
+Version **1.0.3 (4)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
 compile/target API 36. Java 17, Android Gradle Plugin 8.13.2, Gradle 8.13.
 
 Standalone public repository: [loudalley/koenekt-android](https://github.com/loudalley/koenekt-android).
@@ -154,7 +154,14 @@ dependencies. They use `../koenekt-people` by default; override with
 backend source/history into this public app repository. All test data is synthetic
 and tests never contact production.
 
-## Release state, 20 October 2026 — 1.0.2
+## Release state, 20 October 2026 — 1.0.3
+
+1.0.3 adds Privacy policy and Delete account buttons to About & privacy. They open
+the published pages (`docs/`, GitHub Pages) in the phone's browser. Built, signed
+with the same upload key, lint clean; 43 policy checks and the other portable
+suites passed. Not device-tested.
+
+### 1.0.2
 
 1.0.2 keeps a phone with no screen lock signed in while it is in a file picker,
 Save dialog or print screen opened by the app. After unlocking, the app returns to the

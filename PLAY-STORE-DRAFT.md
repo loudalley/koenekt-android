@@ -1,6 +1,6 @@
 # Play Store publication draft
 
-**Version:** Koenekt 1.0.2 (3). Package: `za.co.koenekt.app`.
+**Version:** Koenekt 1.0.3 (4). Package: `za.co.koenekt.app`.
 This is a submission preparation note, not a claim of store approval.
 
 ## Listing text
@@ -37,8 +37,7 @@ features depend on the permissions and services enabled for your account.
 - Privacy policy: DONE, https://loudalley.github.io/koenekt-android/privacy.html (Koenekt (Pty) Ltd, POPIA,
   retention as supplied by the owner). Source is `docs/` on `main` (GitHub Pages).
 - Public deletion-request URL: DONE, https://loudalley.github.io/koenekt-android/delete-account.html.
-  Still needed: an in-app route to it (e.g. a link from About & privacy), which
-  needs an app update.
+  In-app route: DONE in 1.0.3 (About & privacy → Delete account / Privacy policy).
 - Review access to a synthetic customer workspace with instructions that do not
   depend on a reviewer's access to the operator's personal authenticator. Do not
   disable production master MFA to facilitate review.

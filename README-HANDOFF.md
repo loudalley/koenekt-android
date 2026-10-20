@@ -1,6 +1,6 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **20 October 2026, Claude — version 1.0.2 (3) built/signed and
+Last updated: **20 October 2026, Claude — version 1.0.3 (4) built/signed and
 pushed; People server amendment INSTALLED on the production People console.
 No device test or Play publication has occurred.**
 
@@ -18,8 +18,8 @@ No device test or Play publication has occurred.**
 - Local Android upload credentials moved with the app into ignored/restricted
   `.signing/`; their certificate matches the existing 1.0.0/1.0.1 APKs. Never
   regenerate them for an ordinary update, commit them or include them in releases.
-- Signed release files are kept locally under `dist/1.0.2/` (ignored; APK, AAB
-  and SHA256SUMS). `dist/1.0.1/` is older; its server-amendment ZIP holds the
+- Signed release files are kept locally under `dist/1.0.3/` (ignored; APK, AAB
+  and SHA256SUMS); `dist/1.0.2/` is the previous build. `dist/1.0.1/` is older; its server-amendment ZIP holds the
   patcher without the server-helper check, so do not use that copy.
   Build products are under `app/build/outputs/`. Local SDK configuration is
   ignored. A clean clone must configure its own SDK and signing credentials.
@@ -109,14 +109,15 @@ Next actions for Cursor/Claude:
 2. Server amendment is installed (see above). On the phone, sign out once and
    sign in again, then confirm the session survives more than 30 minutes. If login
    breaks, roll back using the backup above and `SERVER-AMENDMENT.md`.
-3. On a test phone, install/upgrade the signed 1.0.2 app; verify initial login, biometric
+3. On a test phone, install/upgrade the signed 1.0.3 app; verify initial login, biometric
    and PIN success/cancel, background/process restart, changed device lock,
    permissions, report/import picker return, expiry/revocation and sign-out.
    Also check 1.0.2: unlock returns to the open page; with no screen lock,
    import/save/print no longer signs out, but leaving via Home still does.
+   1.0.3: About's Privacy policy and Delete account buttons open the browser.
 4. Privacy policy and deletion-request pages are live on GitHub Pages from
-   `docs/` (https://loudalley.github.io/koenekt-android/privacy.html and delete-account.html). Still to do: link
-   them from the app's About screen (app update), support/developer details, review access, actual-device screenshots and an internal Play test
+   `docs/` (https://loudalley.github.io/koenekt-android/privacy.html and
+   delete-account.html), linked from About in 1.0.3. Still to do: support/developer details, review access, actual-device screenshots and an internal Play test
    track. Public GitHub source is not Play publication/approval. Apple is deferred.
 
 ## Handoff log
@@ -163,3 +164,11 @@ attendance/payroll at least 1 year. App behaviour statements were checked agains
 source: the audit log stores IP addresses, and People can only disable (not delete)
 users, so deletion is by request. Not legal advice; the owner should review the
 wording, especially the 1-year minimum against statutory employment/tax record periods.
+
+**20 October 2026 — Claude (1.0.3):** Added Privacy policy and Delete account
+buttons to the About dialog; the account-removal sentence now points to Delete
+account. URLs are constants in AppPolicy; new policy checks confirm they are the
+published HTTPS pages and open outside the trusted WebView. Version 1.0.3 (4); release
+build/lint clean, same signing certificate, 43 policy checks plus export, amendment
+(5) and backend contract (6) suites pass. Copied to ignored `dist/1.0.3/`.
+Not device-tested.
