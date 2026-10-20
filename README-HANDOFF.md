@@ -114,8 +114,9 @@ Next actions for Cursor/Claude:
    permissions, report/import picker return, expiry/revocation and sign-out.
    Also check 1.0.2: unlock returns to the open page; with no screen lock,
    import/save/print no longer signs out, but leaving via Home still does.
-4. Complete privacy-policy URL, account-deletion request paths, support/developer
-   details, review access, actual-device screenshots and an internal Play test
+4. Privacy policy and deletion-request pages are live on GitHub Pages from
+   `docs/` (https://loudalley.github.io/koenekt-android/privacy.html and delete-account.html). Still to do: link
+   them from the app's About screen (app update), support/developer details, review access, actual-device screenshots and an internal Play test
    track. Public GitHub source is not Play publication/approval. Apple is deferred.
 
 ## Handoff log
@@ -152,3 +153,13 @@ earlier backups, and sudo requiring a password. Copied the 1.0.2 patcher (hash
 matches the repo) and the dry run passed. The user ran the apply and restart with
 sudo; Claude verified the result (details under "Server work"). No receiver, clock,
 drain, data or licence-service change. Next: phone sign-out/sign-in test.
+
+**20 October 2026 — Claude (privacy pages):** User asked for a privacy policy on
+GitHub Pages. Added `docs/` (privacy policy, account-deletion request page, landing
+page) served from `main` /docs. Business facts were supplied by the user: Koenekt
+(Pty) Ltd, contact and information officer william@koenekt.co.za, POPIA, hosting
+Absolute Hosting (South Africa), deletion within about 30 days, audit logs 6 months,
+attendance/payroll at least 1 year. App behaviour statements were checked against
+source: the audit log stores IP addresses, and People can only disable (not delete)
+users, so deletion is by request. Not legal advice; the owner should review the
+wording, especially the 1-year minimum against statutory employment/tax record periods.

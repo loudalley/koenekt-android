@@ -34,12 +34,11 @@ features depend on the permissions and services enabled for your account.
 
 - Verified developer account and exact legal/developer name.
 - Public support contact and website.
-- Hosted privacy policy naming Koenekt and the operator/controller, contact,
-  purposes, retention and request process. The in-app About text is a technical
-  summary and cannot replace the completed public policy.
-- An in-app account-deletion request route and a public deletion-request URL
-  covering the existing website registration flow; explain retained employment
-  records separately from the login account.
+- Privacy policy: DONE, https://loudalley.github.io/koenekt-android/privacy.html (Koenekt (Pty) Ltd, POPIA,
+  retention as supplied by the owner). Source is `docs/` on `main` (GitHub Pages).
+- Public deletion-request URL: DONE, https://loudalley.github.io/koenekt-android/delete-account.html.
+  Still needed: an in-app route to it (e.g. a link from About & privacy), which
+  needs an app update.
 - Review access to a synthetic customer workspace with instructions that do not
   depend on a reviewer's access to the operator's personal authenticator. Do not
   disable production master MFA to facilitate review.
