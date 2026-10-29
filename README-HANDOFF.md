@@ -2,8 +2,8 @@
 
 Last updated: **29 October 2026, Claude (Windows PC) — version 1.5.0 (9), Who's in by
 department (shop) with status filters, built and signed on the PC, pushed, published on
-the self-hosted F-Droid repo and copied to Google Drive at the user's request; not yet
-tried on a phone.** People server amendment INSTALLED
+the self-hosted F-Droid repo and copied to Google Drive at the user's request. Installed on
+the user's phone; the user reports departments work.** People server amendment INSTALLED
 on the production People console. A separate accounts/leavers change (see the 20 October
 entry from the PC) is NOT on `main` yet and needs a server update first.
 
@@ -112,8 +112,8 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
-000. 1.5.0 (Who's in by department) is released (F-Droid, Drive). Check on the phone with a
-   real company: department rows, the chooser, and the counts against the website's live board.
+000. 1.5.0 (Who's in by department) is released and on the user's phone; they report
+   departments work. Next: the accounts/leavers work as 1.6.0 (10), after the server install.
 00. 1.4.0 is released and on the user's phone; they report Reporter updates works. Still
    worth a careful look next time (no test sends without the user's say-so):
    check the list (names, IP, install date), a one-PC preview, then Cancel. Don't send a
@@ -464,3 +464,4 @@ separate who's in and the other status checks by department ("shop is dept at th
   publish --push` from the build worktree, giving `koenekt-fdroid` `dca4229`. The live index
   lists 1.5.0 (9) with the APK hash `53df030f…`. Copied to `G:\My Drive\Koenekt Android\`
   (hash checked).
+- 29 October: the user installed 1.5.0 on their phone and reported "departments work".
