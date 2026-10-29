@@ -113,7 +113,8 @@ the repository move.
 Next actions for Cursor/Claude:
 
 000. 1.5.0 (Who's in by department) is released and on the user's phone; they report
-   departments work. Next: the accounts/leavers work as 1.6.0 (10), after the server install.
+   departments work. Next: the accounts/leavers work as 1.6.0 (10); its server update is now
+   INSTALLED (29 October, see the log).
 00. 1.4.0 is released and on the user's phone; they report Reporter updates works. Still
    worth a careful look next time (no test sends without the user's say-so):
    check the list (names, IP, install date), a one-PC preview, then Cancel. Don't send a
@@ -465,3 +466,15 @@ separate who's in and the other status checks by department ("shop is dept at th
   lists 1.5.0 (9) with the APK hash `53df030f…`. Copied to `G:\My Drive\Koenekt Android\`
   (hash checked).
 - 29 October: the user installed 1.5.0 on their phone and reported "departments work".
+
+**29 October 2026 — Claude (accounts server update installed):** The 20 October package
+stopped in its dry run: the live `adms_console.py` was an older upstream version (without
+three later, unrelated upstream changes: the shop-PC login guard, the favicon route and the
+recent-punch ordering). Rebuilt the package on the server's own copy with a three-way merge.
+The changed lines are identical to the original account change, and the three upstream
+changes stay absent. 389 backend tests: three failures, two for the absent shop-PC guard and
+one backup-export test that fails the same way without the change. Rehearsed dry run, apply
+and rollback on a local copy. The user ran the dry run (passed), the sudo apply and a
+console-only restart. Console and receiver both active; receiver not restarted. Backend
+package and merge are in the private People worktree (`dist/accounts-update-20261029`),
+not in this repository. The app side becomes 1.6.0 (10).
