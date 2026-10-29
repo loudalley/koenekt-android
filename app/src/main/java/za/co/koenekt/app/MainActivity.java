@@ -73,7 +73,7 @@ import java.util.function.Consumer;
 
 /** Native navigation, sign-in and everyday screens; the remaining product workflows run in a restricted WebView. */
 public final class MainActivity extends Activity {
-    static final int TAB_HOME = 0, TAB_PEOPLE = 1, TAB_LIVE = 2, TAB_ACCOUNT = 3;
+    static final int TAB_HOME = 0, TAB_PEOPLE = 1, TAB_LIVE = 2, TAB_ACCOUNT = 3, TAB_UPDATES = 4;   // Updates is opened from Home, not the bottom bar
     private static final int PICK_FILE = 20, SAVE_FILE = 21, DEVICE_UNLOCK = 22, MAX_EXPORT = 20 * 1024 * 1024;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final Set<String> caps = new HashSet<>();
@@ -103,6 +103,7 @@ public final class MainActivity extends Activity {
     private List<Company> companies;
     private PeopleScreen peopleScreen;
     private LiveScreen liveScreen;
+    private UpdatesScreen updatesScreen;
     private Flow flow;
 
     /** A full-screen task (add or edit a person) that keeps its answers across locking and unlocking. */
@@ -177,6 +178,7 @@ public final class MainActivity extends Activity {
     private boolean hasTab(int which) {
         if (which == TAB_PEOPLE) return peopleSession && caps.contains("people_read");
         if (which == TAB_LIVE) return peopleSession && caps.contains("dashboard");
+        if (which == TAB_UPDATES) return operator;
         return true;
     }
     private void showNav(boolean visible) {
@@ -211,6 +213,7 @@ public final class MainActivity extends Activity {
         leaveWeb(); flow = null; tab = which;
         if (which == TAB_PEOPLE) { if (peopleScreen == null) peopleScreen = new PeopleScreen(this); showNav(true); peopleScreen.show(); }
         else if (which == TAB_LIVE) { if (liveScreen == null) liveScreen = new LiveScreen(this); showNav(true); liveScreen.show(); }
+        else if (which == TAB_UPDATES) { if (updatesScreen == null) updatesScreen = new UpdatesScreen(this); showNav(false); updatesScreen.show(); }
         else if (which == TAB_ACCOUNT) accountTab();
         else home();
     }
@@ -278,8 +281,11 @@ public final class MainActivity extends Activity {
     /** People API call on the worker; results are dropped if the session changed or the app locked meanwhile. */
     void request(String path, JSONObject body, Done ok, Consumer<String> failed) { request("POST", path, body, ok, failed); }
     /** As above with an explicit method for a body (the website's PUT endpoints). */
-    void request(String method, String path, JSONObject body, Done ok, Consumer<String> failed) {
-        int attempt = epoch; String url = workspace + path;
+    void request(String method, String path, JSONObject body, Done ok, Consumer<String> failed) { call(false, method, path, body, ok, failed); }
+    /** Licence-site (management) API call, e.g. the Reporter updates routes; a 401 ends only the management session. */
+    void adminRequest(String path, JSONObject body, Done ok, Consumer<String> failed) { call(true, "POST", path, body, ok, failed); }
+    private void call(boolean management, String method, String path, JSONObject body, Done ok, Consumer<String> failed) {
+        int attempt = epoch; String url = (management ? AppPolicy.ADMIN : workspace) + path;
         worker.execute(() -> {
             try {
                 JSONObject data = api(url, method, body);
@@ -289,7 +295,8 @@ public final class MainActivity extends Activity {
                 String message = friendly(e);
                 runOnUiThread(() -> {
                     if (attempt != epoch || isDestroyed()) return;
-                    if (expired) { peopleSession = false; caps.clear(); notice = "Your People session ended. Sign in again to continue."; showTab(TAB_HOME); }
+                    if (expired && management) { operator = false; updatesScreen = null; notice = "Your management session ended. Sign in again to continue."; showTab(TAB_HOME); }
+                    else if (expired) { peopleSession = false; caps.clear(); notice = "Your People session ended. Sign in again to continue."; showTab(TAB_HOME); }
                     else failed.accept(message);
                 });
             }
@@ -516,6 +523,7 @@ public final class MainActivity extends Activity {
         LinearLayout quick = Ui.row(this); quick.setGravity(Gravity.TOP);
         if (peopleSession && can("people_hire")) addQuick(quick, R.drawable.ic_add, "Add employee", "Name, company and clock PIN", this::startAddEmployee);
         if (hasTab(TAB_LIVE)) addQuick(quick, R.drawable.ic_live, "Who's in", "Live attendance right now", () -> showTab(TAB_LIVE));
+        if (hasTab(TAB_UPDATES) && quick.getChildCount() < 2) addQuick(quick, R.drawable.ic_update, "Reporter updates", "Shop PCs, update and pause", () -> showTab(TAB_UPDATES));
         if (quick.getChildCount() > 0) { page.addView(quick); Ui.gap(page, 28); }
         List<AppPolicy.Feature> tools = new ArrayList<>();
         for (AppPolicy.Feature f : AppPolicy.features(caps, operator))
@@ -530,7 +538,8 @@ public final class MainActivity extends Activity {
         for (int i = 0; i < tools.size(); i++) {
             AppPolicy.Feature f = tools.get(i);
             if (i > 0) card.addView(Ui.divider(this, 16));
-            card.addView(Ui.listRow(this, null, f.name(), f.description(), null, () -> open(f)));
+            card.addView(Ui.listRow(this, null, f.name(), f.description(), null,
+                    f.path().endsWith("#updates") ? () -> showTab(TAB_UPDATES) : () -> open(f)));   // native Reporter updates screen
         }
         page.addView(card);
     }
@@ -597,7 +606,7 @@ public final class MainActivity extends Activity {
             runOnUiThread(() -> {
                 if (epoch != attempt || isDestroyed()) return;
                 busy = false; peopleSession = p != null; operator = a; applyPerson(p); notice = m.trim();
-                companies = null; peopleScreen = null; liveScreen = null; home();
+                companies = null; peopleScreen = null; liveScreen = null; updatesScreen = null; home();
             });
         });
     }
@@ -639,7 +648,7 @@ public final class MainActivity extends Activity {
         if (authentication != null) authentication.cancel();
         vault.clear(); locked = false; hideShield(); pendingFileRequest = 0; pendingFileResult = null;
         epoch++; operator = false; peopleSession = false; caps.clear(); notice = "";
-        companies = null; peopleScreen = null; liveScreen = null; flow = null; tab = TAB_HOME;
+        companies = null; peopleScreen = null; liveScreen = null; updatesScreen = null; flow = null; tab = TAB_HOME;
         web.stopLoading(); web.loadUrl("about:blank"); web.clearHistory(); web.clearCache(true); web.clearFormData();
         WebStorage.getInstance().deleteAllData(); cancelExport();
         if (uploadCallback != null) { uploadCallback.onReceiveValue(null); uploadCallback = null; }
@@ -816,7 +825,8 @@ public final class MainActivity extends Activity {
     private JSONObject api(String url, String method, JSONObject payload) throws Exception {
         if (!(AppPolicy.sameOrigin(workspace, url) || AppPolicy.sameOrigin(AppPolicy.ADMIN, url))) throw new Exception("Untrusted service address.");
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-        c.setConnectTimeout(15000); c.setReadTimeout(20000); c.setInstanceFollowRedirects(false);
+        // The licence site asks the update service once per ticked PC, so those calls may take longer.
+        c.setConnectTimeout(15000); c.setReadTimeout(url.contains("/licences/api/updates/") ? 90000 : 20000); c.setInstanceFollowRedirects(false);
         c.setRequestProperty("Accept", "application/json"); c.setRequestProperty("User-Agent", "KoenektAndroid/" + BuildConfig.VERSION_NAME);
         String cookies = CookieManager.getInstance().getCookie(url);
         if (cookies != null) c.setRequestProperty("Cookie", cookies);
@@ -834,8 +844,9 @@ public final class MainActivity extends Activity {
                 if (status == 401) throw new SessionRejected(401, "Sign-in failed or expired. Check your password and authenticator code.");
                 if (status == 403) throw new SessionRejected(403, "This account does not have access.");
                 if (status == 429) throw new Exception("Too many attempts. Wait 15 minutes before retrying.");
-                // Validation errors (e.g. "PIN already in use") carry the server's explanation; show it.
-                String detail = status >= 400 && status < 500 ? errorDetail(c) : "";
+                // Validation errors (e.g. "PIN already in use") carry the server's explanation; show it. The licence
+                // site also explains its 502s (e.g. "The update service is not reachable").
+                String detail = status >= 400 && (status < 500 || AppPolicy.sameOrigin(AppPolicy.ADMIN, url)) ? errorDetail(c) : "";
                 throw new Exception(detail.isEmpty() ? "Service unavailable (" + status + "). Try again later." : detail);
             }
             try (InputStream in = c.getInputStream()) { return new JSONObject(new String(readLimited(in, 4 * 1024 * 1024), StandardCharsets.UTF_8)); }

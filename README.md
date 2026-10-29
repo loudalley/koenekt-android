@@ -1,7 +1,7 @@
 # Koenekt for Android
 
 One Android app for the existing People, licensing, customer and Reporter update services.
-Version **1.3.0 (7)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
+Version **1.4.0 (8)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
 compile/target API 36. Java 17, Android Gradle Plugin 8.13.2, Gradle 8.13.
 
 Standalone public repository: [loudalley/koenekt-android](https://github.com/loudalley/koenekt-android).
@@ -14,12 +14,19 @@ bottom bar (Home, People, Who's in, Account), a searchable People list with pers
 summaries, a three-step **Add employee** (name, workplace, suggested clock PIN),
 **Edit details** (name, department, job title, start date, shift, ID or passport
 number and birth date; the clock PIN is shown but permanent), **Mark as left** and a
-**Who's in** live board. They call the same People endpoints as the website
+**Who's in** live board, plus a native **Reporter updates** screen for Koenekt
+management. They call the same People endpoints as the website
 (`/api/companies`, `/api/people/directory`, `/api/people/next-pin`,
 `/api/frappe/departments`, `/api/employees`, `/api/shifts/assign`,
 `/api/people/extras`, `/api/employees/deactivate`, `/api/dashboard/live`), so server
 permissions apply unchanged: Edit details needs Edit people, Mark as left needs
-Deactivate/transfer. The design kit is
+Deactivate/transfer. Reporter updates uses the licence site's own Updates routes
+(`/licences/api/updates/devices`, `preview`, `force`, `cancel` and
+`devices/<id>/pause`), so the licence site still holds the update-service token,
+checks the management session, logs every action in Licence activity and refuses
+a multi-PC or fleet request without the confirmation the preview stands for. Release
+uploads, promotion and tidy-up stay on the web page (menu: "Releases and full page").
+The design kit is
 `Ui.java`; there are no third-party UI libraries.
 
 Everything else (People records, reports, payroll, clocks, settings, users and the
@@ -36,7 +43,7 @@ future server-side product improvements available without duplicating their rule
 | Clocks | Connection/delivery status; clock actions only with the existing clock-control permission |
 | Administration | Company/shop settings and branding, user permissions/company access, activity for master or an all-company user administrator |
 | Koenekt master | All authorised People sections, plus licences/machines, customers/workspaces, licensing activity and Reporter updates |
-| Reporter updates | Existing PC/release status, preview/update one or all, cancel, pause and resume |
+| Reporter updates | Native: each PC's shop, Windows name, IP and install date, status and why it is waiting; tick PCs and preview/update or cancel just those, one or every PC, with an optional release; pause and resume. Web page: releases and everything else on the Updates tab |
 
 The server remains responsible for all company, tenant, role, licence and write
 permission checks. Selecting a screen in the app grants no additional access.
@@ -166,6 +173,7 @@ javac -d app/build/policy-checks app/src/main/java/za/co/koenekt/app/AppPolicy.j
 java -cp app/build/policy-checks PolicyChecks
 node tools/export-checks.cjs
 python tools/test_mobile_login.py -q
+python tools/test_mobile_updates.py -q
 python tools/test_server_amendment.py -q
 ```
 
@@ -188,7 +196,16 @@ dependencies. They use `../koenekt-people` by default; override with
 backend source/history into this public app repository. All test data is synthetic
 and tests never contact production.
 
-## Release state, 20 October 2026 — 1.3.0
+## Release state, 29 October 2026 — 1.4.0
+
+1.4.0 adds a native Reporter updates screen (Home, for a management sign-in) for the
+licence site's Updates changes of 26 October: PC names, IP and install date, ticked
+PCs and the waiting reasons. Source only: built and checked in a cloud session without
+the Android SDK (a `javac` compile against the Android framework classes and the new
+`tools/test_mobile_updates.py` contract test). Not yet built with Gradle, signed,
+linted, or tried on the emulator or a phone.
+
+### 1.3.0 — 20 October 2026
 
 1.3.0 adds shift, ID or passport number and birth date to Edit details, and shows
 birth date and today's shift on the person summary. Tried on the Android 15 emulator

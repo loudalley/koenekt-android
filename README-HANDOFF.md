@@ -1,12 +1,11 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **20 October 2026, Claude — version 1.3.0 (7) (shift, ID number and
-birth date in Edit details) pushed, published on the self-hosted F-Droid repo and
-copied to the user's Google Drive (`My Drive/Koenekt Android/`), at the user's request.
-Not yet on their phone; 1.2.0 (6) is. People server
-amendment INSTALLED on the production People console. 1.1.0 is installed on the
-user's phone (from Google Drive) and the user approved the new look; no other device
-checks were reported. 1.2.0 has not been on a phone. No Play publication has occurred.**
+Last updated: **29 October 2026, Claude (cloud session) — version 1.4.0 (8), native
+Reporter updates screen, SOURCE ONLY: pushed to branch `claude/laughing-brown-nleo4l`, not
+merged to `main`, not built with Gradle, not signed, not on F-Droid or Drive, not tried on
+a device.** 1.3.0 (7) is the latest released build (F-Droid, Drive); 1.2.0 (6) is on the
+user's phone. People server amendment INSTALLED on the production People console. No Play
+publication has occurred.
 
 ## Repository and current state
 
@@ -113,6 +112,12 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
+00. 1.4.0 (branch `claude/laughing-brown-nleo4l`): on the Windows PC, merge it to `main`,
+   run `assembleRelease bundleRelease lintDebug`, then try the Reporter updates screen
+   with a master sign-in (debug build or emulator first). Check the list (names, IP,
+   install date), a one-PC preview, then Cancel. Don't send a real update request or
+   pause as a test without the user's say-so. Then sign it, copy it to `dist/1.4.0/`
+   and publish if the user asks.
 0. Install 1.3.0 on the phone (F-Droid or Drive) and check shift, ID number and
    birth date with a test person.
 1. Open this repository and read AGENTS.md, then inspect actual Git state.
@@ -324,3 +329,49 @@ date and shift.
   (`koenekt-fdroid` `589c57f`). The live index lists 1.3.0 (7), and the APK downloads
   with SHA-256 `4a56ce1f…f2b17e8f`, matching `dist/1.3.0`. The same APK is copied to
   `G:\My Drive\Koenekt Android\` (hash checked).
+
+**29 October 2026 — Claude (1.4.0 Reporter updates, cloud session):** The user said they
+had changed the server and asked for "those functions" in the app ("it's the main app").
+- Granted read access to the private People repo. Its `main` has only handoff commits
+  since 20 October, and nothing changed in the People console. The changes are on the
+  licence site, branch `deploy/licence-updates-gui-on-cea23fe`:
+  - `50ff824`: tick PCs, then update or cancel just those.
+  - `759d5c3`: waiting PCs are shown as waiting, with the reason.
+  - `61e8db7`: each PC's Windows name, IP address and install date.
+  The licence site's Releases section is not on GitHub yet, so it was not built
+  natively. It is still on the web page. PC names, IP and install date only appear once
+  the server sends them; until then the app shows the short PC id, like the website.
+- New `UpdatesScreen.java`, opened from Home (a tile when there's room, and the Tools
+  row "Reporter updates"). It replaces the web Updates tab for everyday use:
+  - Totals.
+  - PCs by shop, with the Windows name, version and last contact.
+  - Tick boxes, and a bottom bar to Update…/Cancel… just the ticked PCs.
+  - PC details: status, why it's waiting, request, offered release, IP, install date,
+    updater, plus Update this PC / Cancel request / Pause / Resume.
+  - Menu: Tick every PC, Update every PC…, Cancel every request…, and "Releases and
+    full page (web)".
+  - Optional release chip (the website's "Only release" box).
+  - It uses the licence site's own routes and payloads. Every action is previewed
+    first. Multi-PC actions send `confirm: "selected"`, fleet actions send
+    `confirm: "all"`, and pause asks first, all as on the website.
+- `MainActivity`:
+  - `adminRequest` calls the licence site. A 401 there ends only the management
+    session.
+  - `TAB_UPDATES` is a screen without a bottom-bar tab, so unlock returns to it.
+  - The read timeout is 90 s for `/licences/api/updates/`, because ticked PCs are asked
+    one at a time.
+  - The licence site's 5xx `detail` is now shown, e.g. "The update service is not
+    reachable".
+- New `ic_update` icon. Changelog `8.txt`. README updated.
+- Checks actually run (Linux cloud container, no Android SDK; dl.google.com is blocked):
+  - All app sources compile with `javac --release 17` against Robolectric's
+    `android-all` 14 jar, with R/BuildConfig stubs (API 34 classes, not 36).
+  - API use was checked by hand against minSdk 26 (no `List.of`).
+  - 48 policy checks, the export checks and the amendment tests pass.
+  - New `tools/test_mobile_updates.py` (6 tests): passes against the deploy branch's
+    licence site with the update service replaced by a recorder; skips on `main`.
+  - `test_mobile_login.py`: 7 pass against `feat/koenekt-android-app`. Against People
+    `main` the same 3 fail with or without this change (main lacks the amendment).
+  - NOT run: Gradle build, Android lint, signing, emulator or phone.
+- Not done: merge to `main`, signed build, `dist/1.4.0`, F-Droid, Drive.
+

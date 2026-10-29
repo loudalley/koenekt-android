@@ -99,7 +99,7 @@ public final class AppPolicy {
         if (operator) {
             out.add(new Feature("Licences & machines", "Issue, renew, edit, suspend and manage activations", ADMIN + "/licences/#machines"));
             out.add(new Feature("Customers", "Customer details, hosted workspaces and setup links", ADMIN + "/licences/#customers"));
-            out.add(new Feature("Reporter updates", "PC status, update one or all, cancel, pause and resume", ADMIN + "/licences/#updates"));
+            out.add(new Feature("Reporter updates", "Shop PCs by name, tick and update or cancel, pause and resume", ADMIN + "/licences/#updates"));
             out.add(new Feature("Licence activity", "Licensing and Reporter update audit trail", ADMIN + "/licences/#activity"));
         }
         return out;

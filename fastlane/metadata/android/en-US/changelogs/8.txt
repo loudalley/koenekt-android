@@ -1,0 +1,5 @@
+Reporter updates on the phone, for Koenekt management.
+• See every shop PC with its Windows name, IP address and install date.
+• Tick PCs and update or cancel just those, or update every PC.
+• Each request shows what would happen before anything is sent.
+• Pause or resume updates for one PC, and see why a PC is waiting.
