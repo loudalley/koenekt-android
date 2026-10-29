@@ -1,9 +1,9 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
 Last updated: **29 October 2026, Claude (Windows PC) — version 1.5.0 (9), Who's in by
-department (shop) with status filters, BUILT AND SIGNED on the PC (`dist/1.5.0/`), tried
-on the emulator; not yet pushed, not on F-Droid or Drive.**
-1.4.0 (8) is the latest released build (F-Droid, Drive; on the user's phone). People server amendment INSTALLED
+department (shop) with status filters, built and signed on the PC, pushed, published on
+the self-hosted F-Droid repo and copied to Google Drive at the user's request; not yet
+tried on a phone.** People server amendment INSTALLED
 on the production People console. A separate accounts/leavers change (see the 20 October
 entry from the PC) is NOT on `main` yet and needs a server update first.
 
@@ -112,10 +112,8 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
-000. 1.5.0 (Who's in by department) is built and signed (`dist/1.5.0/`), on branch
-   `live-departments` in the build worktree. With the user's OK, push it to `main` and publish
-   to F-Droid and Drive, then check on the phone with a real company: department rows, the
-   chooser, and the counts against the website's live board.
+000. 1.5.0 (Who's in by department) is released (F-Droid, Drive). Check on the phone with a
+   real company: department rows, the chooser, and the counts against the website's live board.
 00. 1.4.0 is released and on the user's phone; they report Reporter updates works. Still
    worth a careful look next time (no test sends without the user's say-so):
    check the list (names, IP, install date), a one-PC preview, then Cancel. Don't send a
@@ -462,3 +460,7 @@ separate who's in and the other status checks by department ("shop is dept at th
   tab, All departments, and the Not in tile.
 - Signed release: same certificate `3e3a0931…`, aapt 9 / 1.5.0. APK SHA-256
   `53df030f…87a31e`. Copied to `dist/1.5.0/` here and in the main checkout.
+- Released at the user's request: pushed `main` (`750f0c5..6339680`); `tools/fdroid_repo.py
+  publish --push` from the build worktree, giving `koenekt-fdroid` `dca4229`. The live index
+  lists 1.5.0 (9) with the APK hash `53df030f…`. Copied to `G:\My Drive\Koenekt Android\`
+  (hash checked).
