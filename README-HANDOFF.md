@@ -1,6 +1,13 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
+Last updated: **29 October 2026, Codex — Play upload in progress for locally built
+1.6.1 (11) on `workspace-1.6.1` in `../koenekt-android-build`. Store graphics uploaded
+and listing saved ready for review; content rating completed. Demo reviewer login
+tested. Reviewer-access declaration, 18+ audience, Data safety and the production
+release still need completion/verification. No Play publication yet. Source push and
+F-Droid/Drive publication of 1.6.1 await the owner's separate instruction.**
+
+Previous release: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
 leaver controls (change/delete your account, forced password change after an admin reset,
 delete leavers, clock passwords), built and signed on the PC, pushed, published on the
 self-hosted F-Droid repo and copied to Google Drive at the user's request; not yet tried on
@@ -525,3 +532,68 @@ a Play developer account (organisation, D-U-N-S verified) and asked to publish w
   The app could only switch workspace through a setup link, so 1.6.1 (11) adds Workspace ·
   Change on the sign-in screen. Built, signed (`3e3a0931…`, APK `2adb5fc9…`), lint clean, checks
   pass, tried on the emulator. Branch `workspace-1.6.1` in the build worktree; not pushed.
+
+**29 October 2026 — Codex (Play continuation, in progress):**
+- Fetched and inspected Git. Authoritative main is `e152430`; Claude's newer 1.6.1
+  commit is `e79d301` on the existing build worktree's `workspace-1.6.1` branch.
+  The stale OneDrive checkout and its old unpushed accounts commits were left intact.
+- Locally ran `bundleRelease lintDebug` successfully; lint reports "No issues found".
+  48 Java policy checks, JS export checks and five amendment tests passed. Verified
+  APK signature (existing certificate `3e3a0931…501d75`), package `za.co.koenekt.app`,
+  version 11 / 1.6.1, minimum API 26 and target 36; AAB JAR signature verifies.
+- Upload AAB is `dist/play-store/Koenekt-1.6.1.aab` in the main checkout; matches
+  `dist/1.6.1/Koenekt-1.6.1.aab` and its recorded SHA-256
+  `d9f3c22512f3a00ae81e86ab56c8316d16706453ead18b67efd895c852e5c582`.
+  Checked all eight PNG dimensions: 512x512 icon, 1024x500 feature graphic and
+  six 1080x1920 screenshots. No new emulator/phone or backend integration run.
+- Owner signed into Play Console in the in-app browser. Uploaded the icon, feature
+  graphic and all six synthetic-data screenshots; saved Default store listing,
+  verified "Ready to send for review". Original logo/rendered app screenshots do
+  not use AI image generation. Content rating completed after the owner explicitly
+  approved IARC Terms of Use: ESRB Everyone, PEGI 3, IARC 3+ (distinct from 18+ audience).
+- Owner confirmed the separate `demo` workspace and registered `play.reviewer`.
+  Set Demo Shop only; custom permissions: dashboard, people_read, people_edit,
+  people_hire and people_leave. Reviewer sign-in, People (four synthetic staff)
+  and Live (two departments) verified in the browser. No reviewer credentials in Git.
+- Added Naledi Demo and Sipho Example as synthetic staff with Save only; no clock
+  commands. No production-client data changes, service restarts or server deployment.
+- Play refuses to save Sign-in details without the full-feature-access confirmation.
+  Current reviewer lacks Reports, Payroll and Settings; asked the owner whether to
+  expand to available demo administrator permissions. Demo currently reports a
+  30-day licence grace period; asked the owner to issue lasting demo review access.
+- Prepared sign-in instructions with Workspace · Change → demo and the owner's
+  existing reviewer credentials in Console only; full-access box remains unticked.
+  Data safety draft retains Claude's six categories; also selected the ordinary
+  Username and password account method alongside password plus other authentication.
+  Final save is blocked until target audience is completed; audience depends on
+  Sign-in details. No false full-access declaration submitted.
+- Created production release draft and started uploading the signed 1.6.1 bundle,
+  with English release notes. Play accepted code 11 / 1.6.1, minimum API 26,
+  target 36. Selected South Africa for the initial production country, which
+  resolved the only blocking release error. The remaining deobfuscation warning
+  is expected (`minifyEnabled false`). Saved the release to Publishing overview;
+  this does not send it for review. The owner requested to click Send for review
+  themselves. Reordered the six listing screenshots to 01 through 06 and saved.
+- Publishing overview lists eight changes, including the production release,
+  country and listing. Quick checks are running (up to 14 minutes shown initially).
+  Its three reported blockers are missing Sign-in details, Target audience and
+  Data safety. Sign-in details must be finished first to unlock Target audience.
+  Managed publishing is off:
+  once submitted, approval will publish the release automatically.
+- Updated `PLAY-STORE-DRAFT.md` and corrected stale deletion/device-testing text
+  in README. Keep scratch proof/screenshots in ignored `build/play-upload/`.
+- Exact next action: finish demo review access with the owner's answer, save
+  Sign-in details, set 18+ audience and final Data safety save; verify Play accepted
+  code 11, resolve release validation errors, and leave the review-ready result for
+  the owner. 1.6.1 is built/signed and previously emulator-tested by Claude; physical
+  phone testing and Play review/publication remain unconfirmed. The accounts server
+  update was already installed by the owner before this session.
+- At handoff: pending owner approval to expand the review account beyond its five
+  permissions, and pending lasting demo licence. Do not tick the full-feature
+  confirmation while access is restricted. Reviewer password is supplied privately
+  in the Console form; never copy it into notes. Preserved browser tabs: Publishing
+  overview, Sign-in details (prepared form), Data safety (saved draft), Demo Shop
+  Users and the verified reviewer Live screen. Quick checks were still running
+  (up to 10 minutes remaining), so recheck their final result before submission.
+  No change has been sent for review. 1.6.1 source/F-Droid/Drive release stays held;
+  only shared handoff documentation is to be pushed from the main checkout.

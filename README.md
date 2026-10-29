@@ -302,19 +302,17 @@ are unchanged. No production login,
 customer, licence, update instruction or clock mutation was used for verification.
 Public HTTPS checks returned 200 for People branding, the admin page and updates.js.
 
-**Not yet device-tested or published to Play.** Automatic approval review blocked starting
-the Android emulator (reason returned: "blocked by policy"). A real phone check
-is still required for fingerprint/PIN success/cancel, process restart, background
-locking, lock-setting changes, imports/exports after unlock, expiry and logout.
+**Not yet published to Play.** Later versions have been exercised on the emulator,
+and the owner confirmed 1.4.0 and 1.5.0 on a physical phone (see the release entries).
+1.6.1 has not been confirmed on a physical phone. The complete fingerprint/PIN
+success/cancel, process restart, background locking, lock-setting changes,
+imports/exports after unlock, expiry and logout checks remain outstanding.
 The People server amendment was **applied to the production People console on
 20 October 2026**. See `SERVER-AMENDMENT.md` for the commands and rollback.
 
-Before Play submission: confirm the application ID/name, complete the developer
-account and store listing, publish an actual privacy-policy URL with the correct
-business contact/retention details, provide review access, complete Data safety
-and other content declarations, and test the signed bundle through an internal
-track. Screenshots must come from the actual app with synthetic data.
-Account creation can be reached through the existing website login flow; provide
-the required in-app and external account-deletion request paths before publishing.
-The About screen currently explains contacting the workspace administrator;
-this is not a completed Play account-deletion flow. See `PLAY-STORE-DRAFT.md`.
+For Play submission, Claude prepared the 1.6.1 bundle and six actual-app emulator
+screenshots with synthetic data in `dist/play-store/`. The privacy and external
+deletion pages are published from `docs/`; Account → Delete my account has been
+implemented since 1.6.0 and its server update is installed. Reviewer access must
+use the separate `demo` workspace. The remaining Console declarations, uploads
+and review submission must be verified in Play Console. See `PLAY-STORE-DRAFT.md`.
