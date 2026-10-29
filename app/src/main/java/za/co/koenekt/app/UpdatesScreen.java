@@ -119,8 +119,9 @@ final class UpdatesScreen {
             ticked.retainAll(present);
             if (body == null || !body.isAttachedToWindow()) return;
             showList();
-            summary.setText("Refreshed " + Instant.now().atZone(ZoneId.of("Africa/Johannesburg")).toLocalTime().toString().substring(0, 5)
-                    + (devices.isEmpty() ? "" : " · Tick PCs to update or cancel just those. Tap a PC for details."));
+            String refreshed = "Refreshed " + Instant.now().atZone(ZoneId.of("Africa/Johannesburg")).toLocalTime().toString().substring(0, 5)
+                    + (devices.isEmpty() ? "" : " · Tick PCs to update or cancel just those. Tap a PC for details.");
+            summary.setText(refreshed);
         }, message -> { if (body != null && body.isAttachedToWindow()) message(message); });
     }
 
@@ -153,7 +154,8 @@ final class UpdatesScreen {
         int n = ticked.size();
         selection.setVisibility(n > 0 ? View.VISIBLE : View.GONE);
         selectionLine.setVisibility(n > 0 ? View.VISIBLE : View.GONE);
-        selectionCount.setText(n + " ticked");
+        String count = n + " ticked";
+        selectionCount.setText(count);
     }
 
     private void buildChips() {
