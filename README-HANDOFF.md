@@ -1,10 +1,9 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **29 October 2026, Claude (Windows PC) — version 1.4.0 (8), native
-Reporter updates screen, built and signed on the PC, pushed, published on the self-hosted
-F-Droid repo and copied to Google Drive (`My Drive/Koenekt Android/`) at the user's
-request. Installed on the user's phone; the user reports Reporter updates works.**
-1.3.0 (7) is the latest released build (F-Droid, Drive). People server amendment INSTALLED
+Last updated: **29 October 2026, Claude (Windows PC) — version 1.5.0 (9), Who's in by
+department (shop) with status filters, BUILT AND SIGNED on the PC (`dist/1.5.0/`), tried
+on the emulator; not yet pushed, not on F-Droid or Drive.**
+1.4.0 (8) is the latest released build (F-Droid, Drive; on the user's phone). People server amendment INSTALLED
 on the production People console. A separate accounts/leavers change (see the 20 October
 entry from the PC) is NOT on `main` yet and needs a server update first.
 
@@ -113,6 +112,10 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
+000. 1.5.0 (Who's in by department) is built and signed (`dist/1.5.0/`), on branch
+   `live-departments` in the build worktree. With the user's OK, push it to `main` and publish
+   to F-Droid and Drive, then check on the phone with a real company: department rows, the
+   chooser, and the counts against the website's live board.
 00. 1.4.0 is released and on the user's phone; they report Reporter updates works. Still
    worth a careful look next time (no test sends without the user's say-so):
    check the list (names, IP, install date), a one-PC preview, then Cancel. Don't send a
@@ -435,3 +438,27 @@ session's report and asked to check and build.
   - Copied to `G:\My Drive\Koenekt Android\` (hash checked).
 - 29 October: the user installed 1.4.0 on their phone and reported "Reporter updates works".
   No other device checks reported.
+
+**29 October 2026 — Claude (1.5.0 Who's in by department, Windows PC):** The user asked to
+separate who's in and the other status checks by department ("shop is dept at the moment").
+- No server change. `/api/dashboard/live` already returns each person's `department`,
+  `at_work` and `seen_today`. The app now loads it once with `presence=all` and filters on
+  the phone, so switching is instant and the per-department counts are always there.
+- Who's in (`LiveScreen`):
+  - A department chip (All departments or one), remembered per company in app preferences.
+  - With all departments: one row per department ("2 of 4 at work · 3 clocked today"); tap
+    to choose it.
+  - Tiles count only the chosen department. At work and Not in are tappable filters.
+  - Show filter adds Clocked out (clocked today, not in now) and Not clocked today.
+  - The chip row scrolls sideways when the names are long.
+- Version 1.5.0 (9), `changelogs/9.txt`. The accounts/leavers work (local `main`, waiting
+  for its server update) must now become 1.6.0 (10).
+- Checks: `assembleRelease bundleRelease lintDebug`, lint "No issues found"; 48 policy
+  checks, export checks; `test_mobile_login` (8, now also asserting `seen_today` per
+  person), `test_mobile_updates` (6), amendment tests (5) against the scratch composite
+  (People `main` `03582a7` with the amendment, which matches production).
+- Emulator (debug build) against a synthetic local console with synthetic punches: department
+  rows and counts, choosing Kitchen, Not clocked today, the choice kept after leaving the
+  tab, All departments, and the Not in tile.
+- Signed release: same certificate `3e3a0931…`, aapt 9 / 1.5.0. APK SHA-256
+  `53df030f…87a31e`. Copied to `dist/1.5.0/` here and in the main checkout.

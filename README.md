@@ -1,7 +1,7 @@
 # Koenekt for Android
 
 One Android app for the existing People, licensing, customer and Reporter update services.
-Version **1.4.0 (8)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
+Version **1.5.0 (9)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
 compile/target API 36. Java 17, Android Gradle Plugin 8.13.2, Gradle 8.13.
 
 Standalone public repository: [loudalley/koenekt-android](https://github.com/loudalley/koenekt-android).
@@ -14,7 +14,7 @@ bottom bar (Home, People, Who's in, Account), a searchable People list with pers
 summaries, a three-step **Add employee** (name, workplace, suggested clock PIN),
 **Edit details** (name, department, job title, start date, shift, ID or passport
 number and birth date; the clock PIN is shown but permanent), **Mark as left** and a
-**Who's in** live board, plus a native **Reporter updates** screen for Koenekt
+**Who's in** live board (by department, i.e. shop, with status filters), plus a native **Reporter updates** screen for Koenekt
 management. They call the same People endpoints as the website
 (`/api/companies`, `/api/people/directory`, `/api/people/next-pin`,
 `/api/frappe/departments`, `/api/employees`, `/api/shifts/assign`,
@@ -196,14 +196,22 @@ dependencies. They use `../koenekt-people` by default; override with
 backend source/history into this public app repository. All test data is synthetic
 and tests never contact production.
 
-## Release state, 29 October 2026 — 1.4.0
+## Release state, 29 October 2026 — 1.5.0
+
+1.5.0 splits Who's in by department (the shop, for now): a department chooser
+(remembered per company), one row per department with how many are at work and have
+clocked today, the tiles counting only the chosen department, new Clocked out and Not
+clocked today filters, and tappable At work / Not in tiles. No server change: the app
+loads `/api/dashboard/live?presence=all` once and filters on the phone. Built, signed
+and linted on the PC and tried on the emulator against a synthetic local console with
+synthetic punches. Not yet tried on a phone.
+
+### 1.4.0 — 29 October 2026
 
 1.4.0 adds a native Reporter updates screen (Home, for a management sign-in) for the
 licence site's Updates changes of 26 October: PC names, IP and install date, ticked
-PCs and the waiting reasons. Source only: built and checked in a cloud session without
-the Android SDK (a `javac` compile against the Android framework classes and the new
-`tools/test_mobile_updates.py` contract test). Not yet built with Gradle, signed,
-linted, or tried on the emulator or a phone.
+PCs and the waiting reasons. Built and signed on the PC, released, and confirmed
+working on the user's phone.
 
 ### 1.3.0 — 20 October 2026
 

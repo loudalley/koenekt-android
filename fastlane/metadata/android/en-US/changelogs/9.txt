@@ -1,0 +1,5 @@
+Who's in by department (shop).
+• Pick a department to see only its people and counts; the choice is remembered.
+• With all departments showing, each department lists how many are at work.
+• New filters: Clocked out and Not clocked today.
+• Tap the At work or Not in count to show just those people.

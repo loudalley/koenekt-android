@@ -184,7 +184,7 @@ class MobileLoginContract(unittest.TestCase):
             self.assertIn(key, live['totals'])
         self.assertTrue(live['as_of'])
         self.assertEqual({p['employee_name'] for p in live['people']}, {'Lee Example', 'Ari Synthetic'})
-        for key in ('at_work', 'last_time', 'department'):
+        for key in ('at_work', 'last_time', 'department', 'seen_today'):   # Who's in filters by department and status on the phone
             self.assertIn(key, live['people'][0])
         self.assertEqual(self.p.get('/api/people/next-pin', params={'url': 'https://other.example'}).status_code, 403)
 
