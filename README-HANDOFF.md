@@ -2,9 +2,9 @@
 
 Last updated: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
 leaver controls (change/delete your account, forced password change after an admin reset,
-delete leavers, clock passwords), BUILT AND SIGNED on the PC (`dist/1.6.0/`), tried on the
-emulator; not yet pushed, not on F-Droid or Drive. Its People server update is installed.**
-1.5.0 (9) is the latest released build (F-Droid, Drive; on the user's phone). People server
+delete leavers, clock passwords), built and signed on the PC, pushed, published on the
+self-hosted F-Droid repo and copied to Google Drive at the user's request; not yet tried on
+a phone. Its People server update is installed.** People server
 amendment and the accounts server update are both INSTALLED on the production People console.
 
 ## Repository and current state
@@ -112,9 +112,7 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
-000. 1.6.0 (accounts and leavers) is built and signed (`dist/1.6.0/`), on branch
-   `accounts-1.6.0` in the build worktree. With the user's OK, push to `main`, publish to
-   F-Droid and Drive. Then on the phone: Account → Change password; an admin's Reset password
+000. 1.6.0 (accounts and leavers) is released (F-Droid, Drive). On the phone, with test people: Account → Change password; an admin's Reset password
    in Users followed by the forced change; Delete from People on a test leaver; a clock
    password on a test person. The local `main` in `C:\Projects\koenekt-android` still has the
    old unpushed "1.4.0" accounts commits (`70495a6`, `8c7fba2`); they are superseded by 1.6.0
@@ -505,3 +503,6 @@ the site works after the server update and asked to build 1.6.0.
   - Typing note: with the keyboard open the footer button rides up over the third field.
 - Signed release: same certificate `3e3a0931…`, aapt 10 / 1.6.0. APK SHA-256
   `dd0e303c…69a653`. Copied to `dist/1.6.0/` here and in the main checkout.
+- Released at the user's request: pushed `main` (`3388db0..7483de1`); `tools/fdroid_repo.py
+  publish --push` from the build worktree, giving `koenekt-fdroid` `59028fe`. The live index
+  lists 1.6.0 (10) with the APK hash `dd0e303c…`. Copied to Google Drive (hash checked).
