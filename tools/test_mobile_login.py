@@ -145,6 +145,49 @@ class MobileLoginContract(unittest.TestCase):
         self.assertEqual(row['status'], 'Inactive')
         self.assertTrue(row['left_on'])
 
+    def test_native_add_employee_and_live_board(self):
+        """Home, AddEmployeeFlow and LiveScreen: the calls and the response fields the app reads."""
+        import employee_master as em
+        url = 'https://synthetic-deli.example'
+        (self.home / 'people' / 'devices.json').write_text(json.dumps({'SYN2': {'company': 'Synthetic Deli', 'frappe_url': url}}))
+        company = em.ensure_company(name='Synthetic Deli', frappe_url=url)
+        em.ensure_department(company['id'], 'Counter')
+        em.upsert_employee({'company_id': company['id'], 'device_pin': '7', 'display_name': 'Lee Example',
+                            'department': 'Counter', 'status': 'Active', 'hired_on': '2026-01-05'})
+        auth.register_user(people.base_dir(), 'hirer', 'synthetic-password-123', 'Synthetic hirer')
+        auth.set_caps(people.base_dir(), 'hirer', ['people_read', 'people_hire', 'dashboard'])
+        auth.set_allowed_sites(people.base_dir(), 'hirer', [url], actor_is_master=True)
+        self.assertEqual(self.p.post('/api/login', json={'username': 'hirer', 'password': 'synthetic-password-123', 'code': '',
+                                                         'remember_device': True}).status_code, 200)
+        me = self.p.get('/api/me').json()   # MainActivity.applyPerson
+        for key in ('role', 'display_name', 'role_label', 'caps', 'allowed_sites'):
+            self.assertIn(key, me)
+        companies = self.p.get('/api/companies').json()['companies']   # MainActivity.loadCompanies
+        self.assertEqual([(c['frappe_url'], c['name']) for c in companies], [(url, 'Synthetic Deli')])
+        query = {'url': url, 'company': 'Synthetic Deli'}
+        departments = self.p.get('/api/frappe/departments', params=query).json()['departments']
+        self.assertIn('Counter', [d['name'] for d in departments])
+        pin = self.p.get('/api/people/next-pin', params=query).json()['pin']
+        self.assertTrue(pin and pin != '7')
+        hire = {'frappe_url': url, 'company': 'Synthetic Deli', 'pin': pin, 'first_name': 'Ari', 'last_name': 'Synthetic',
+                'department': 'Counter', 'job_title': 'Cashier', 'hire_date': '2026-10-29', 'status': 'Active',
+                'push_device': True, 'push_all_company': True}
+        result = self.p.post('/api/employees', json=hire)
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertEqual((result.json()['pin'], len(result.json()['devices'])), (pin, 1))   # the done screen
+        self.assertEqual(self.p.post('/api/employees', json=hire).status_code, 400)   # the PIN is now taken
+        rows = self.p.get('/api/people/directory', params={'url': url, 'status': 'Active'}).json()['employees']
+        self.assertIn(('Ari Synthetic', pin, 'Counter', 'Cashier'),
+                      [(r['employee_name'], r['pin'], r['department'], r['job_title']) for r in rows])
+        live = self.p.get('/api/dashboard/live', params={'url': url, 'presence': 'all'}).json()
+        for key in ('at_work', 'not_at_work', 'seen_today'):
+            self.assertIn(key, live['totals'])
+        self.assertTrue(live['as_of'])
+        self.assertEqual({p['employee_name'] for p in live['people']}, {'Lee Example', 'Ari Synthetic'})
+        for key in ('at_work', 'last_time', 'department'):
+            self.assertIn(key, live['people'][0])
+        self.assertEqual(self.p.get('/api/people/next-pin', params={'url': 'https://other.example'}).status_code, 403)
+
     def register_customer(self):
         auth.register_user(people.base_dir(), 'remembered', 'synthetic-password-123', 'Remembered customer')
         return {'username': 'remembered', 'password': 'synthetic-password-123'}

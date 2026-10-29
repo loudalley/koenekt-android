@@ -377,3 +377,27 @@ had changed the server and asked for "those functions" in the app ("it's the mai
   they were told `main` would then hold unbuilt code.
 - Not done: Gradle build/lint, signed build, `dist/1.4.0`, F-Droid, Drive.
 
+**29 October 2026 — Claude (server contract check, cloud session):** The user asked
+whether every function in the app matches the server.
+- Every People and licence-site route the app calls exists, with the same method, in
+  People `main`, `feat/koenekt-android-app` and the licence-site deploy branch. So do
+  the web pages it opens, the capability names, the licence tabs and the
+  `kp-header`/`#logout` hooks in `mobile.js`.
+- Tested setup: People `main` console with this repo's amendment applied, plus the
+  deploy branch's licence site, in a scratch checkout. That is the nearest copy of
+  production in git, but production's console is a server-only build, so it is not
+  byte-identical.
+- Results there: `test_mobile_login.py` passes 8 tests and `test_mobile_updates.py`
+  passes 6.
+- New test `test_native_add_employee_and_live_board` covers the calls that had no test:
+  - `/api/me` fields and `/api/companies`;
+  - departments and next PIN;
+  - the Add employee payload, the reply the app's done screen reads, and that a used
+    PIN is refused;
+  - the Who's in totals and rows;
+  - another company's next PIN is refused (403).
+  It also passes against `feat/koenekt-android-app`.
+- Not covered: the `/api/sites` fallback (only used when `/api/companies` is empty)
+  and Frappe-mode companies; the tests use local mode. Nothing was run against the
+  live servers.
+
