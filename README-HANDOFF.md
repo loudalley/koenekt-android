@@ -1,8 +1,9 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
 Last updated: **29 October 2026, Claude (Windows PC) — version 1.4.0 (8), native
-Reporter updates screen, BUILT AND SIGNED on the PC (`dist/1.4.0/`), lint clean after a
-small fix; not yet pushed (the fix), not on F-Droid or Drive, not tried on a phone.**
+Reporter updates screen, built and signed on the PC, pushed, published on the self-hosted
+F-Droid repo and copied to Google Drive (`My Drive/Koenekt Android/`) at the user's
+request; not yet tried on a phone.**
 1.3.0 (7) is the latest released build (F-Droid, Drive). People server amendment INSTALLED
 on the production People console. A separate accounts/leavers change (see the 20 October
 entry from the PC) is NOT on `main` yet and needs a server update first.
@@ -112,8 +113,7 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
-00. 1.4.0 is built and signed (`dist/1.4.0/`). With the user's OK, push the lint fix and
-   publish it to F-Droid and Drive. On the phone, try Reporter updates with a master sign-in:
+00. 1.4.0 is released (F-Droid, Drive). On the phone, try Reporter updates with a master sign-in:
    check the list (names, IP, install date), a one-PC preview, then Cancel. Don't send a
    real update request or pause as a test without the user's say-so.
 0. Install 1.3.0 on the phone (F-Droid or Drive) and check shift, ID number and
@@ -426,3 +426,9 @@ session's report and asked to check and build.
 - Signed release: same certificate `3e3a0931…`, aapt 8 / 1.4.0.
   - APK SHA-256 `848ff565…6ef6d`.
   - Copied to `dist/1.4.0/`. The unreleased accounts build moved to `dist/accounts-unreleased/`.
+- Released at the user's request:
+  - Pushed `main` (`9758abe..9813ac2`).
+  - `tools/fdroid_repo.py publish --push` ran from the build worktree, so the 1.4.0 release
+    notes were used. Its venv was linked by a junction. Result: `koenekt-fdroid` `2089d9e`.
+  - The live index lists 1.4.0 (8), and the downloaded APK hash matches `848ff565…`.
+  - Copied to `G:\My Drive\Koenekt Android\` (hash checked).
