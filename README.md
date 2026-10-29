@@ -1,7 +1,7 @@
 # Koenekt for Android
 
 One Android app for the existing People, licensing, customer and Reporter update services.
-Version **1.6.0 (10)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
+Version **1.6.1 (11)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
 compile/target API 36. Java 17, Android Gradle Plugin 8.13.2, Gradle 8.13.
 
 Standalone public repository: [loudalley/koenekt-android](https://github.com/loudalley/koenekt-android).
@@ -211,7 +211,16 @@ dependencies. They use `../koenekt-people` by default; override with
 backend source/history into this public app repository. All test data is synthetic
 and tests never contact production.
 
-## Release state, 29 October 2026 — 1.6.0
+## Release state, 29 October 2026 — 1.6.1
+
+1.6.1 adds **Workspace · Change** to the sign-in screen: type another organisation's
+workspace name (for example `demo`) or HTTPS People address, validated by
+`AppPolicy.workspace` (only `people.koenekt.co.za` and `*.people.koenekt.co.za`). Until now
+a workspace could only be changed with a `koenekt://workspace/<name>` setup link. Needed
+for Google Play review (a separate demo workspace) and for further customers. Tried on the
+emulator: change to `demo`, a non-Koenekt address refused.
+
+### 1.6.0 — 29 October 2026
 
 1.6.0 adds Change password, Delete my account, the forced new-password screen after
 an administrator's reset, Delete from People for leavers and clock passwords. It needs

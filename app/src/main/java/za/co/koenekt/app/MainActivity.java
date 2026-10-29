@@ -515,8 +515,31 @@ public final class MainActivity extends Activity {
         Ui.gap(page, 24);
         page.addView(Ui.text(this, "After signing in, open the app with your fingerprint or phone PIN. Your password is never stored on this phone.", 13.5f, Ui.MUTED));
         Ui.gap(page, 4);
+        String where = "Workspace: " + Uri.parse(workspace).getHost() + " · Change";
+        TextView place = Ui.quiet(this, where, this::chooseWorkspace); place.setPadding(0, 0, 0, 0); place.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        page.addView(place, new LinearLayout.LayoutParams(-2, dp(48)));
         TextView about = Ui.quiet(this, "About & privacy", this::about); about.setPadding(0, 0, 0, 0); about.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         page.addView(about, new LinearLayout.LayoutParams(-2, dp(48)));
+    }
+
+    /** Sign-in screen: type another organisation's workspace (its name, e.g. "demo", or its HTTPS People address). */
+    private void chooseWorkspace() {
+        String host = Uri.parse(workspace).getHost();
+        EditText input = new EditText(this); input.setSingleLine(true); input.setHint("e.g. people");
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        input.setText(host != null && host.endsWith(".people.koenekt.co.za") ? host.substring(0, host.indexOf('.')) : "people");
+        input.setSelectAllOnFocus(true); input.requestFocus();
+        FrameLayout box = new FrameLayout(this); box.setPadding(dp(24), dp(8), dp(24), 0); box.addView(input);
+        new AlertDialog.Builder(this).setTitle("Workspace")
+                .setMessage("Your organisation's workspace name, from your administrator.")
+                .setView(box)
+                .setPositiveButton("Use", (d, w) -> {
+                    try { workspace = AppPolicy.workspace(input.getText().toString()); }
+                    catch (IllegalArgumentException e) { toast(e.getMessage()); return; }
+                    getPreferences(MODE_PRIVATE).edit().putString("workspace", workspace).apply();
+                    loginScreen("");
+                })
+                .setNegativeButton("Cancel", null).show();
     }
 
     private void applyPerson(JSONObject person) {

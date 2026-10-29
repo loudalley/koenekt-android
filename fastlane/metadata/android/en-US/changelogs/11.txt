@@ -1,0 +1,2 @@
+Sign in to another organisation.
+• The sign-in screen shows your workspace, with Change to type another one (for example "demo").

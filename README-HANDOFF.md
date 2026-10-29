@@ -506,3 +506,22 @@ the site works after the server update and asked to build 1.6.0.
 - Released at the user's request: pushed `main` (`3388db0..7483de1`); `tools/fdroid_repo.py
   publish --push` from the build worktree, giving `koenekt-fdroid` `59028fe`. The live index
   lists 1.6.0 (10) with the APK hash `dd0e303c…`. Copied to Google Drive (hash checked).
+
+**29 October 2026 — Claude (Google Play listing, 1.6.1 workspace choice):** The user registered
+a Play developer account (organisation, D-U-N-S verified) and asked to publish with screenshots.
+- Play Console app "Koenekt" (`za.co.koenekt.app`) created by the user. Website verified through
+  Search Console (koenekt.co.za already had Google's DNS record); phones verified by the user.
+- Filled and saved, not sent for review: store text, category Business, contact details, privacy
+  policy, ads (none), advertising ID (no), government (no), financial (none), health (none), Data
+  safety (draft: name, user IDs, other personal info, other financial info, files and docs, app
+  interactions; collected, not shared, encrypted in transit, deletion URL).
+- Remaining in Play: Sign in details (reviewer login), Target audience, Content rating, Data
+  safety final save, graphics and AAB upload (the browser pane cannot upload local files),
+  production release and Send for review (the user clicks).
+- Store graphics in ignored `dist/play-store/`: 6 screenshots 1080x1920 from the emulator with
+  synthetic Demo Bakery data, the F-Droid icon (as RGBA) and feature graphic, and the AAB.
+- Reviewer data must not be a client's: `people.koenekt.co.za` is the Chamakala/Five workspace.
+  The user chose a separate demo workspace (admin site → Customers → New customer, e.g. `demo`).
+  The app could only switch workspace through a setup link, so 1.6.1 (11) adds Workspace ·
+  Change on the sign-in screen. Built, signed (`3e3a0931…`, APK `2adb5fc9…`), lint clean, checks
+  pass, tried on the emulator. Branch `workspace-1.6.1` in the build worktree; not pushed.
