@@ -1,11 +1,11 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **29 October 2026, Claude (cloud session) — version 1.4.0 (8), native
-Reporter updates screen, SOURCE ONLY: merged to `main` at the user's request (from
-branch `claude/laughing-brown-nleo4l`), not built with Gradle, not signed, not on F-Droid or Drive, not tried on
-a device.** 1.3.0 (7) is the latest released build (F-Droid, Drive); 1.2.0 (6) is on the
-user's phone. People server amendment INSTALLED on the production People console. No Play
-publication has occurred.
+Last updated: **29 October 2026, Claude (Windows PC) — version 1.4.0 (8), native
+Reporter updates screen, BUILT AND SIGNED on the PC (`dist/1.4.0/`), lint clean after a
+small fix; not yet pushed (the fix), not on F-Droid or Drive, not tried on a phone.**
+1.3.0 (7) is the latest released build (F-Droid, Drive). People server amendment INSTALLED
+on the production People console. A separate accounts/leavers change (see the 20 October
+entry from the PC) is NOT on `main` yet and needs a server update first.
 
 ## Repository and current state
 
@@ -112,12 +112,10 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
-00. 1.4.0 is on `main` but has never been built: on the Windows PC, pull `main`, run
-   `assembleRelease bundleRelease lintDebug` and fix anything it finds, then try the Reporter updates screen
-   with a master sign-in (debug build or emulator first). Check the list (names, IP,
-   install date), a one-PC preview, then Cancel. Don't send a real update request or
-   pause as a test without the user's say-so. Then sign it, copy it to `dist/1.4.0/`
-   and publish if the user asks.
+00. 1.4.0 is built and signed (`dist/1.4.0/`). With the user's OK, push the lint fix and
+   publish it to F-Droid and Drive. On the phone, try Reporter updates with a master sign-in:
+   check the list (names, IP, install date), a one-PC preview, then Cancel. Don't send a
+   real update request or pause as a test without the user's say-so.
 0. Install 1.3.0 on the phone (F-Droid or Drive) and check shift, ID number and
    birth date with a test person.
 1. Open this repository and read AGENTS.md, then inspect actual Git state.
@@ -401,3 +399,30 @@ whether every function in the app matches the server.
   and Frappe-mode companies; the tests use local mode. Nothing was run against the
   live servers.
 
+**29 October 2026 — Claude (1.4.0 build on the Windows PC):** The user pasted the cloud
+session's report and asked to check and build.
+- This PC's `main` had two unpushed commits: the 20 October accounts/leavers "1.4.0", which
+  also used versionCode 8 and `changelogs/8.txt`. That work is on hold for its server update.
+  It must become 1.5.0 (9) and be rebased onto this `main`.
+- To leave that untouched and not switch branches in the shared checkout, the build used a
+  separate worktree (`../koenekt-android-build`) at `origin/main` `9758abe`. `.signing`
+  there is a directory junction to the real one (not a copy), and `local.properties` was
+  copied.
+- First Gradle build of the cloud session's code: it compiled. Android lint found 4
+  `SetTextI18n` warnings in `UpdatesScreen` (text built inside `setText`). Fixed by building
+  the strings first (`73478c2`, branch `release-1.4.0`, no behaviour change); then lint
+  reported "No issues found".
+- Code review of `3000e09`: licence-site calls stay origin-restricted. A management 401 ends
+  only that session. Every update/cancel is previewed by the server first, multi-PC and fleet
+  requests send `confirm`, and pause asks first.
+- Checks:
+  - 48 policy checks, export checks, amendment tests.
+  - `test_mobile_login` (8) and `test_mobile_updates` (6) pass against a scratch composite:
+    People `main` `03582a7` console with the amendment, plus the licence-site deploy branch
+    `61e8db7`.
+- Emulator (debug build) against that composite with synthetic data: sign-in, Home, People,
+  person summary, Who's in. Reporter updates was not tried (it needs master and the real
+  licence site).
+- Signed release: same certificate `3e3a0931…`, aapt 8 / 1.4.0.
+  - APK SHA-256 `848ff565…6ef6d`.
+  - Copied to `dist/1.4.0/`. The unreleased accounts build moved to `dist/accounts-unreleased/`.
