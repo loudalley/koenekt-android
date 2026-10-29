@@ -3,7 +3,7 @@
 Last updated: **29 October 2026, Claude (Windows PC) — version 1.4.0 (8), native
 Reporter updates screen, built and signed on the PC, pushed, published on the self-hosted
 F-Droid repo and copied to Google Drive (`My Drive/Koenekt Android/`) at the user's
-request; not yet tried on a phone.**
+request. Installed on the user's phone; the user reports Reporter updates works.**
 1.3.0 (7) is the latest released build (F-Droid, Drive). People server amendment INSTALLED
 on the production People console. A separate accounts/leavers change (see the 20 October
 entry from the PC) is NOT on `main` yet and needs a server update first.
@@ -113,7 +113,8 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
-00. 1.4.0 is released (F-Droid, Drive). On the phone, try Reporter updates with a master sign-in:
+00. 1.4.0 is released and on the user's phone; they report Reporter updates works. Still
+   worth a careful look next time (no test sends without the user's say-so):
    check the list (names, IP, install date), a one-PC preview, then Cancel. Don't send a
    real update request or pause as a test without the user's say-so.
 0. Install 1.3.0 on the phone (F-Droid or Drive) and check shift, ID number and
@@ -432,3 +433,5 @@ session's report and asked to check and build.
     notes were used. Its venv was linked by a junction. Result: `koenekt-fdroid` `2089d9e`.
   - The live index lists 1.4.0 (8), and the downloaded APK hash matches `848ff565…`.
   - Copied to `G:\My Drive\Koenekt Android\` (hash checked).
+- 29 October: the user installed 1.4.0 on their phone and reported "Reporter updates works".
+  No other device checks reported.
