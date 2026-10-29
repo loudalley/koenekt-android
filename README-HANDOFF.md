@@ -1,8 +1,8 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
 Last updated: **29 October 2026, Claude (cloud session) — version 1.4.0 (8), native
-Reporter updates screen, SOURCE ONLY: pushed to branch `claude/laughing-brown-nleo4l`, not
-merged to `main`, not built with Gradle, not signed, not on F-Droid or Drive, not tried on
+Reporter updates screen, SOURCE ONLY: merged to `main` at the user's request (from
+branch `claude/laughing-brown-nleo4l`), not built with Gradle, not signed, not on F-Droid or Drive, not tried on
 a device.** 1.3.0 (7) is the latest released build (F-Droid, Drive); 1.2.0 (6) is on the
 user's phone. People server amendment INSTALLED on the production People console. No Play
 publication has occurred.
@@ -112,8 +112,8 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
-00. 1.4.0 (branch `claude/laughing-brown-nleo4l`): on the Windows PC, merge it to `main`,
-   run `assembleRelease bundleRelease lintDebug`, then try the Reporter updates screen
+00. 1.4.0 is on `main` but has never been built: on the Windows PC, pull `main`, run
+   `assembleRelease bundleRelease lintDebug` and fix anything it finds, then try the Reporter updates screen
    with a master sign-in (debug build or emulator first). Check the list (names, IP,
    install date), a one-PC preview, then Cancel. Don't send a real update request or
    pause as a test without the user's say-so. Then sign it, copy it to `dist/1.4.0/`
@@ -373,5 +373,7 @@ had changed the server and asked for "those functions" in the app ("it's the mai
   - `test_mobile_login.py`: 7 pass against `feat/koenekt-android-app`. Against People
     `main` the same 3 fail with or without this change (main lacks the amendment).
   - NOT run: Gradle build, Android lint, signing, emulator or phone.
-- Not done: merge to `main`, signed build, `dist/1.4.0`, F-Droid, Drive.
+- Merged to `main` (fast-forward) at the user's request before any Gradle build, after
+  they were told `main` would then hold unbuilt code.
+- Not done: Gradle build/lint, signed build, `dist/1.4.0`, F-Droid, Drive.
 
