@@ -1,12 +1,10 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **30 October 2026, Codex — Play upload and declarations prepared for
-1.6.1 (11), with an enabled "Submit 10 changes for review" button. NOT submitted,
-approved or published to Play. Quick checks are still running; no current blocking
-issues shown. The owner will submit. Demo reviewer has Demo Shop administrator access
-and the permanent licence is installed. Source remains local on `workspace-1.6.1`
-in `../koenekt-android-build`; source push and F-Droid/Drive publication of 1.6.1 await
-the owner's separate instruction. Shared handoff documentation is pushed separately.**
+Last updated: **30 October 2026, Claude (Windows PC) — version 1.6.1 (11), choose another
+workspace on the sign-in screen (Workspace · Change). Submitted to Google Play by the owner
+and IN REVIEW (production, South Africa; managed publishing off, so approval publishes it).
+Source pushed to `main`, published on the self-hosted F-Droid repo and copied to Google
+Drive at the user's request. Not yet tried on a phone.**
 
 Previous release: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
 leaver controls (change/delete your account, forced password change after an admin reset,
@@ -638,3 +636,18 @@ a Play developer account (organisation, D-U-N-S verified) and asked to publish w
 - Local release files remain `dist/1.6.1/` and `dist/play-store/` in the main checkout.
   Proof is in ignored `build/play-upload/ready-for-review-20261030.png` and
   `demo-admin-licence.png`. 1.6.1 source/F-Droid/Drive publication stays held.
+
+**30 October 2026 — Claude (1.6.1 release, Windows PC):** The owner submitted the Play
+changes; Publishing overview shows "Changes in review" for production 1.6.1 in South Africa
+with the listing, declarations and Sign-in details. The user then asked to push and publish.
+- GitHub `main` had only Codex's handoff commits (`10c9f48`, `8cd5929`), whose handoff text
+  was identical to the build worktree's. Merged them with `-s ours` (`c85a2dd`, no content
+  change) and pushed `8cd5929..c85a2dd`, bringing `e79d301` (1.6.1 code) and Codex's
+  Play-notes commits to `main`. Scanned the pushed docs: no reviewer password or other secret.
+- `tools/fdroid_repo.py publish --push` from the build worktree, giving `koenekt-fdroid`
+  `cba4d63`. The live index lists 1.6.1 (11) with APK hash `2adb5fc9…e0d0`.
+- Copied the same APK to `G:\My Drive\Koenekt Android\` (hash checked) and `dist/1.6.1/` to
+  the main checkout, which was fast-forwarded.
+- Watch for: Google may try Delete my account during review; if `play.reviewer` disappears,
+  recreate it (Demo Shop head-office access) before the next submission. Play-signed and
+  F-Droid/Drive installs use different signing keys, so a phone cannot update across them.
