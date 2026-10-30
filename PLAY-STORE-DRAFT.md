@@ -3,7 +3,15 @@
 **Version:** Koenekt 1.6.1 (11). Package: `za.co.koenekt.app`.
 This is a submission preparation note, not a claim of store approval.
 
-## Upload package and remaining Console work
+## Upload package and current Console state
+
+30 October 2026: the production 1.6.1 bundle, icon, feature graphic and six phone
+screenshots are uploaded and saved. Sign-in details, 18+ target audience, Content
+rating and Data safety are saved. Publishing overview shows an enabled
+**Submit 10 changes for review** button, with no current blocking issues. Quick
+checks are still running; no review submission or store approval has occurred.
+The owner will click Submit. Managed publishing is off, so approval will publish
+the production release automatically in South Africa.
 
 The signed bundle is `dist/1.6.1/Koenekt-1.6.1.aab`. Its SHA-256 is
 `d9f3c22512f3a00ae81e86ab56c8316d16706453ead18b67efd895c852e5c582`.
@@ -12,22 +20,23 @@ main checkout: `Koenekt-1.6.1.aab`, `icon-512.png`,
 `feature-graphic-1024x500.png` and six PNGs in `screenshots/`.
 These ignored local files must not be committed with signing credentials.
 
-The user confirmed that the separate `demo` workspace exists. Review access
-must use synthetic Demo Shop data, with no access to client workspaces. Set up
-`play.reviewer` with Demo Shop only and People and Who's in permissions. Keep
-its password out of Git, public notes and screenshots.
+The separate `demo` workspace contains only synthetic Demo Shop data. The reviewer
+is limited to Demo Shop, with the owner-approved administrator role (12/13
+permissions). The permanent complimentary demo licence is installed. Keep the
+reviewer password out of Git, public notes and screenshots.
 
 Access instructions for Play Console:
 
 > On the sign-in screen tap Workspace · Change and enter demo. Sign in with
 > the reviewer credentials supplied in Play Console. Open People to view the
-> synthetic staff and Who's in to view attendance. Available features depend
-> on the review account's permissions.
+> synthetic staff and Who's in to view attendance. Reports, Payroll, Clocks,
+> Users and Settings are available through the demo administrator role. Device
+> PIN/biometric prompts use the reviewer's own device lock; no authenticator code
+> is needed for this account.
 
-Before submission, verify the reviewer credentials work and complete Sign-in
-details, Target audience (18 and over, as requested by the owner), Content
-rating and the final Data safety save. Upload the graphics and bundle, review
-the production release, and have the owner click Send for review. A saved draft,
+Reviewer sign-in and Reports/Payroll access were verified in the browser. The
+owner's next action is to submit the saved changes from Publishing overview and
+resolve any new issues from the running quick checks. A saved draft,
 an uploaded bundle and store approval are separate states; verify each in Console.
 Pushing the 1.6.1 source and publishing it to F-Droid or Drive remain subject to
 the owner's separate instruction.
@@ -83,7 +92,7 @@ A Koenekt workspace and an internet connection are required.
   depend on a reviewer's access to the operator's personal authenticator. Do not
   disable production master MFA to facilitate review.
 - Six actual-app emulator screenshots with synthetic data, 512px store icon and
-  1024×500 feature graphic: prepared in `dist/play-store/`; upload still to verify.
+  1024×500 feature graphic: uploaded and saved, with screenshots ordered 01 to 06.
 - Confirm chosen application ID is available in the developer account before
   the first upload. Keep it stable after publishing.
 

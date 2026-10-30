@@ -314,5 +314,7 @@ For Play submission, Claude prepared the 1.6.1 bundle and six actual-app emulato
 screenshots with synthetic data in `dist/play-store/`. The privacy and external
 deletion pages are published from `docs/`; Account → Delete my account has been
 implemented since 1.6.0 and its server update is installed. Reviewer access must
-use the separate `demo` workspace. The remaining Console declarations, uploads
-and review submission must be verified in Play Console. See `PLAY-STORE-DRAFT.md`.
+use the separate `demo` workspace. As of 30 October, the
+uploads and declarations are saved and the owner can select **Submit 10 changes
+for review**. Quick checks are still running; the app has not been submitted,
+approved or published to Play. See `PLAY-STORE-DRAFT.md`.

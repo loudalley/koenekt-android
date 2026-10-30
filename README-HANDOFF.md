@@ -1,11 +1,12 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **29 October 2026, Codex — Play upload in progress for locally built
-1.6.1 (11) on `workspace-1.6.1` in `../koenekt-android-build`. Store graphics uploaded
-and listing saved ready for review; content rating completed. Demo reviewer login
-tested. Reviewer-access declaration, 18+ audience, Data safety and the production
-release still need completion/verification. No Play publication yet. Source push and
-F-Droid/Drive publication of 1.6.1 await the owner's separate instruction.**
+Last updated: **30 October 2026, Codex — Play upload and declarations prepared for
+1.6.1 (11), with an enabled "Submit 10 changes for review" button. NOT submitted,
+approved or published to Play. Quick checks are still running; no current blocking
+issues shown. The owner will submit. Demo reviewer has Demo Shop administrator access
+and the permanent licence is installed. Source remains local on `workspace-1.6.1`
+in `../koenekt-android-build`; source push and F-Droid/Drive publication of 1.6.1 await
+the owner's separate instruction. Shared handoff documentation is pushed separately.**
 
 Previous release: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
 leaver controls (change/delete your account, forced password change after an admin reset,
@@ -597,3 +598,43 @@ a Play developer account (organisation, D-U-N-S verified) and asked to publish w
   (up to 10 minutes remaining), so recheck their final result before submission.
   No change has been sent for review. 1.6.1 source/F-Droid/Drive release stays held;
   only shared handoff documentation is to be pushed from the main checkout.
+
+**30 October 2026 — Codex (Play preparation complete; owner submission next):**
+- The owner approved expanding the demo reviewer to the available Demo Shop
+  administrator permissions and confirmed the licence was issued. Signed in as
+  Demo Admin using the supplied existing demo credentials. Set the reviewer to
+  Head office admin (12/13 permissions), keeping company access at Demo Shop only.
+  Clock control is not held by Demo Admin and was not granted or exercised.
+- Users → Check now retrieved the issued licence. Verified Permanent,
+  complimentary and Never expires, replacing the 29-day grace-period message.
+  No new licence issued here, no service restart or backend deployment.
+- Signed in again as the reviewer; verified Reports and Payroll open, the Payroll
+  company selector is Demo Shop only, and the expanded navigation is present.
+  No payroll calculation, clock commands, account deletion or data edits used
+  as tests. No real customer records were accessed or changed.
+- Saved Sign-in details with the verified reviewer credentials in Play Console
+  only, Workspace · Change → demo, no authenticator requirement, device-local
+  PIN/biometric instructions and the synthetic workspace's administrator access.
+  Optional Google/partner-device feedback testing was left off; the credentials
+  remain available for the required Play review. No credentials saved in Git.
+- Saved Target audience as 18 and over. Final-saved the Data safety questionnaire
+  after confirming its existing account/encryption/deletion answers and six data
+  categories. Each save was confirmed by Console. Content rating and the uploaded
+  listing/release remain as prepared on 29 October.
+- Publishing overview now has an enabled "Submit 10 changes for review" button,
+  with production 1.6.1 and South Africa, the store listing, adult audience and
+  Data safety present. Sign-in details appears under "What you've told us".
+  No current blocking issues shown. Quick checks restarted and were still running
+  (up to 14 minutes shown); this is not a claim that they passed or review completed.
+- Exact next action: the owner opens the preserved Publishing overview tab and
+  clicks Submit 10 changes for review. Console says changes will be sent when
+  quick checks succeed; address any new issues it reports. Managed publishing
+  remains off, so approval will automatically publish the release in South Africa.
+  No review submission was clicked by Codex.
+- Checks this session: Git fetch/status/diff and browser verification of the licence,
+  permissions, reviewer sign-in, Reports/Payroll, saved declarations and enabled
+  submission control. No app source changes, build/test rerun or phone test;
+  29 October's successful local checks still apply to the unchanged bundle.
+- Local release files remain `dist/1.6.1/` and `dist/play-store/` in the main checkout.
+  Proof is in ignored `build/play-upload/ready-for-review-20261030.png` and
+  `demo-admin-licence.png`. 1.6.1 source/F-Droid/Drive publication stays held.
