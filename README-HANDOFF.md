@@ -1,8 +1,8 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
 Last updated: **30 October 2026, Claude (Windows PC) — version 1.6.1 (11), choose another
-workspace on the sign-in screen (Workspace · Change). Submitted to Google Play by the owner
-and IN REVIEW (production, South Africa; managed publishing off, so approval publishes it).
+workspace on the sign-in screen (Workspace · Change). LIVE ON GOOGLE PLAY in South Africa
+(checked 3 November 2026: public listing https://play.google.com/store/apps/details?id=za.co.koenekt.app).
 Source pushed to `main`, published on the self-hosted F-Droid repo and copied to Google
 Drive at the user's request. Not yet tried on a phone.**
 
@@ -651,3 +651,8 @@ with the listing, declarations and Sign-in details. The user then asked to push 
 - Watch for: Google may try Delete my account during review; if `play.reviewer` disappears,
   recreate it (Demo Shop head-office access) before the next submission. Play-signed and
   F-Droid/Drive installs use different signing keys, so a phone cannot update across them.
+
+**3 November 2026 — Claude:** Play review passed. The public listing for
+`za.co.koenekt.app` shows Koenekt with an Install button in South Africa (0+ downloads), and
+IARC sent a live rating notice. Play Console itself had signed out in the browser pane, so
+the Console status page was not re-read.
