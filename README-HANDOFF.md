@@ -656,3 +656,30 @@ with the listing, declarations and Sign-in details. The user then asked to push 
 `za.co.koenekt.app` shows Koenekt with an Install button in South Africa (0+ downloads), and
 IARC sent a live rating notice. Play Console itself had signed out in the browser pane, so
 the Console status page was not re-read.
+
+**3 November 2026 — Codex (public website review only):**
+- Reviewed the public homepage (including Services, Work, About and Contact),
+  pricing, new-store quote, downloads, callout and privacy pages at koenekt.co.za
+  in the native browser, using desktop and phone-sized layouts. Client Login
+  opens two "coming soon" entries; phone navigation hides Services, Work,
+  Pricing, New store and Downloads without a replacement menu.
+- Main design opportunities: installation photos and illustrated job stories,
+  People/Reporter previews using synthetic data, a shorter homepage, clearer
+  product enquiry buttons, and a friendlier introduction to the six-section
+  new-store form. Website recommendations only; no website source changed.
+- Browser checks: pricing calculator changed 20 km to R550; a public-landmark
+  callout lookup returned an address, route, R550 callout and R1,200 total with
+  one hour labour. No booking, enquiry, message or install was submitted.
+- Verified the public Google Play listing has an Install button and app
+  screenshots; website Downloads still says "Google Play coming soon".
+- Android remains 1.6.1 (11), built/signed and published as recorded above;
+  no Android build, test, physical-device check or server operation this session.
+  Existing release files remain in the primary checkout at `dist/1.6.1/` and
+  `dist/play-store/`. Existing server installations are unchanged.
+- Exact next action: in the website repository, add a mobile navigation menu,
+  update Downloads to link the live Play listing, resolve the Client Login
+  placeholders, then prepare a homepage revision with installation photos and
+  software previews. No website implementation or deployment was requested here.
+- Reviewed and committed this handoff in an isolated worktree from origin/main;
+  preserved the pre-existing local Android planning edits and stale OneDrive
+  checkout. Publication of this documentation is separate from an app release.
