@@ -42,6 +42,29 @@ uploads, promotion and tidy-up stay on the web page (menu: "Releases and full pa
 - The WebView now answers the website's `prompt()` dialogs natively (used by Users →
   Reset password).
 
+**My stores** (built 3 November 2026, not released): live till sales for every
+store a store login may see, through the Koenekt Link relay (`https://link.koenekt.co.za`,
+`/api/login`, `/api/stores`, `/api/stores/<id>/live`; nothing else is allowed by
+`AppPolicy.linkAllowed`). The one sign-in form also tries the relay; a store-only login
+gets Home, Stores and Account, and People or management users can add one under
+Account → Connect My stores. The token is saved in the same device-bound vault as the
+other sessions. Screens (`StoresScreen`, `StoreScreen`, `CompareScreen`, `Chart`,
+maths in `StoreMath`):
+- **Dashboard:** totals across the chosen stores in tiles (choose which), one row per
+  store (tills read, sales, basket, GP for owners, PC offline), grouped by **store type**
+  with each type's total and share, sorted by any figure. Store types, hidden stores,
+  tiles, grouping and sort are set on the phone (Customise) and kept per store login.
+- **One store:** sales, receipts, basket, GP; Today (sales by hour, payments, refunds and
+  paid outs, till events), Items (sort by sales, quantity or GP; departments) and Tills
+  (each till's sales, last sale, the cashier on it now and since when, who worked it,
+  voids, overrides and no-sale drawer opens).
+- **Compare:** store vs store or type vs type on any figure: a ranking, a head-to-head
+  table with each row's winner, and the hour-by-hour running total.
+Refreshes every 60 seconds while open, never in the background; nothing from it is
+stored on the phone except the dashboard layout. Owners see GP; staff answers arrive
+without GP (the shop PC removes it). Today only: past periods need back-office history
+from the shop PCs, which is not built yet.
+
 The design kit is `Ui.java`; there are no third-party UI libraries.
 
 Everything else (People records, reports, payroll, clocks, settings, users and the
@@ -184,8 +207,9 @@ Build output:
 Checks:
 
 ```powershell
-javac -d app/build/policy-checks app/src/main/java/za/co/koenekt/app/AppPolicy.java tools/PolicyChecks.java
+javac -d app/build/policy-checks app/src/main/java/za/co/koenekt/app/AppPolicy.java app/src/main/java/za/co/koenekt/app/StoreMath.java tools/PolicyChecks.java tools/StoreChecks.java
 java -cp app/build/policy-checks PolicyChecks
+java -cp app/build/policy-checks StoreChecks
 node tools/export-checks.cjs
 python tools/test_mobile_login.py -q
 python tools/test_mobile_updates.py -q
@@ -199,6 +223,11 @@ console running locally with synthetic data, seen from the emulator as
 ```powershell
 .\gradlew.bat assembleDebug -PdevOrigin=http://10.0.2.2:8765
 ```
+
+My stores can likewise use a local Link relay (`-PdevLink=http://10.0.2.2:18198`), for
+example the Reporter repo's `server/link_relay.py` with made-up stores; give People a
+dead local port at the same time (`-PdevOrigin=http://10.0.2.2:18999`) so test logins
+never reach a real People site.
 
 Without `-PdevOrigin`, debug builds behave like release builds apart from allowing
 screenshots. Debug builds include a network config that permits HTTP only to

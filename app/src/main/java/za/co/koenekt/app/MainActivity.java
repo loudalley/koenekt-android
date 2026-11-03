@@ -75,8 +75,14 @@ import java.util.function.Consumer;
 /** Native navigation, sign-in and everyday screens; the remaining product workflows run in a restricted WebView. */
 public final class MainActivity extends Activity {
     static final int TAB_HOME = 0, TAB_PEOPLE = 1, TAB_LIVE = 2, TAB_ACCOUNT = 3, TAB_UPDATES = 4;   // Updates is opened from Home, not the bottom bar
+    static final int TAB_STORES = 5;
     private static final int PICK_FILE = 20, SAVE_FILE = 21, DEVICE_UNLOCK = 22, MAX_EXPORT = 20 * 1024 * 1024;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    /** My stores asks several shop PCs at once, and each answer may take up to 20 s. */
+    private final ExecutorService linkWorker = Executors.newFixedThreadPool(4);
+    /** My stores (Koenekt Link relay) session: a bearer token, never a password. */
+    private String linkToken = "", linkUser = "", linkRole = "";
+    private StoresScreen storesScreen;
     private final Set<String> caps = new HashSet<>();
     private String workspace = AppPolicy.DEFAULT_WORKSPACE, displayName = "", role = "", roleLabel = "";
     private String notice = "", currentTitle = "Koenekt", exportNonce = "";
@@ -133,6 +139,7 @@ public final class MainActivity extends Activity {
         // Debug builds given -PdevOrigin talk to a local People console; release builds never do.
         if (BuildConfig.DEBUG && !BuildConfig.DEV_ORIGIN.isEmpty()) { AppPolicy.allowDevOrigin(BuildConfig.DEV_ORIGIN); workspace = BuildConfig.DEV_ORIGIN; }
         try { workspace = AppPolicy.workspace(workspace); } catch (Exception e) { workspace = AppPolicy.DEFAULT_WORKSPACE; }
+        if (BuildConfig.DEBUG && !BuildConfig.DEV_LINK.isEmpty()) AppPolicy.allowDevLink(BuildConfig.DEV_LINK);
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().removeAllCookies(ignored -> buildShell());
     }
@@ -181,15 +188,21 @@ public final class MainActivity extends Activity {
         if (which == TAB_PEOPLE) return peopleSession && caps.contains("people_read");
         if (which == TAB_LIVE) return peopleSession && caps.contains("dashboard");
         if (which == TAB_UPDATES) return operator;
+        if (which == TAB_STORES) return !linkToken.isEmpty();
         return true;
     }
+    /** Any of the three services: People, management (licence site) or My stores. */
+    private boolean signedIn() { return peopleSession || operator || !linkToken.isEmpty(); }
+    boolean showingStores() { return tab == TAB_STORES && !locked && !inWeb && flow == null && storesScreen != null; }
+    String linkRole() { return linkRole; }
+    String linkUser() { return linkUser; }
     private void showNav(boolean visible) {
         nav.setVisibility(visible ? View.VISIBLE : View.GONE); navLine.setVisibility(visible ? View.VISIBLE : View.GONE);
         if (!visible) return;
         nav.removeAllViews();
-        int[] tabs = {TAB_HOME, TAB_PEOPLE, TAB_LIVE, TAB_ACCOUNT};
-        int[] icons = {R.drawable.ic_home, R.drawable.ic_people, R.drawable.ic_live, R.drawable.ic_account};
-        String[] names = {"Home", "People", "Who's in", "Account"};
+        int[] tabs = {TAB_HOME, TAB_STORES, TAB_PEOPLE, TAB_LIVE, TAB_ACCOUNT};
+        int[] icons = {R.drawable.ic_home, R.drawable.ic_store, R.drawable.ic_people, R.drawable.ic_live, R.drawable.ic_account};
+        String[] names = {"Home", "Stores", "People", "Who's in", "Account"};
         for (int i = 0; i < tabs.length; i++) {
             if (!hasTab(tabs[i])) continue;
             boolean selected = tabs[i] == tab;
@@ -210,11 +223,12 @@ public final class MainActivity extends Activity {
 
     void showTab(int which) {
         if (busy || locked) return;
-        if (!peopleSession && !operator) { loginScreen(notice); return; }
+        if (!signedIn()) { loginScreen(notice); return; }
         if (peopleSession && mustChangePassword) { startPasswordChange(true); return; }
         if (!hasTab(which)) which = TAB_HOME;
         leaveWeb(); flow = null; tab = which;
-        if (which == TAB_PEOPLE) { if (peopleScreen == null) peopleScreen = new PeopleScreen(this); showNav(true); peopleScreen.show(); }
+        if (which == TAB_STORES) { if (storesScreen == null) storesScreen = new StoresScreen(this); showNav(true); storesScreen.show(); }
+        else if (which == TAB_PEOPLE) { if (peopleScreen == null) peopleScreen = new PeopleScreen(this); showNav(true); peopleScreen.show(); }
         else if (which == TAB_LIVE) { if (liveScreen == null) liveScreen = new LiveScreen(this); showNav(true); liveScreen.show(); }
         else if (which == TAB_UPDATES) { if (updatesScreen == null) updatesScreen = new UpdatesScreen(this); showNav(false); updatesScreen.show(); }
         else if (which == TAB_ACCOUNT) accountTab();
@@ -257,6 +271,13 @@ public final class MainActivity extends Activity {
     LinearLayout page() {
         ScrollView scroll = new ScrollView(this); scroll.setFillViewport(true);
         LinearLayout l = Ui.column(this); l.setPadding(dp(20), dp(8), dp(20), dp(28)); scroll.addView(l); mount(scroll); return l;
+    }
+
+    /** Redraws the current page (new figures arrived) without jumping back to the top. */
+    void redraw(Runnable render) {
+        int y = content.getChildCount() > 0 && content.getChildAt(0) instanceof ScrollView s ? s.getScrollY() : 0;
+        render.run();
+        if (y > 0 && content.getChildCount() > 0 && content.getChildAt(0) instanceof ScrollView s) s.post(() -> s.scrollTo(0, y));
     }
 
     boolean can(String cap) { return caps.contains(cap); }
@@ -497,16 +518,20 @@ public final class MainActivity extends Activity {
                     api(origin + "/api/login", new JSONObject().put("username", username).put("password", password).put("code", otp).put("remember_device", remember));
                     person = api(origin + "/api/me", null); peopleOk = true;
                 } catch (Exception e) { failure += (failure.isEmpty() ? "" : "\n") + "People: " + friendly(e); }
+                // A store login (My stores) is made by Koenekt; most People accounts have none, so its refusal is not shown.
+                String[] store = linkLogin(username, password);
                 final boolean gotAdmin = adminOk, gotPeople = peopleOk;
                 final JSONObject account = person; final String msg = failure;
                 runOnUiThread(() -> {
                     if (attempt != epoch || isFinishing() || isDestroyed()) return;
                     busy = false; pw.setText(""); code.setText("");
-                    if (!gotPeople && !gotAdmin) {
+                    if (!gotPeople && !gotAdmin && store == null) {
                         Ui.enable(signIn, true); signIn.setText(R.string.sign_in); error.setText(msg); return;
                     }
+                    setLink(store, username);
                     operator = gotAdmin; peopleSession = gotPeople; applyPerson(account); companies = null;
-                    notice = msg.isEmpty() ? "" : msg + "\nAvailable sections are shown below. Sign in again to retry the other service.";
+                    String shown = !gotPeople && !gotAdmin ? "" : msg;   // a store-only login has no People account to complain about
+                    notice = shown.isEmpty() ? "" : shown + "\nAvailable sections are shown below. Sign in again to retry the other service.";
                     getPreferences(MODE_PRIVATE).edit().putString("workspace", workspace).apply();
                     rememberSignIn();
                 });
@@ -545,8 +570,10 @@ public final class MainActivity extends Activity {
     private void applyPerson(JSONObject person) {
         caps.clear(); role = person == null ? "" : person.optString("role");
         mustChangePassword = person != null && person.optBoolean("must_change_password");
-        displayName = person == null ? "Koenekt management" : person.optString("display_name", person.optString("username"));
-        roleLabel = person == null ? "Licences, customers and Reporter updates" : person.optString("role_label", role);
+        boolean storesOnly = person == null && !operator && !linkToken.isEmpty();
+        displayName = person != null ? person.optString("display_name", person.optString("username")) : storesOnly ? linkUser : "Koenekt management";
+        roleLabel = person != null ? person.optString("role_label", role) : storesOnly
+                ? ("owner".equals(linkRole) ? "My stores · owner" : "My stores · staff") : "Licences, customers and Reporter updates";
         if (person != null) {
             JSONArray list = person.optJSONArray("caps");
             if (list != null) for (int i=0; i<list.length(); i++) caps.add(list.optString(i));
@@ -559,7 +586,7 @@ public final class MainActivity extends Activity {
 
     private void home() {
         if (busy || locked) return;
-        if (!peopleSession && !operator) { loginScreen(notice); return; }
+        if (!signedIn()) { loginScreen(notice); return; }
         if (peopleSession && mustChangePassword) { startPasswordChange(true); return; }
         leaveWeb(); flow = null; tab = TAB_HOME; currentTitle = "Koenekt"; setBar(null, false); showNav(true);
         LinearLayout page = page(); page.setPadding(dp(20), dp(24), dp(20), dp(28));
@@ -571,8 +598,9 @@ public final class MainActivity extends Activity {
         page.addView(Ui.text(this, roleLabel, 15, Ui.MUTED)); Ui.gap(page, 24);
         if (!notice.isEmpty()) { page.addView(Ui.notice(this, notice, false)); Ui.gap(page, 20); }
         LinearLayout quick = Ui.row(this); quick.setGravity(Gravity.TOP);
-        if (peopleSession && can("people_hire")) addQuick(quick, R.drawable.ic_add, "Add employee", "Name, company and clock PIN", this::startAddEmployee);
-        if (hasTab(TAB_LIVE)) addQuick(quick, R.drawable.ic_live, "Who's in", "Live attendance right now", () -> showTab(TAB_LIVE));
+        if (hasTab(TAB_STORES)) addQuick(quick, R.drawable.ic_store, "My stores", "Live sales from the tills", () -> showTab(TAB_STORES));
+        if (peopleSession && can("people_hire") && quick.getChildCount() < 2) addQuick(quick, R.drawable.ic_add, "Add employee", "Name, company and clock PIN", this::startAddEmployee);
+        if (hasTab(TAB_LIVE) && quick.getChildCount() < 2) addQuick(quick, R.drawable.ic_live, "Who's in", "Live attendance right now", () -> showTab(TAB_LIVE));
         if (hasTab(TAB_UPDATES) && quick.getChildCount() < 2) addQuick(quick, R.drawable.ic_update, "Reporter updates", "Shop PCs, update and pause", () -> showTab(TAB_UPDATES));
         if (quick.getChildCount() > 0) { page.addView(quick); Ui.gap(page, 28); }
         List<AppPolicy.Feature> tools = new ArrayList<>();
@@ -616,11 +644,14 @@ public final class MainActivity extends Activity {
         LinearLayout who = Ui.row(this); who.addView(Ui.avatar(this, displayName, 56));
         LinearLayout words = Ui.column(this); words.setPadding(dp(16), 0, 0, 0);
         words.addView(Ui.title(this, displayName, 20)); words.addView(Ui.text(this, roleLabel, 14, Ui.MUTED));
-        String host = Uri.parse(peopleSession ? workspace : AppPolicy.ADMIN).getHost();
+        String host = Uri.parse(peopleSession ? workspace : operator ? AppPolicy.ADMIN : AppPolicy.link()).getHost();
         if (host != null) words.addView(Ui.text(this, host, 13, Ui.MUTED));
         who.addView(words, new LinearLayout.LayoutParams(0, -2, 1)); page.addView(who); Ui.gap(page, 24);
         LinearLayout card = Ui.column(this); card.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, this)); card.setClipToOutline(true);
         card.addView(Ui.listRow(this, null, "Refresh access", "Reload your companies and permissions", null, this::refreshAccess));
+        card.addView(Ui.divider(this, 16));
+        if (linkToken.isEmpty()) card.addView(Ui.listRow(this, null, "Connect My stores", "Sign in with the store login Koenekt gave you", null, this::connectStores));
+        else card.addView(Ui.listRow(this, null, "My stores: " + linkUser, "Sign out of My stores on this phone", null, this::disconnectStores));
         card.addView(Ui.divider(this, 16));
         boolean ownAccount = peopleSession && !role.equals("master");   // master's login is managed by Koenekt
         if (ownAccount) {
@@ -655,20 +686,127 @@ public final class MainActivity extends Activity {
 
     private void refreshAccess() {
         if (busy || locked) return;
-        busy = true; int attempt = epoch; boolean checkPeople = peopleSession, checkAdmin = operator;
+        busy = true; int attempt = epoch; boolean checkPeople = peopleSession, checkAdmin = operator; String token = linkToken;
         worker.execute(() -> {
-            JSONObject person = null; boolean adminOk = checkAdmin; String msg = "";
+            JSONObject person = null; boolean adminOk = checkAdmin, linkOk = !token.isEmpty(); String msg = "", role = linkRole;
             try { if (checkPeople) person = api(workspace + "/api/me", null); }
             catch (Exception e) { msg = "People: " + friendly(e); }
             try { if (checkAdmin) api(AppPolicy.ADMIN + "/licences/api/overview", null); }
             catch (Exception e) { adminOk = false; msg += "\nManagement: " + friendly(e); }
-            final JSONObject p = person; final boolean a = adminOk; final String m = msg;
+            try { if (linkOk) role = linkApi(AppPolicy.link() + "/api/stores", "GET", null, token).optString("role", role); }
+            catch (SessionRejected e) { linkOk = false; msg += "\nMy stores: session ended. Sign in again."; }
+            catch (Exception e) { msg += "\nMy stores: " + friendly(e); }
+            final JSONObject p = person; final boolean a = adminOk, l = linkOk; final String m = msg, r = role;
             runOnUiThread(() -> {
                 if (epoch != attempt || isDestroyed()) return;
-                busy = false; peopleSession = p != null; operator = a; applyPerson(p); notice = m.trim();
-                companies = null; peopleScreen = null; liveScreen = null; updatesScreen = null; home();
+                busy = false; peopleSession = p != null; operator = a; linkRole = r;
+                if (!l) linkToken = "";
+                applyPerson(p); notice = m.trim();
+                companies = null; peopleScreen = null; liveScreen = null; updatesScreen = null; storesScreen = null; home();
             });
         });
+    }
+
+    /** Relay sign-in on the worker: {token, role}, or null when it refused or could not be reached. */
+    private String[] linkLogin(String username, String password) {
+        try {
+            JSONObject r = linkApi(AppPolicy.link() + "/api/login", "POST",
+                    new JSONObject().put("username", username).put("password", password), "");
+            String token = r.optString("token");
+            return token.isEmpty() ? null : new String[]{token, r.optString("role", "staff")};
+        } catch (Exception e) { return null; }
+    }
+    private void setLink(String[] store, String username) {
+        linkToken = store == null ? "" : store[0]; linkRole = store == null ? "" : store[1];
+        linkUser = store == null ? "" : username; storesScreen = null;
+    }
+
+    /** Account: add a store login to a People or management sign-in. */
+    private void connectStores() {
+        if (busy || locked) return;
+        LinearLayout box = Ui.column(this); box.setPadding(dp(24), dp(8), dp(24), 0);
+        box.addView(Ui.text(this, "Your store login from Koenekt. It shows live sales for the stores it may see.", 14, Ui.MUTED)); Ui.gap(box, 12);
+        EditText user = Ui.field(box, "Store login", "e.g. owner.shop", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        EditText pw = Ui.field(box, "Password", "Password", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        new AlertDialog.Builder(this).setTitle("Connect My stores").setView(box).setNegativeButton("Cancel", null)
+                .setPositiveButton("Connect", (d, w) -> {
+                    String u = user.getText().toString().trim(), p = pw.getText().toString();
+                    if (u.isEmpty() || p.isEmpty()) { toast(getString(R.string.credentials_required)); return; }
+                    busy = true; int attempt = epoch;
+                    worker.execute(() -> {
+                        String[] store = linkLogin(u, p);
+                        runOnUiThread(() -> {
+                            if (attempt != epoch || isDestroyed()) return;
+                            busy = false;
+                            if (store == null) { toast("My stores sign-in failed. Check the store login and password, or your connection."); return; }
+                            setLink(store, u); refreshAfterStores();
+                        });
+                    });
+                }).show();
+    }
+    private void disconnectStores() {
+        new AlertDialog.Builder(this).setTitle("Sign out of My stores?").setMessage("People and management stay signed in.")
+                .setPositiveButton("Sign out", (d, w) -> {
+                    linkLogout(); setLink(null, "");
+                    if (!peopleSession && !operator) signOut(); else refreshAfterStores();
+                }).setNegativeButton("Cancel", null).show();
+    }
+    /** Saves the changed set of sessions (asks for the fingerprint or PIN again), then shows Home. */
+    private void refreshAfterStores() {
+        storesScreen = null;
+        rememberSignIn();   // re-saves and re-checks every session, or shows Home when the phone has no screen lock
+    }
+    /** Ends this phone's relay session there too (it ends only this token, not the login's other phones). */
+    private void linkLogout() {
+        String token = linkToken;
+        if (token.isEmpty()) return;
+        linkWorker.execute(() -> { try { linkApi(AppPolicy.link() + "/api/logout", "POST", new JSONObject(), token); } catch (Exception ignored) { } });
+    }
+
+    /** My stores: the relay's phone API with the store token. A 401 ends only the My stores session. */
+    void linkRequest(String method, String path, JSONObject body, Done ok, Consumer<String> failed) {
+        int attempt = epoch; String token = linkToken, url = AppPolicy.link() + path;
+        if (token.isEmpty()) return;
+        linkWorker.execute(() -> {
+            try {
+                JSONObject data = linkApi(url, method, body, token);
+                runOnUiThread(() -> { if (attempt == epoch && token.equals(linkToken) && !isDestroyed()) ok.accept(data); });
+            } catch (Exception e) {
+                boolean expired = e instanceof SessionRejected && ((SessionRejected) e).status == 401;
+                String message = friendly(e);
+                runOnUiThread(() -> {
+                    if (attempt != epoch || !token.equals(linkToken) || isDestroyed()) return;
+                    if (expired) { setLink(null, ""); notice = "Your My stores session ended. Sign in again to continue."; showTab(TAB_HOME); }
+                    else failed.accept(message);
+                });
+            }
+        });
+    }
+
+    private JSONObject linkApi(String url, String method, JSONObject payload, String token) throws Exception {
+        if (!AppPolicy.linkAllowed(url)) throw new Exception("Untrusted service address.");
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        // A live answer waits up to 20 s on the relay while the shop PC reads its tills.
+        c.setConnectTimeout(15000); c.setReadTimeout(35000); c.setInstanceFollowRedirects(false);
+        c.setRequestProperty("Accept", "application/json"); c.setRequestProperty("User-Agent", "KoenektAndroid/" + BuildConfig.VERSION_NAME);
+        if (!token.isEmpty()) c.setRequestProperty("Authorization", "Bearer " + token);
+        try {
+            c.setRequestMethod(method);
+            if (payload != null) {
+                c.setDoOutput(true); c.setRequestProperty("Content-Type", "application/json");
+                try (OutputStream out = c.getOutputStream()) { out.write(payload.toString().getBytes(StandardCharsets.UTF_8)); }
+            }
+            int status = c.getResponseCode();
+            if (status < 200 || status >= 300) {
+                String detail = "";
+                try (InputStream in = c.getErrorStream()) {
+                    if (in != null) detail = new JSONObject(new String(readLimited(in, 16 * 1024), StandardCharsets.UTF_8)).optString("error").trim();
+                } catch (Exception ignored) { /* no readable reason */ }
+                if (status == 401) throw new SessionRejected(401, detail.isEmpty() ? "Sign-in failed or expired." : detail);
+                throw new Exception(detail.isEmpty() ? "My stores is unavailable (" + status + "). Try again later." : detail);
+            }
+            try (InputStream in = c.getInputStream()) { return new JSONObject(new String(readLimited(in, 8 * 1024 * 1024), StandardCharsets.UTF_8)); }
+        } finally { c.disconnect(); }
     }
 
     private void webMenu() {
@@ -687,7 +825,7 @@ public final class MainActivity extends Activity {
 
     private void about() {
         new AlertDialog.Builder(this).setTitle("Koenekt " + BuildConfig.VERSION_NAME)
-                .setMessage("People, licences and Reporter updates.\n\nThis app connects to your existing Koenekt services over HTTPS. Server permissions determine what you can view and change.\n\nPasswords and authenticator codes are not saved. Remembered session tokens are encrypted using Android Keystore and require device authentication to restore. Unlock with a strong biometric such as fingerprint, or the phone's PIN, pattern or password. Android 8 uses the device credential. Sign out forgets the saved login. Expired or revoked server sessions require a new Koenekt sign-in.\n\nStaff, attendance, payroll and licence information stays with your Koenekt service. Exported reports are saved only to a location you select. The app has no advertising or analytics SDKs.\n\nFor account access or correction, contact your organisation's administrator. To delete your login, use Account → Delete my account; if you can no longer sign in, use Delete account below. Deleting a login does not erase employment records that the organisation must retain.\n\nAn internet connection is required. Phone biometrics unlock this app; staff fingerprint/face enrollment still uses the connected clocks.")
+                .setMessage("People, licences, Reporter updates and My stores.\n\nThis app connects to your existing Koenekt services over HTTPS. My stores shows live till figures that your shop PCs send through Koenekt while you have it open; the app keeps no copy of them after you leave it. Server permissions determine what you can view and change.\n\nPasswords and authenticator codes are not saved. Remembered session tokens are encrypted using Android Keystore and require device authentication to restore. Unlock with a strong biometric such as fingerprint, or the phone's PIN, pattern or password. Android 8 uses the device credential. Sign out forgets the saved login. Expired or revoked server sessions require a new Koenekt sign-in.\n\nStaff, attendance, payroll and licence information stays with your Koenekt service. Exported reports are saved only to a location you select. The app has no advertising or analytics SDKs.\n\nFor account access or correction, contact your organisation's administrator. To delete your login, use Account → Delete my account; if you can no longer sign in, use Delete account below. Deleting a login does not erase employment records that the organisation must retain.\n\nAn internet connection is required. Phone biometrics unlock this app; staff fingerprint/face enrollment still uses the connected clocks.")
                 .setNeutralButton("Privacy policy", (d,w) -> openExternal(AppPolicy.PRIVACY_URL))
                 .setNegativeButton("Delete account", (d,w) -> openExternal(AppPolicy.DELETE_ACCOUNT_URL))
                 .setPositiveButton("Close", null).show();
@@ -707,6 +845,7 @@ public final class MainActivity extends Activity {
         authAttempt++; authInProgress = false; pinPromptActive = false; pendingAuthAttempt = 0; afterUnlock = null; busy = false;
         if (authentication != null) authentication.cancel();
         vault.clear(); locked = false; hideShield(); pendingFileRequest = 0; pendingFileResult = null;
+        linkLogout(); setLink(null, "");
         epoch++; operator = false; peopleSession = false; caps.clear(); notice = "";
         companies = null; peopleScreen = null; liveScreen = null; updatesScreen = null; flow = null; tab = TAB_HOME;
         web.stopLoading(); web.loadUrl("about:blank"); web.clearHistory(); web.clearCache(true); web.clearFormData();
@@ -729,8 +868,10 @@ public final class MainActivity extends Activity {
             vault.prepare();
             JSONObject saved = new JSONObject().put("workspace", workspace)
                     .put("people", peopleSession ? AppPolicy.sessionCookie(CookieManager.getInstance().getCookie(workspace + "/"), "adms_session") : "")
-                    .put("management", operator ? AppPolicy.sessionCookie(CookieManager.getInstance().getCookie(AppPolicy.ADMIN + "/licences/"), "kls_session") : "");
-            if (saved.optString("people").isEmpty() && saved.optString("management").isEmpty()) throw new Exception("No session was returned.");
+                    .put("management", operator ? AppPolicy.sessionCookie(CookieManager.getInstance().getCookie(AppPolicy.ADMIN + "/licences/"), "kls_session") : "")
+                    .put("link", linkToken).put("link_user", linkUser).put("link_role", linkRole);
+            if (saved.optString("people").isEmpty() && saved.optString("management").isEmpty() && linkToken.isEmpty())
+                throw new Exception("No session was returned.");
             afterUnlock = () -> {
                 try { vault.save(saved); restoreSavedSession(); }
                 catch (Exception e) { signOut(); toast("The saved sign-in could not be secured. Sign in again."); }
@@ -820,14 +961,23 @@ public final class MainActivity extends Activity {
         catch (Exception e) { signOut(); toast("Saved login is unavailable or device security changed. Sign in again."); return; }
         String p = AppPolicy.sessionCookie(saved.optString("people"), "adms_session");
         String a = AppPolicy.sessionCookie(saved.optString("management"), "kls_session");
-        if (p.isEmpty() && a.isEmpty()) { signOut(); return; }
+        String l = saved.optString("link"), lUser = saved.optString("link_user"), lRole = saved.optString("link_role");
+        if (p.isEmpty() && a.isEmpty() && l.isEmpty()) { signOut(); return; }
         busy = true; showLock("Checking your saved sign-in…"); int attempt = epoch;
         Runnable verify = () -> worker.execute(() -> {
             JSONObject person = null; boolean adminOk = false, retry = false; String error = "";
+            // My stores: kept when the relay can't be reached (it is checked again on the next call), dropped when it refuses.
+            boolean storesKept = false, storesChecked = false; String storesRole = lRole;
+            if (!l.isEmpty()) {
+                try { storesRole = linkApi(AppPolicy.link() + "/api/stores", "GET", null, l).optString("role", lRole); storesKept = storesChecked = true; }
+                catch (SessionRejected e) { error += "\nMy stores session expired. Sign in again to renew it."; }
+                catch (Exception e) { storesKept = true; retry = true; error += "\nMy stores: " + friendly(e); }
+            }
+            final boolean keepStores = storesKept, storesOk = storesChecked; final String role = storesRole;
             if (!p.isEmpty()) {
                 try { person = api(workspace + "/api/me", null); }
-                catch (SessionRejected e) { error = "People session expired. Sign in again to renew it."; }
-                catch (Exception e) { retry = true; error = friendly(e); }
+                catch (SessionRejected e) { error += "\nPeople session expired. Sign in again to renew it."; }
+                catch (Exception e) { retry = true; error += "\n" + friendly(e); }
             }
             if (!a.isEmpty()) {
                 try { api(AppPolicy.ADMIN + "/licences/api/overview", null); adminOk = true; }
@@ -838,11 +988,12 @@ public final class MainActivity extends Activity {
             runOnUiThread(() -> {
                 if (attempt != epoch || isDestroyed()) return;
                 busy = false;
-                if (account == null && !admin) {
+                if (account == null && !admin && !storesOk) {
                     CookieManager.getInstance().removeAllCookies(null);
                     if (networkRetry) { showLock("Could not check your saved login. Check your connection and unlock to retry."); return; }
                     signOut(); toast("Your Koenekt session expired or was revoked. Sign in again."); return;
                 }
+                linkToken = keepStores ? l : ""; linkUser = keepStores ? lUser : ""; linkRole = keepStores ? role : ""; storesScreen = null;
                 peopleSession = account != null; operator = admin; applyPerson(account); notice = message;
                 // Return to the open page when its service session is still valid; otherwise re-list sections.
                 boolean resumeFile = pendingFileRequest != 0, stay = resumeFile || resumable(web.getUrl());
@@ -853,6 +1004,7 @@ public final class MainActivity extends Activity {
         });
         // Wait for both asynchronous CookieManager writes before making native requests.
         int[] remaining = { (p.isEmpty() ? 0 : 1) + (a.isEmpty() ? 0 : 1) };
+        if (remaining[0] == 0) { verify.run(); return; }   // My stores only: no cookies to install
         ValueCallback<Boolean> installed = ok -> {
             if (attempt != epoch || isDestroyed()) return;
             if (!ok) { busy = false; signOut(); toast("Saved session could not be restored. Sign in again."); return; }
@@ -1057,7 +1209,7 @@ public final class MainActivity extends Activity {
         if (inWeb && web.canGoBack()) web.goBack();
         else if (inWeb) showTab(tab);
         else if (flow != null) finishFlow(false);
-        else if (tab != TAB_HOME && (peopleSession || operator)) showTab(TAB_HOME);
+        else if (tab != TAB_HOME && signedIn()) showTab(TAB_HOME);
         else finish();
     }
     /** After unlocking: an add or edit flow keeps its answers; tabs reload their data. */
@@ -1078,7 +1230,7 @@ public final class MainActivity extends Activity {
     @Override protected void onStop() {
         super.onStop(); foreground = false;
         if (authInProgress || root == null) return;
-        if (vault.exists() || peopleSession || operator) {
+        if (vault.exists() || signedIn()) {
             // Without a screen lock the return cannot be protected, so sign out, except while
             // the user is in a file picker, Save dialog or print screen this app opened.
             if (!vault.deviceSecured()) { if (!externalTask) signOut(); return; }
@@ -1086,12 +1238,13 @@ public final class MainActivity extends Activity {
             showLock("Unlock to continue.");
             web.stopLoading(); web.onPause(); web.pauseTimers();
             CookieManager.getInstance().removeAllCookies(null);
+            linkToken = "";   // read again from the vault after unlocking, like the cookies
         }
     }
     @Override protected void onDestroy() {
         authAttempt++;
         if (authentication != null) authentication.cancel();
-        epoch++; worker.shutdownNow(); cancelExport();
+        epoch++; worker.shutdownNow(); linkWorker.shutdownNow(); cancelExport();
         if (uploadCallback != null) uploadCallback.onReceiveValue(null);
         if (web != null) { if (web.getParent() instanceof ViewGroup parent) parent.removeView(web); web.destroy(); }
         super.onDestroy();

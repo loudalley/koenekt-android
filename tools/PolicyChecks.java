@@ -51,6 +51,21 @@ public class PolicyChecks {
         check(AppPolicy.sameOrigin("http://10.0.2.2:8765", "http://10.0.2.2:8765/people"), "development origin allowed once set");
         check(!AppPolicy.sameOrigin("http://10.0.2.2:8765", "http://10.0.2.2:9999/"), "other local ports still rejected");
         check(!AppPolicy.sameOrigin(AppPolicy.DEFAULT_WORKSPACE, "http://people.koenekt.co.za/"), "production stays HTTPS-only");
+        // My stores: only the relay's phone API, only over HTTPS, the debug relay only when set.
+        check(AppPolicy.linkAllowed(AppPolicy.LINK + "/api/login"), "relay sign-in");
+        check(AppPolicy.linkAllowed(AppPolicy.LINK + "/api/stores"), "relay store list");
+        check(AppPolicy.linkAllowed(AppPolicy.LINK + "/api/stores/a1b2c30000/live"), "relay live figures");
+        for (String url : new String[]{"http://link.koenekt.co.za/api/stores", "https://link.koenekt.co.za.evil.com/api/stores",
+                "https://link.koenekt.co.za/op/agents", "https://link.koenekt.co.za/agent/poll", "https://link.koenekt.co.za/api/stores/../op/live",
+                "https://user@link.koenekt.co.za/api/stores", "https://link.koenekt.co.za:8443/api/stores",
+                "https://link.koenekt.co.za/api/stores?x=1", AppPolicy.ADMIN + "/api/stores", "http://10.0.2.2:18198/api/stores"})
+            check(!AppPolicy.linkAllowed(url), "relay call refused: " + url);
+        rejected = false;
+        try { AppPolicy.allowDevLink("https://evil.example:443"); } catch (IllegalArgumentException e) { rejected = true; }
+        check(rejected, "development relay limited to the emulator host");
+        AppPolicy.allowDevLink("http://10.0.2.2:18198");
+        check(AppPolicy.linkAllowed("http://10.0.2.2:18198/api/stores"), "development relay allowed once set");
+        check(!AppPolicy.linkAllowed(AppPolicy.LINK + "/api/stores"), "one relay at a time");
         System.out.println("Policy checks passed: " + checks);
     }
 }

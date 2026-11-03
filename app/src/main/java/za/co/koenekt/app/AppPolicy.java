@@ -9,6 +9,8 @@ import java.util.Set;
 public final class AppPolicy {
     public static final String ADMIN = "https://admin.koenekt.co.za";
     public static final String DEFAULT_WORKSPACE = "https://people.koenekt.co.za";
+    /** Koenekt Link relay: My stores asks shop PCs for live till figures through it. */
+    public static final String LINK = "https://link.koenekt.co.za";
     /** Public policy pages (GitHub Pages from docs/); opened in the browser, never inside the WebView. */
     public static final String PRIVACY_URL = "https://loudalley.github.io/koenekt-android/privacy.html";
     public static final String DELETE_ACCOUNT_URL = "https://loudalley.github.io/koenekt-android/delete-account.html";
@@ -22,6 +24,27 @@ public final class AppPolicy {
         devOrigin = origin;
     }
     public static boolean isDevOrigin(String origin) { return !devOrigin.isEmpty() && devOrigin.equals(origin); }
+
+    /** Debug builds only (-PdevLink): a local Link relay on this PC, seen from the emulator. */
+    private static String devLink = "";
+    public static void allowDevLink(String origin) {
+        if (!origin.matches("http://(10\\.0\\.2\\.2|127\\.0\\.0\\.1):[0-9]{2,5}"))
+            throw new IllegalArgumentException("A development relay must be the emulator host.");
+        devLink = origin;
+    }
+    public static String link() { return devLink.isEmpty() ? LINK : devLink; }
+
+    /** Only the relay's phone API, over HTTPS (or the debug relay). */
+    public static boolean linkAllowed(String url) {
+        try {
+            URI u = new URI(url), base = new URI(link());
+            String path = u.getRawPath();
+            return u.getScheme() != null && u.getScheme().equals(base.getScheme()) && u.getRawUserInfo() == null
+                    && base.getHost().equals(u.getHost()) && base.getPort() == u.getPort()
+                    && u.getRawQuery() == null && u.getRawFragment() == null
+                    && path != null && path.matches("/api/(login|logout|stores|stores/[A-Za-z0-9_-]{4,64}/live)");
+        } catch (Exception e) { return false; }
+    }
 
     public static String setupWorkspace(String link) {
         try {

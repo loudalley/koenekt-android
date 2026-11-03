@@ -118,6 +118,15 @@ the repository move.
 
 Next actions for Cursor/Claude:
 
+0000. **My stores: built 3 Nov 2026, NOT released** (owner's request: live till sales per store,
+   a customisable multi-store dashboard grouped by store type, store vs store and type vs type).
+   Native `StoresScreen`/`StoreScreen`/`CompareScreen`/`Chart`/`StoreMath`, Stores tab, Account →
+   Connect My stores; relay `https://link.koenekt.co.za` (installed on srv1 3 Nov). Before a release:
+   bump to 1.7.0 (12); Play Data safety and the privacy page must mention business sales figures shown
+   (none stored); add a demo store login for the Play reviewer; try it on the owner's phone against the
+   pilot shop once its Reporter has `link_enabled`. Spec: Reporter repo
+   `docs/proposals/KOENEKT-REPORTS-IN-APP.md` sections 1, 2b, 7.1. Keep real shop names and figures out of
+   this public repo.
 000. 1.6.0 (accounts and leavers) is released (F-Droid, Drive). On the phone, with test people: Account → Change password; an admin's Reset password
    in Users followed by the forced change; Delete from People on a test leaver; a clock
    password on a test person. The local `main` in `C:\Projects\koenekt-android` still has the
@@ -683,3 +692,30 @@ the Console status page was not re-read.
 - Reviewed and committed this handoff in an isolated worktree from origin/main;
   preserved the pre-existing local Android planning edits and stale OneDrive
   checkout. Publication of this documentation is separate from an app release.
+
+**3 November 2026 — Claude (planning only, Windows PC):** The owner asked for "My stores": pick
+a store, see live sales from its tills, history from the back office and total stock, inside
+this app. Planned only, with no code change here; see Next actions 0000. Recommended native
+`StoresScreen` / `StoreScreen` built with `Ui.java` like `LiveScreen`, a `TAB_STORES` bottom-bar
+tab, a third sign-in against the Reporter relay, and a demo relay for development and the Play
+reviewer. A mockup was shown in chat and not saved.
+
+**3 November 2026 — Claude (My stores, Windows PC):** Built the My stores screens; no release, version
+still 1.6.1 (11). Sign-in form also tries the Link relay (a refusal there is silent, most People users
+have no store login); store-only logins get Home/Stores/Account; the relay token sits in the same
+device-bound `SessionVault` JSON (`link`, `link_user`, `link_role`), is checked with `GET /api/stores` on
+unlock (kept on a network error, dropped on 401), cleared from memory on lock, and logged out at the relay
+on Sign out. `AppPolicy.linkAllowed` allows only `/api/login|logout|stores|stores/<id>/live` on the relay
+over HTTPS (debug `-PdevLink` emulator host only). Dashboard: tiles chosen on the phone, rows per store,
+grouping by store type with type totals and share, sort by any figure, scope chip (all, a type, a store);
+layout, store types and hidden stores kept per store login in preferences (no figures stored). Store
+screen: Today / Items / Tills (cashier on each till now). Compare: ranking, head to head (winner per row;
+fewer is better for refunds, voids, no-sales, overrides), hour-by-hour running totals. Refresh every 60 s
+while open, keeps the scroll position, stops when the tab is left or the app locks. Checks run: lint 0
+issues; PolicyChecks 64 and new StoreChecks 23 passed; export checks passed; test_server_amendment OK;
+test_mobile_login OK against People `feat/account-lifecycle` (it fails against older People branches,
+unrelated). Emulator (koenekt-test, API 35, no screen lock, so no remembered sign-in) against a local Link
+relay with four made-up stores, People pointed at a dead local port: owner login sees all four, offline PC
+shown, one till not read shown, types grouped, compare store vs store and type vs type, store tills tab;
+staff login sees no GP anywhere. Not tested: a real shop PC, fingerprint unlock with a saved store
+session, a physical phone.

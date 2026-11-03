@@ -14,6 +14,7 @@ android {
         versionCode 11
         versionName '1.6.1'
         buildConfigField 'String', 'DEV_ORIGIN', '""'
+        buildConfigField 'String', 'DEV_LINK', '""'
     }
     signingConfigs {
         release {
@@ -29,6 +30,8 @@ android {
         debug {
             // Optional: -PdevOrigin=http://10.0.2.2:8765 points a debug build at a local People console.
             buildConfigField 'String', 'DEV_ORIGIN', "\"${project.findProperty('devOrigin') ?: ''}\""
+            // Optional: -PdevLink=http://10.0.2.2:18198 points My stores at a local Link relay.
+            buildConfigField 'String', 'DEV_LINK', "\"${project.findProperty('devLink') ?: ''}\""
         }
         release {
             signingConfig signingConfigs.release
