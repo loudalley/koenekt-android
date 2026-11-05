@@ -810,3 +810,23 @@ downloaded it yet", then "probably screenshots and a short whats new with old fe
   F-Droid/Drive; 1.6.1 remains the recorded published version. Other work preserved.
 - Exact next action: if proceeding with iOS, select supported Mac access, then
   scope the iOS implementation and use the available iPhone for device validation.
+
+**5 November 2026 — Codex (remote Mac price check):**
+- Compared official MacinCloud checkout, Scaleway Apple Silicon pricing/FAQ and
+  MacStadium pricing. Advertised starting prices: MacinCloud managed USD25/month
+  (usage conditions, no admin) and dedicated USD49/month (base configuration);
+  Scaleway M2 16 GB EUR0.17/hour or advertised EUR115/month; MacStadium M4 16 GB
+  USD149/month. Confirm final configuration/availability before purchase.
+- Scaleway requires 24 hours minimum (M2 EUR4.08) and bills until deletion, even
+  when powered off. Xcode is preinstalled per its FAQ. Estimated rand figures
+  use Xe mid-market rates checked today: USD/ZAR 16.3362, EUR/ZAR 18.3955;
+  exclude applicable tax and card conversion fees. Apple membership is separate.
+- Sources: https://checkout.macincloud.com/select ,
+  https://www.scaleway.com/en/pricing/apple-silicon/ ,
+  https://www.scaleway.com/en/docs/apple-silicon/faq/ and
+  https://macstadium.com/pricing . Advice only; no rental/payment/account action.
+- Android remains 1.7.0 (12) built/signed at `dist/1.7.0/`, with publication/device
+  state as recorded in the header. No new build/tests/server/store action here.
+- Exact next action if iOS proceeds: check a 24-hour M2 rental's available
+  macOS/Xcode image and desktop access before booking; budget about R75 plus tax
+  for that allocation. Preserve project/signing files before releasing a host.
