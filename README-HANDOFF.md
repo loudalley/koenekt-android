@@ -765,6 +765,12 @@ downloaded it yet", then "probably screenshots and a short whats new with old fe
   -PdevOrigin=http://10.0.2.2:18999`) against the Reporter repo's real `server/link_relay.py` on localhost
   with made-up stores (Northgate, Southside, Main Depot, Station Kiosk) and made-up cashiers; nothing from a
   real shop.
+- Play Console (owner's Chrome, william@koenekt.co.za): production release 12 (1.7.0) created with the AAB
+  and these release notes (only warning: no deobfuscation file, expected without R8); default listing short
+  and full descriptions and the 8 phone screenshots changed (AI asset declaration: "Don't label assets":
+  real app captures, icon/banner drawn by script). Publishing overview shows "Submit 4 changes for review"
+  (release + short description + full description + screenshots), left for the owner to click. Data safety
+  not changed. Console also asks for the trader status declaration (deadline February 2027).
 - Play reviewer: My stores needs a store login; the reviewer's People demo login shows no Stores tab, which is
   correct behaviour. No demo store on the real relay yet (would need a pretend shop PC agent running there).
 
