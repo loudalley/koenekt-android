@@ -794,3 +794,19 @@ downloaded it yet", then "probably screenshots and a short whats new with old fe
 - Exact next action if the owner chooses iOS: confirm supported Mac/Xcode and
   iPhone access, enroll Koenekt as an organization, then scope the iOS app and
   its synthetic reviewer workspace. This was advice, not an instruction to start.
+
+**5 November 2026 — Codex (iOS VM and language clarification):**
+- Owner confirms an iPhone is available. Java remains a supported native Android
+  language; the app's Android-specific screens and security need iOS equivalents.
+  Google recommends Kotlin for new Android development and still supports Java.
+- Checked official Android language support, Apple Simulator documentation and
+  macOS Tahoe licence section 2B(iii): macOS development VMs are permitted on
+  Apple-branded hosts. A Windows-PC VM is not the licensed Apple-hardware route.
+  Remote access to rented physical Mac hardware is an available alternative;
+  use the owner's iPhone for final testing, with TestFlight delivery if needed.
+- Advisory follow-up only; no VM installation, rental, code/build/test, account,
+  server or release action. Current handoff records Android 1.7.0 (12) built/signed
+  at `dist/1.7.0/` and pushed, Play submission in progress, not device-tested or on
+  F-Droid/Drive; 1.6.1 remains the recorded published version. Other work preserved.
+- Exact next action: if proceeding with iOS, select supported Mac access, then
+  scope the iOS implementation and use the available iPhone for device validation.
