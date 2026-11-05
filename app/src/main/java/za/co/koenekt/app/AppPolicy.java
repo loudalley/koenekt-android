@@ -16,6 +16,15 @@ public final class AppPolicy {
     public static final String DELETE_ACCOUNT_URL = "https://loudalley.github.io/koenekt-android/delete-account.html";
     private AppPolicy() {}
 
+    /**
+     * FLAG_SECURE (no screenshots, screen recording or recent-app previews): on in release builds
+     * unless this phone's owner turned on Account → Allow screenshots on this phone (off by default,
+     * turning it on asks for the phone's lock). Debug builds allow screenshots unless -PsecureScreens.
+     */
+    public static boolean protectScreen(boolean secureBuild, boolean screenshotsAllowedOnThisPhone) {
+        return secureBuild && !screenshotsAllowedOnThisPhone;
+    }
+
     /** Debug builds only (-PdevOrigin): a local People console on this PC, seen from the emulator. */
     private static String devOrigin = "";
     public static void allowDevOrigin(String origin) {

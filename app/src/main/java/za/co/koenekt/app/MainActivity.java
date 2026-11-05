@@ -47,6 +47,7 @@ import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -76,7 +77,9 @@ import java.util.function.Consumer;
 public final class MainActivity extends Activity {
     static final int TAB_HOME = 0, TAB_PEOPLE = 1, TAB_LIVE = 2, TAB_ACCOUNT = 3, TAB_UPDATES = 4;   // Updates is opened from Home, not the bottom bar
     static final int TAB_STORES = 5;
-    private static final int PICK_FILE = 20, SAVE_FILE = 21, DEVICE_UNLOCK = 22, MAX_EXPORT = 20 * 1024 * 1024;
+    private static final int PICK_FILE = 20, SAVE_FILE = 21, DEVICE_UNLOCK = 22, CONFIRM_DEVICE = 23, MAX_EXPORT = 20 * 1024 * 1024;
+    /** Preference (this phone only; backups are off): Account → Allow screenshots on this phone. */
+    private static final String ALLOW_SCREENSHOTS = "allow_screenshots";
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     /** My stores asks several shop PCs at once, and each answer may take up to 20 s. */
     private final ExecutorService linkWorker = Executors.newFixedThreadPool(4);
@@ -106,6 +109,10 @@ public final class MainActivity extends Activity {
     private CancellationSignal authentication;
     private Runnable afterUnlock, backAction;
     private int authAttempt, pinAttempt, pendingAuthAttempt;
+    /** Phone-lock check for a setting (Allow screenshots); while it is open, leaving the app does not lock it at once. */
+    private Runnable afterConfirm;
+    private boolean confirmPinActive, leftDuringConfirm;
+    private CancellationSignal confirmation;
     private Intent pendingFileResult;
     private int pendingFileRequest, pendingFileStatus;
     private List<Company> companies;
@@ -132,9 +139,7 @@ public final class MainActivity extends Activity {
         }
         File[] stale = getCacheDir().listFiles((dir, name) -> name.startsWith("export-"));
         if (stale != null) for (File file : stale) file.delete();
-        // Personnel/payroll content must not appear in recent-app previews.
-        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0)
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        applyScreenProtection();
         workspace = getPreferences(MODE_PRIVATE).getString("workspace", AppPolicy.DEFAULT_WORKSPACE);
         // Debug builds given -PdevOrigin talk to a local People console; release builds never do.
         if (BuildConfig.DEBUG && !BuildConfig.DEV_ORIGIN.isEmpty()) { AppPolicy.allowDevOrigin(BuildConfig.DEV_ORIGIN); workspace = BuildConfig.DEV_ORIGIN; }
@@ -658,6 +663,7 @@ public final class MainActivity extends Activity {
             card.addView(Ui.listRow(this, null, "Change password", "Other phones and browsers will need the new one", null, () -> startPasswordChange(false)));
             card.addView(Ui.divider(this, 16));
         }
+        if (secureBuild()) { card.addView(screenshotsRow()); card.addView(Ui.divider(this, 16)); }
         card.addView(Ui.listRow(this, null, "About & privacy", "How this app protects your sign-in", null, this::about));
         card.addView(Ui.divider(this, 16));
         card.addView(Ui.listRow(this, null, "Privacy policy", "Opens in your browser", null, () -> openExternal(AppPolicy.PRIVACY_URL)));
@@ -670,6 +676,91 @@ public final class MainActivity extends Activity {
         }
         Ui.gap(page, 20);
         TextView version = Ui.text(this, "Koenekt " + BuildConfig.VERSION_NAME, 13, Ui.MUTED); version.setGravity(Gravity.CENTER); page.addView(version);
+    }
+
+    /** Release builds (or debug with -PsecureScreens); other debug builds always allow screenshots. */
+    private boolean secureBuild() {
+        boolean debuggable = (getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        return !debuggable || BuildConfig.SECURE_SCREENS;
+    }
+    private boolean screenshotsAllowed() { return getPreferences(MODE_PRIVATE).getBoolean(ALLOW_SCREENSHOTS, false); }
+    /** People data (ID numbers, pay, payroll) stays out of screenshots, recordings and recent-app previews unless allowed. */
+    private void applyScreenProtection() {
+        if (AppPolicy.protectScreen(secureBuild(), screenshotsAllowed())) getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+    }
+    private View screenshotsRow() {
+        boolean on = screenshotsAllowed();
+        LinearLayout row = Ui.listRow(this, null, "Allow screenshots on this phone",
+                on ? "On: also screen recording and recent apps" : "Off: Koenekt is hidden from screenshots", null, null);
+        Switch toggle = new Switch(this); toggle.setChecked(on); toggle.setContentDescription("Allow screenshots on this phone");
+        toggle.setThumbTintList(ColorStateList.valueOf(on ? Ui.LIME : android.graphics.Color.rgb(176, 184, 179)));
+        toggle.setTrackTintList(ColorStateList.valueOf(on ? Ui.LIME : Ui.MUTED));
+        // The switch only moves once the setting has changed (turning it on asks for the phone's lock).
+        toggle.setOnClickListener(v -> { toggle.setChecked(screenshotsAllowed()); toggleScreenshots(); });
+        row.addView(toggle);
+        row.setOnClickListener(v -> toggleScreenshots()); row.setClickable(true);
+        return row;
+    }
+    private void setScreenshotsAllowed(boolean allowed) {
+        getPreferences(MODE_PRIVATE).edit().putBoolean(ALLOW_SCREENSHOTS, allowed).apply();
+        applyScreenProtection();
+        if (tab == TAB_ACCOUNT && !locked && !inWeb && flow == null) accountTab();
+    }
+    private void toggleScreenshots() {
+        if (locked || afterConfirm != null) return;
+        if (screenshotsAllowed()) { setScreenshotsAllowed(false); toast("Screenshots of Koenekt are blocked again."); return; }
+        if (!vault.deviceSecured()) { toast("Set a screen lock on this phone first."); return; }
+        new AlertDialog.Builder(this).setTitle("Allow screenshots?")
+                .setMessage("Screenshots and screen recordings of Koenekt will work on this phone, and its screens will show in recent apps.\n\n"
+                        + "They can include ID numbers, pay and payroll. Screenshots go to the phone's gallery, where other apps and backups can reach them. Only share them with people allowed to see that information.\n\n"
+                        + "This applies to this phone only. Confirm with your fingerprint or phone PIN.")
+                .setPositiveButton("Continue", (d, w) -> confirmDevice("Allow screenshots", () -> {
+                    setScreenshotsAllowed(true); toast("Screenshots are allowed on this phone.");
+                }))
+                .setNegativeButton("Cancel", null).show();
+    }
+
+    /** Asks for the phone's own lock (strong biometric or PIN, pattern, password) before a setting changes. */
+    @SuppressWarnings("deprecation")
+    private void confirmDevice(String title, Runnable onConfirmed) {
+        if (locked || authInProgress || afterConfirm != null || isDestroyed()) return;
+        afterConfirm = onConfirmed; leftDuringConfirm = false; confirmPinActive = false;
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            BiometricPrompt.Builder prompt = new BiometricPrompt.Builder(this)
+                    .setTitle(title).setSubtitle("Use your fingerprint or device PIN");
+            if (android.os.Build.VERSION.SDK_INT >= 30)
+                prompt.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
+            else if (android.os.Build.VERSION.SDK_INT >= 29) prompt.setDeviceCredentialAllowed(true);
+            else prompt.setNegativeButton("Use device PIN", getMainExecutor(), (dialog, which) -> confirmWithPin(title));
+            confirmation = new CancellationSignal();
+            prompt.build().authenticate(confirmation, getMainExecutor(), new BiometricPrompt.AuthenticationCallback() {
+                @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) { confirmed(true); }
+                @Override public void onAuthenticationError(int code, CharSequence message) {
+                    if (afterConfirm == null || confirmPinActive) return;
+                    if (code == BiometricPrompt.BIOMETRIC_ERROR_HW_NOT_PRESENT || code == BiometricPrompt.BIOMETRIC_ERROR_NO_BIOMETRICS
+                            || code == BiometricPrompt.BIOMETRIC_ERROR_HW_UNAVAILABLE || code == BiometricPrompt.BIOMETRIC_ERROR_LOCKOUT
+                            || code == BiometricPrompt.BIOMETRIC_ERROR_LOCKOUT_PERMANENT) confirmWithPin(title);
+                    else confirmed(false);
+                }
+            });
+        } else confirmWithPin(title);
+    }
+    @SuppressWarnings("deprecation")
+    private void confirmWithPin(String title) {
+        if (afterConfirm == null || confirmPinActive) return;
+        Intent prompt = getSystemService(KeyguardManager.class).createConfirmDeviceCredentialIntent(title, "Confirm your phone PIN, pattern or password");
+        if (prompt == null) { confirmed(false); toast("Set a screen lock on this phone first."); return; }
+        try { confirmPinActive = true; startActivityForResult(prompt, CONFIRM_DEVICE); }
+        catch (Exception e) { confirmPinActive = false; confirmed(false); toast("Device authentication is unavailable."); }
+    }
+    private void confirmed(boolean ok) {
+        Runnable action = afterConfirm; boolean left = leftDuringConfirm;
+        afterConfirm = null; leftDuringConfirm = false; confirmPinActive = false; confirmation = null;
+        if (action == null || isDestroyed()) return;
+        if (ok) action.run();
+        // Cancelled after the app went to the background: lock now, as leaving would have.
+        else if (left) lockInBackground();
     }
 
     private void open(AppPolicy.Feature feature) {
@@ -825,7 +916,7 @@ public final class MainActivity extends Activity {
 
     private void about() {
         new AlertDialog.Builder(this).setTitle("Koenekt " + BuildConfig.VERSION_NAME)
-                .setMessage("People, licences, Reporter updates and My stores.\n\nThis app connects to your existing Koenekt services over HTTPS. My stores shows live till figures that your shop PCs send through Koenekt while you have it open; the app keeps no copy of them after you leave it. Server permissions determine what you can view and change.\n\nPasswords and authenticator codes are not saved. Remembered session tokens are encrypted using Android Keystore and require device authentication to restore. Unlock with a strong biometric such as fingerprint, or the phone's PIN, pattern or password. Android 8 uses the device credential. Sign out forgets the saved login. Expired or revoked server sessions require a new Koenekt sign-in.\n\nStaff, attendance, payroll and licence information stays with your Koenekt service. Exported reports are saved only to a location you select. The app has no advertising or analytics SDKs.\n\nFor account access or correction, contact your organisation's administrator. To delete your login, use Account → Delete my account; if you can no longer sign in, use Delete account below. Deleting a login does not erase employment records that the organisation must retain.\n\nAn internet connection is required. Phone biometrics unlock this app; staff fingerprint/face enrollment still uses the connected clocks.")
+                .setMessage("People, licences, Reporter updates and My stores.\n\nThis app connects to your existing Koenekt services over HTTPS. My stores shows live till figures that your shop PCs send through Koenekt while you have it open; the app keeps no copy of them after you leave it. Server permissions determine what you can view and change.\n\nPasswords and authenticator codes are not saved. Remembered session tokens are encrypted using Android Keystore and require device authentication to restore. Unlock with a strong biometric such as fingerprint, or the phone's PIN, pattern or password. Android 8 uses the device credential. Sign out forgets the saved login. Expired or revoked server sessions require a new Koenekt sign-in.\n\nStaff, attendance, payroll and licence information stays with your Koenekt service. Exported reports are saved only to a location you select. The app has no advertising or analytics SDKs. Screenshots, screen recordings and recent-app previews of Koenekt are blocked unless you turn on Account → Allow screenshots on this phone.\n\nFor account access or correction, contact your organisation's administrator. To delete your login, use Account → Delete my account; if you can no longer sign in, use Delete account below. Deleting a login does not erase employment records that the organisation must retain.\n\nAn internet connection is required. Phone biometrics unlock this app; staff fingerprint/face enrollment still uses the connected clocks.")
                 .setNeutralButton("Privacy policy", (d,w) -> openExternal(AppPolicy.PRIVACY_URL))
                 .setNegativeButton("Delete account", (d,w) -> openExternal(AppPolicy.DELETE_ACCOUNT_URL))
                 .setPositiveButton("Close", null).show();
@@ -1158,6 +1249,10 @@ public final class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
+        if (request == CONFIRM_DEVICE) {
+            if (confirmPinActive) confirmed(result == RESULT_OK);
+            return;
+        }
         if (request == DEVICE_UNLOCK) {
             if (!pinPromptActive) return;
             pinPromptActive = false;
@@ -1230,6 +1325,11 @@ public final class MainActivity extends Activity {
     @Override protected void onStop() {
         super.onStop(); foreground = false;
         if (authInProgress || root == null) return;
+        // The phone's PIN screen for a setting covers the app; the result decides (see confirmed).
+        if (afterConfirm != null) { leftDuringConfirm = true; return; }
+        lockInBackground();
+    }
+    private void lockInBackground() {
         if (vault.exists() || signedIn()) {
             // Without a screen lock the return cannot be protected, so sign out, except while
             // the user is in a file picker, Save dialog or print screen this app opened.
@@ -1244,6 +1344,8 @@ public final class MainActivity extends Activity {
     @Override protected void onDestroy() {
         authAttempt++;
         if (authentication != null) authentication.cancel();
+        if (confirmation != null) confirmation.cancel();
+        afterConfirm = null;
         epoch++; worker.shutdownNow(); linkWorker.shutdownNow(); cancelExport();
         if (uploadCallback != null) uploadCallback.onReceiveValue(null);
         if (web != null) { if (web.getParent() instanceof ViewGroup parent) parent.removeView(web); web.destroy(); }

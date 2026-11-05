@@ -6,6 +6,10 @@ workspace on the sign-in screen (Workspace · Change). LIVE ON GOOGLE PLAY in So
 Source pushed to `main`, published on the self-hosted F-Droid repo and copied to Google
 Drive at the user's request. Not yet tried on a phone.**
 
+Unreleased on local `main` (not pushed), riding with 1.7.0: **5 November 2026, Claude — Account →
+"Allow screenshots on this phone"** (off by default, per phone, asks for the phone's lock to turn on),
+plus My stores (Next actions 0000).
+
 Previous release: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
 leaver controls (change/delete your account, forced password change after an admin reset,
 delete leavers, clock passwords), built and signed on the PC, pushed, published on the
@@ -61,8 +65,9 @@ No passwords, authenticator codes/secrets, phone PINs or raw biometrics are save
 
 Android file pickers, deferred results after unlock, blob/HTTP report saving and
 printing are implemented. Website sign-out is intercepted locally so it does not
-trigger the licence service's global sign-out. Release builds protect screenshots
-and recent-app previews. HTTPS/origin rules, mixed-content blocking and no native
+trigger the licence service's global sign-out. Release builds protect screenshots,
+screen recording and recent-app previews unless Account → Allow screenshots on this phone
+is on (unreleased, see the 5 November 2026 log entry). HTTPS/origin rules, mixed-content blocking and no native
 JavaScript bridge are retained. Target API 36, minimum 26, app ID
 `za.co.koenekt.app`; AGP 8.13.2, Gradle 8.13, Java source 17.
 
@@ -126,7 +131,9 @@ Next actions for Cursor/Claude:
    (none stored); add a demo store login for the Play reviewer; try it on the owner's phone against the
    pilot shop once its Reporter has `link_enabled`. Spec: Reporter repo
    `docs/proposals/KOENEKT-REPORTS-IN-APP.md` sections 1, 2b, 7.1. Keep real shop names and figures out of
-   this public repo.
+   this public repo. The screenshots switch (5 Nov 2026) ships in the same release: add it to the 1.7.0
+   changelog, and on a real phone check that turning it on asks for fingerprint/PIN, that a screenshot and a
+   recording then work, and that the recent-apps preview shows/hides with the switch.
 000. 1.6.0 (accounts and leavers) is released (F-Droid, Drive). On the phone, with test people: Account → Change password; an admin's Reset password
    in Users followed by the forced change; Delete from People on a test leaver; a clock
    password on a test person. The local `main` in `C:\Projects\koenekt-android` still has the
@@ -719,3 +726,24 @@ relay with four made-up stores, People pointed at a dead local port: owner login
 shown, one till not read shown, types grouped, compare store vs store and type vs type, store tills tab;
 staff login sees no GP anywhere. Not tested: a real shop PC, fingerprint unlock with a saved store
 session, a physical phone.
+
+**5 November 2026 — Claude (screenshots switch, Windows PC):** The owner said screenshots and screen
+recording don't work in the APK (FLAG_SECURE on release builds, there for POPIA: People shows ID numbers,
+pay and payroll). Asked him to choose between a per-phone switch, always allowing, or keeping it blocked; he
+chose the per-phone switch. Built: Account → "Allow screenshots on this phone", off by default, saved in this
+phone's preferences (`allow_screenshots`; backups are off, so it never moves to another phone; it survives
+sign-out). Turning it on shows a warning (gallery, other apps and backups can reach screenshots), then asks for
+the phone's lock (BiometricPrompt strong biometric or device credential; Android 8 the KeyguardManager PIN
+screen); turning it off needs nothing. One window flag covers screenshots, recording and recent-app previews,
+so all three follow the switch. `AppPolicy.protectScreen(secureBuild, allowed)` is the rule; leaving the app
+while that PIN prompt is open and then cancelling locks it as leaving normally would; About text mentions the
+switch. Debug builds still allow screenshots and hide the switch; new `-PsecureScreens` makes a debug build
+behave like release. Version stays 1.6.1 (11); ships with 1.7.0. Checks run: `lintDebug` "No issues found",
+`assembleRelease` built (local test output only, not a release), PolicyChecks 68 (4 new), StoreChecks 23.
+Emulator (koenekt-test, API 35; debug `-PsecureScreens -PdevLink`, local Link relay with one made-up owner login,
+People pointed at a dead port; a test PIN set for the run and cleared afterwards): window flag SECURE and a black
+`screencap` while off; warning Cancel and PIN-prompt Back both leave it off with the app still open; PIN
+confirms, switch on, flag gone, `screencap` shows the Account screen; still on after force-stop and relaunch;
+off again gives a black capture; Home during the PIN prompt then returning asks to unlock Koenekt and the switch
+stays off. Not tested: fingerprint, Android 8-10 paths, a screen recording, recent-apps thumbnail, a physical
+phone. Committed on local `main`, not pushed.

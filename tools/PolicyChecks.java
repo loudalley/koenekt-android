@@ -66,6 +66,11 @@ public class PolicyChecks {
         AppPolicy.allowDevLink("http://10.0.2.2:18198");
         check(AppPolicy.linkAllowed("http://10.0.2.2:18198/api/stores"), "development relay allowed once set");
         check(!AppPolicy.linkAllowed(AppPolicy.LINK + "/api/stores"), "one relay at a time");
+        // Screenshots: blocked in release builds unless this phone's owner allowed them.
+        check(AppPolicy.protectScreen(true, false), "release build blocks screenshots by default");
+        check(!AppPolicy.protectScreen(true, true), "release build allows screenshots once turned on for this phone");
+        check(!AppPolicy.protectScreen(false, false), "debug build allows screenshots");
+        check(!AppPolicy.protectScreen(false, true), "debug build allows screenshots with the switch on");
         System.out.println("Policy checks passed: " + checks);
     }
 }

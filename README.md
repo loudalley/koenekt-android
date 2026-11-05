@@ -164,8 +164,13 @@ The routing address is remembered internally. Local sign-out deletes the saved
 ciphertext/key, cookies and WebView storage. It deliberately
 does not call the licence service's global logout endpoint, which would revoke
 other operator sessions. Cloud backup and device transfer of app data
-are excluded. Release builds prevent screenshots/recent-app previews of staff data.
-Debug builds allow screenshots of synthetic data for development.
+are excluded. Release builds prevent screenshots, screen recording and recent-app previews
+of staff data (FLAG_SECURE) unless the phone's owner turns on Account → Allow screenshots
+on this phone. That switch is off by default, kept in this phone's preferences only
+(backups are off), and asks for the phone's lock (strong biometric or PIN) before turning
+on; turning it off needs nothing. Debug builds allow screenshots of synthetic data for
+development; build with `-PsecureScreens` to make a debug build block them like release
+and show the switch.
 
 HTTPS is required; untrusted main-frame links are offered in an external app;
 certificate errors and mixed content are blocked. There is no native JavaScript

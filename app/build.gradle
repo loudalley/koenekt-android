@@ -15,6 +15,8 @@ android {
         versionName '1.6.1'
         buildConfigField 'String', 'DEV_ORIGIN', '""'
         buildConfigField 'String', 'DEV_LINK', '""'
+        // Release builds block screenshots unless Account → Allow screenshots on this phone is on.
+        buildConfigField 'boolean', 'SECURE_SCREENS', 'true'
     }
     signingConfigs {
         release {
@@ -32,6 +34,8 @@ android {
             buildConfigField 'String', 'DEV_ORIGIN', "\"${project.findProperty('devOrigin') ?: ''}\""
             // Optional: -PdevLink=http://10.0.2.2:18198 points My stores at a local Link relay.
             buildConfigField 'String', 'DEV_LINK', "\"${project.findProperty('devLink') ?: ''}\""
+            // Debug builds allow screenshots; -PsecureScreens makes them block them like release, to test the switch.
+            buildConfigField 'boolean', 'SECURE_SCREENS', project.hasProperty('secureScreens') ? 'true' : 'false'
         }
         release {
             signingConfig signingConfigs.release
