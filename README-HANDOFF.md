@@ -719,3 +719,30 @@ relay with four made-up stores, People pointed at a dead local port: owner login
 shown, one till not read shown, types grouped, compare store vs store and type vs type, store tills tab;
 staff login sees no GP anywhere. Not tested: a real shop PC, fingerprint unlock with a saved store
 session, a physical phone.
+
+**5 November 2026 — Codex (Apple App Store orientation only):**
+- Checked current official Apple enrollment, Xcode, review, privacy, deletion,
+  TestFlight and payment documentation. No iOS source, Apple account enrollment,
+  purchase, build, submission or server change was performed.
+- Main requirements: organization enrollment (D-U-N-S, authority, domain email,
+  working website; USD99 per membership year, regional pricing at enrollment),
+  access to a supported Mac/Xcode setup and physical iPhone testing, an iOS
+  implementation, review credentials with useful synthetic data, store metadata,
+  privacy disclosures and applicable account deletion/export-compliance answers.
+- Main design risk is review guideline 4.2 (minimum functionality). Recommend
+  porting useful People and Stores screens, with iPhone authentication/storage,
+  rather than assuming a website wrapper will pass. Existing service APIs and
+  design can inform the port; Android binaries cannot serve as the iOS build.
+- Payment assessment is conditional: guideline 3.1.3(c) allows qualifying direct
+  organization/group subscriptions; consumer/single-user sales have different
+  requirements. Own-company login does not itself require Sign in with Apple.
+- Sources: https://developer.apple.com/programs/enroll/ and
+  https://developer.apple.com/app-store/review/guidelines/ ; supporting Apple
+  documentation was linked in the chat answer. Approval is not guaranteed.
+- Release state remains Android 1.6.1 (11) published as recorded above; the
+  primary checkout has ongoing 1.7.0 (12) work belonging to another session.
+  Preserved that work. No new app build/tests/device checks or publication here;
+  existing release paths remain `dist/1.6.1/` and `dist/play-store/`.
+- Exact next action if the owner chooses iOS: confirm supported Mac/Xcode and
+  iPhone access, enroll Koenekt as an organization, then scope the iOS app and
+  its synthetic reviewer workspace. This was advice, not an instruction to start.
