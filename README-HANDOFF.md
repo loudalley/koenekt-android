@@ -3,9 +3,9 @@
 Last updated: **5 November 2026, Claude (Windows PC) — version 1.7.0 (12): My stores (live till
 sales per shop, Stores tab only for store logins) and Account → Allow screenshots on this phone. Built
 and signed on the PC (`dist/1.7.0/`), pushed to `main`; Play listing text, privacy page and eight
-screenshots updated; being sent to Google Play at the owner's request ("push to play store, no one
-downloaded it yet"). Not on F-Droid or Drive. Not tried on a physical phone or a real shop PC.**
-1.6.1 (11) is live on Google Play (South Africa), F-Droid and Drive.
+screenshots updated; SUBMITTED to Google Play by the owner (in review; managed publishing off, so approval publishes it),
+published on the self-hosted F-Droid repo and copied to Google Drive. Not tried on a physical phone or a
+real shop PC.** Until Play approves it, Play still serves 1.6.1 (11).
 
 Previous release: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
 leaver controls (change/delete your account, forced password change after an admin reset,
@@ -836,3 +836,6 @@ downloaded it yet", then "probably screenshots and a short whats new with old fe
 - Exact next action if iOS proceeds: check a 24-hour M2 rental's available
   macOS/Xcode image and desktop access before booking; budget about R75 plus tax
   for that allocation. Preserve project/signing files before releasing a host.
+- 5 Nov, later: the owner submitted the 4 changes on Play. Then "push to F-Droid and Drive too":
+  `tools/fdroid_repo.py publish --push` from the main checkout gave `koenekt-fdroid` `d57dcf8`; the live index
+  lists 1.7.0 (12) with APK hash `ca75316e…`. Same APK copied to `G:\My Drive\Koenekt Android\` (hash checked).
