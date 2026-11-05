@@ -1,0 +1,8 @@
+My stores: live till sales for each of your shops.
+• Today's sales, receipts and average basket per store, refreshed every minute.
+• Each till's cashier, voids and no-sale drawer openings.
+• Compare stores, or types of store, side by side.
+
+Also new: allow screenshots on your own phone in Account.
+
+Already in Koenekt: Who's in by department or shop, add and edit staff, leavers, clock passwords, change or delete your account, and switching workspace.

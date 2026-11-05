@@ -1,7 +1,7 @@
 # Koenekt for Android
 
 One Android app for the existing People, licensing, customer and Reporter update services.
-Version **1.6.1 (11)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
+Version **1.7.0 (12)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
 compile/target API 36. Java 17, Android Gradle Plugin 8.13.2, Gradle 8.13.
 
 Standalone public repository: [loudalley/koenekt-android](https://github.com/loudalley/koenekt-android).
@@ -244,6 +244,14 @@ dependencies. They use `../koenekt-people` by default; override with
 `KOENEKT_PEOPLE_REPO`. With no backend checkout they skip. Do not copy private
 backend source/history into this public app repository. All test data is synthetic
 and tests never contact production.
+
+## Release state, 5 November 2026 — 1.7.0
+
+1.7.0 adds **My stores** (live till sales per shop over the Koenekt Link relay; Stores tab only for
+store logins) and **Account → Allow screenshots on this phone** (off by default). Built and signed
+on the PC (`dist/1.7.0/`); Play listing text, privacy page and eight screenshots updated
+(`dist/play-store/screenshots-1.7.0/`, made-up stores from a local relay). Not yet tried on a
+physical phone or against a real shop PC.
 
 ## Release state, 29 October 2026 — 1.6.1
 

@@ -17,9 +17,12 @@ import za.co.koenekt.app.StoreMath.Metric;
 /** One store, live from its tills: Today (by hour, payments, events), Items and Tills (cashier on each till now). */
 final class StoreScreen {
     private static final String[] SECTIONS = {"Today", "Items", "Tills"};
-    private static final String[][] EVENTS = {{"void_line", "Voided lines"}, {"void_sale", "Voided sales"},
-            {"price_override", "Price overrides"}, {"discount", "Discounts"}, {"no_sale", "No-sale drawer opens"},
-            {"on_hold", "Sales put on hold"}, {"manager_auth", "Manager authorisations"}};
+    /** Key, label, and the singular for "1 voided line" on a till. */
+    private static final String[][] EVENTS = {{"void_line", "Voided lines", "voided line"},
+            {"void_sale", "Voided sales", "voided sale"}, {"price_override", "Price overrides", "price override"},
+            {"discount", "Discounts", "discount"}, {"no_sale", "No-sale drawer opens", "no-sale drawer open"},
+            {"on_hold", "Sales put on hold", "sale put on hold"},
+            {"manager_auth", "Manager authorisations", "manager authorisation"}};
     private final StoresScreen s;
     private final MainActivity a;
     private final String id;
@@ -171,7 +174,10 @@ final class StoreScreen {
             JSONObject ev = t.optJSONObject("events");
             if (ev != null) {
                 List<String> bits = new ArrayList<>();
-                for (String[] e : EVENTS) if (ev.optInt(e[0]) > 0) bits.add(ev.optInt(e[0]) + " " + e[1].toLowerCase(java.util.Locale.ROOT));
+                for (String[] e : EVENTS) {
+                    int n = ev.optInt(e[0]);
+                    if (n > 0) bits.add(n + " " + (n == 1 ? e[2] : e[1].toLowerCase(java.util.Locale.ROOT)));
+                }
                 if (!bits.isEmpty()) { Ui.gap(c, 4); c.addView(Ui.text(a, String.join(" · ", bits), 13.5f, Ui.WARN)); }
             }
         }

@@ -1,11 +1,13 @@
 Keep your Koenekt management tools in one place.
 
-Sign in to your workspace to manage staff, add new starters, update employee details, mark leavers and run attendance reports. Use the tools enabled for your account, including live attendance, clock management and payroll.
+Sign in to your workspace to see your shops' sales live, manage staff, add new starters, update employee details, mark leavers and run attendance reports. Use the tools enabled for your account, including live attendance, clock management and payroll.
 
 Koenekt management accounts can also manage customers and licences and control Reporter updates across enrolled PCs.
 
 • Quick, three-step Add employee and a searchable People list
 • Who's in: live attendance at a glance
+• My stores: live till sales per shop, each till's cashier, voids and no-sale openings, and store-vs-store comparison (needs Koenekt Reporter on the shop's PC and a store login)
+• Screenshots blocked by default; allow them on your own phone in Account
 • Existing Koenekt accounts and permissions
 • Remembered login protected by fingerprint or device PIN
 • Customer access limited to the companies their account can manage

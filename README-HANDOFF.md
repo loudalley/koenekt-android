@@ -1,14 +1,11 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **30 October 2026, Claude (Windows PC) — version 1.6.1 (11), choose another
-workspace on the sign-in screen (Workspace · Change). LIVE ON GOOGLE PLAY in South Africa
-(checked 3 November 2026: public listing https://play.google.com/store/apps/details?id=za.co.koenekt.app).
-Source pushed to `main`, published on the self-hosted F-Droid repo and copied to Google
-Drive at the user's request. Not yet tried on a phone.**
-
-Unreleased on local `main` (not pushed), riding with 1.7.0: **5 November 2026, Claude — Account →
-"Allow screenshots on this phone"** (off by default, per phone, asks for the phone's lock to turn on),
-plus My stores (Next actions 0000).
+Last updated: **5 November 2026, Claude (Windows PC) — version 1.7.0 (12): My stores (live till
+sales per shop, Stores tab only for store logins) and Account → Allow screenshots on this phone. Built
+and signed on the PC (`dist/1.7.0/`), pushed to `main`; Play listing text, privacy page and eight
+screenshots updated; being sent to Google Play at the owner's request ("push to play store, no one
+downloaded it yet"). Not on F-Droid or Drive. Not tried on a physical phone or a real shop PC.**
+1.6.1 (11) is live on Google Play (South Africa), F-Droid and Drive.
 
 Previous release: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
 leaver controls (change/delete your account, forced password change after an admin reset,
@@ -747,3 +744,26 @@ confirms, switch on, flag gone, `screencap` shows the Account screen; still on a
 off again gives a black capture; Home during the PIN prompt then returning asks to unlock Koenekt and the switch
 stays off. Not tested: fingerprint, Android 8-10 paths, a screen recording, recent-apps thumbnail, a physical
 phone. Committed on local `main`, not pushed.
+
+**5 November 2026 — Claude (1.7.0 for Google Play, Windows PC):** The owner: "push to play store no one
+downloaded it yet", then "probably screenshots and a short whats new with old features added".
+- 1.7.0 (12) = My stores (`9b2af1f`) + the screenshots switch (`389713e`, was local only) + a plural fix on a
+  till's event line ("1 voided line", not "1 voided lines"; `StoreScreen.EVENTS` has a singular column).
+- `changelogs/12.txt` (460 bytes): My stores, screenshots switch, then a line of earlier features.
+  Short description now "Staff, attendance and live store sales with your Koenekt account." (Play and
+  fastlane); full descriptions gained a My stores section and the screenshots line.
+- `docs/privacy.html` (effective 5 Nov): My stores row (figures for store logins only; Link keeps an answer
+  in memory until the phone has it, at most 15 min, and logs that a request happened, not figures); the
+  phone keeps only layout choices; screenshots blocked by default.
+- Checks: `assembleRelease bundleRelease lintDebug` (lint "No issues found"), PolicyChecks 68, StoreChecks 23,
+  export checks, test_server_amendment OK. Signed with the same upload key `3e3a0931…`; aapt 12 / 1.7.0.
+  APK `ca75316e…`, AAB `d3b33c51…` (`dist/1.7.0/SHA256SUMS`; AAB also in `dist/play-store/`). Release APK
+  smoke test on the emulator: opens on Sign in, workspace people.koenekt.co.za, window SECURE.
+- Screenshots (`dist/play-store/screenshots-1.7.0/`, 1080x1920): 01 home, 02 My stores, 03 a store's Tills,
+  04 Compare, 05 Who's in, 06 People, 07 person, 08 Add (01, 05-08 reused from 1.6.1; 03-kitchen dropped
+  for Play's limit of 8). The store shots come from a debug build (`-PdevLink=http://10.0.2.2:18198
+  -PdevOrigin=http://10.0.2.2:18999`) against the Reporter repo's real `server/link_relay.py` on localhost
+  with made-up stores (Northgate, Southside, Main Depot, Station Kiosk) and made-up cashiers; nothing from a
+  real shop.
+- Play reviewer: My stores needs a store login; the reviewer's People demo login shows no Stores tab, which is
+  correct behaviour. No demo store on the real relay yet (would need a pretend shop PC agent running there).

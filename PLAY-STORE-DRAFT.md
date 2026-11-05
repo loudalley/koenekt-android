@@ -45,13 +45,13 @@ the owner's separate instruction.
 
 **App name:** Koenekt
 
-**Short description:** Staff, attendance and who's in, by shop, with your Koenekt account.
+**Short description:** Staff, attendance and live store sales with your Koenekt account.
 
 **Full description:**
 
 Koenekt keeps your staff and attendance tools in one place on your phone.
 
-Sign in with your Koenekt account to see who is at work right now, add new starters,
+Sign in with your Koenekt account to see your shops' sales live, see who is at work right now, add new starters,
 update employee details and manage leavers. The tools you see depend on what your
 organisation has enabled for your account.
 
@@ -59,6 +59,12 @@ Who's in
 - See who is at work, who is not in and who has clocked today.
 - Split it by department or shop, and see each one's numbers at a glance.
 - Filter to who has clocked out or has not clocked in yet.
+
+My stores
+- See each shop's sales, receipts and average basket live from its tills.
+- See every till's cashier, voids and no-sale drawer openings.
+- Compare stores, or types of store, side by side.
+- Needs Koenekt Reporter on the shop's PC and a store login.
 
 People
 - Search staff by name, clock PIN or department.
@@ -70,6 +76,7 @@ People
 Your account
 - Opens with your fingerprint or phone PIN after you sign in.
 - Change your password, or delete your account from the app.
+- Screenshots are blocked by default; allow them on your own phone.
 
 More tools
 
