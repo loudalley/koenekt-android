@@ -2,8 +2,8 @@
 
 Last updated: **6 November 2026, Claude (Windows PC) — version 1.8.0 (13): the koenekt.co.za / People
 look (site palettes, Big Shoulders / IBM Plex fonts, 2dp corners, square-ended icons) and Account →
-Appearance (System / Light / Dark). Built and signed on the PC (`dist/1.8.0/`), pushed to `main`, being
-sent to Google Play at the owner's request and copied to Google Drive. NOT on F-Droid (not asked this
+Appearance (System / Light / Dark). Built and signed on the PC (`dist/1.8.0/`), pushed to `main`, queued in
+Google Play for the owner to submit, and copied to Google Drive. NOT on F-Droid (not asked this
 time). Tried on the emulator only.** 1.7.0 (12) was in Play review; the 1.8.0 production release replaces
 it. F-Droid still serves 1.7.0.
 
@@ -875,3 +875,8 @@ mock ups"; approved the mockups (https://claude.ai/artifact/3DKJfKREjHCcF4yYCyHa
 - Play screenshots `dist/play-store/screenshots-1.8.0/` (1080x1920): 01 Home, 02 My stores, 03 store tills,
   04 Compare (dark), 05 Who's in, 06 People, 07 person, 08 Add employee. All names and figures made up.
 - Not tested: a physical phone, Android 8-10, the WebView pages (People's own pages keep their own theme switch).
+- Play Console (owner's Chrome, william@koenekt.co.za): 1.7.0 had been published on 5 November. Production release
+  13 (1.8.0) created with the AAB and the 13.txt notes (only warning: no deobfuscation file). Listing: the 8 phone
+  screenshots replaced (uploaded as v18-*.png, ordered as above), full description gained "Light, dark or follow
+  your phone."; AI asset declaration "Don't label assets". Publishing overview shows "Submit 3 changes for review",
+  left for the owner. APK copied to G:\My Drive\Koenekt Android\ (hash checked). F-Droid not updated.
