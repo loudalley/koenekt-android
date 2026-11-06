@@ -1,0 +1,5 @@
+A new look that matches the Koenekt website and People: new fonts, sharper shapes and the site's colours.
+• Light, dark, or follow your phone: choose in Account → Appearance.
+• Clearer labels, bottom bar and icons.
+
+Already in Koenekt: My stores (live till sales per shop), Who's in by department or shop, add and edit staff, leavers, clock passwords, change or delete your account, the screenshots switch, and switching workspace.

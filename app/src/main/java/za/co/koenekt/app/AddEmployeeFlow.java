@@ -1,6 +1,5 @@
 package za.co.koenekt.app;
 
-import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.text.Editable;
 import android.text.InputType;
@@ -61,7 +60,7 @@ final class AddEmployeeFlow implements MainActivity.Flow {
         if (step == 4) { a.finishFlow(true); return; }
         if (step > 1) { step--; error = ""; show(); return; }
         if (first.isEmpty() && last.isEmpty()) { a.finishFlow(false); return; }
-        new AlertDialog.Builder(a).setTitle("Discard this new employee?")
+        Ui.dialog(a).setTitle("Discard this new employee?")
                 .setPositiveButton("Discard", (d, w) -> a.finishFlow(false)).setNegativeButton("Keep editing", null).show();
     }
 
@@ -213,8 +212,7 @@ final class AddEmployeeFlow implements MainActivity.Flow {
         LinearLayout[] f = frame(who + " is added", null);
         LinearLayout body = f[0];
         ImageView tick = Ui.icon(a, R.drawable.ic_check, Ui.BRAND, 64); tick.setPadding(dp(14), dp(14), dp(14), dp(14));
-        android.graphics.drawable.GradientDrawable circle = new android.graphics.drawable.GradientDrawable();
-        circle.setShape(android.graphics.drawable.GradientDrawable.OVAL); circle.setColor(Ui.TINT); tick.setBackground(circle);
+        tick.setBackground(Ui.outline(Ui.TINT, Ui.TINT_LINE, 1, 2, a));
         body.addView(tick, 0);
         ((LinearLayout.LayoutParams) tick.getLayoutParams()).bottomMargin = dp(20);
         JSONArray queued = result == null ? null : result.optJSONArray("devices");

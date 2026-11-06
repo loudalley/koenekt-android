@@ -10,8 +10,11 @@ import android.view.View;
 
 /** Small dependency-free charts for My stores: hourly bars, and running-total lines for comparing stores. */
 final class Chart extends View {
-    static final int[] SERIES = {Ui.BRAND, Ui.LIME, Color.rgb(46, 112, 196), Color.rgb(214, 124, 32),
-            Color.rgb(140, 82, 196), Color.rgb(196, 64, 96)};
+    /** One colour per store or type when comparing; each pair differs in lightness as well as hue. */
+    static int[] series() {
+        return Ui.dark ? new int[]{Ui.LIME, Color.rgb(134, 169, 245), Color.rgb(240, 163, 94), Color.rgb(185, 138, 240), Color.rgb(240, 138, 158), Ui.MUTED}
+                : new int[]{Ui.BRAND, Color.rgb(46, 112, 196), Color.rgb(196, 106, 18), Color.rgb(128, 72, 186), Color.rgb(184, 52, 86), Ui.MUTED};
+    }
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), line = new Paint(Paint.ANTI_ALIAS_FLAG), label = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF bar = new RectF();
     private final Path path = new Path();
@@ -21,14 +24,14 @@ final class Chart extends View {
 
     Chart(Context c) {
         super(c);
-        label.setColor(Ui.MUTED); label.setTextSize(Ui.dp(c, 11));
-        line.setStyle(Paint.Style.STROKE); line.setStrokeWidth(Ui.dp(c, 2.5f)); line.setStrokeJoin(Paint.Join.ROUND);
+        label.setColor(Ui.MUTED); label.setTextSize(Ui.dp(c, 11)); label.setTypeface(Ui.MONO);
+        line.setStyle(Paint.Style.STROKE); line.setStrokeWidth(Ui.dp(c, 2.5f)); line.setStrokeJoin(Paint.Join.MITER);
         setMinimumHeight(Ui.dp(c, 170));
     }
 
     /** One series of hourly figures as bars. */
     void bars(double[] hours) { bars = true; series = new double[][]{hours}; span(); invalidate(); }
-    /** Several series as lines (one colour each, in SERIES order). */
+    /** Several series as lines (one colour each, in series() order). */
     void lines(double[][] values) { bars = false; series = values; span(); invalidate(); }
 
     /** Show only the trading hours: the first to the last hour with any figure (at least 6 hours). */
@@ -61,11 +64,11 @@ final class Chart extends View {
         if (max <= 0) return;
         if (bars) {
             double[] s = series[0]; float gap = Math.max(2, step * 0.18f);
-            fill.setColor(Ui.BRAND);
+            fill.setColor(Ui.LIME);
             for (int i = 0; i < n && first + i < s.length; i++) {
                 float y = (float) (bottom - (bottom - top) * s[first + i] / max);
                 bar.set(i * step + gap / 2, y, (i + 1) * step - gap / 2, bottom);
-                canvas.drawRoundRect(bar, 6, 6, fill);
+                canvas.drawRect(bar, fill);
             }
             return;
         }
@@ -77,7 +80,7 @@ final class Chart extends View {
                 float x = i * step + step / 2, y = (float) (bottom - (bottom - top) * s[first + i] / max);
                 if (i == 0) p.moveTo(x, y); else p.lineTo(x, y);
             }
-            line.setColor(SERIES[k % SERIES.length]); canvas.drawPath(p, line);
+            int[] colours = series(); line.setColor(colours[k % colours.length]); canvas.drawPath(p, line);
         }
     }
 }

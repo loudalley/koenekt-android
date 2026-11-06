@@ -1,12 +1,38 @@
 <resources>
+    <!-- The koenekt.co.za look: IBM Plex Sans text; Ui.apply() sets bar and window colours at run time. -->
     <style name="AppTheme" parent="android:style/Theme.DeviceDefault.Light.NoActionBar">
-        <item name="android:fontFamily">sans-serif</item>
-        <item name="android:colorAccent">#123429</item>
-        <item name="android:colorPrimary">#123429</item>
+        <item name="android:fontFamily">@font/ibm_plex_sans</item>
+        <item name="android:colorAccent">#5FA300</item>
+        <item name="android:colorPrimary">#4B8300</item>
+        <item name="android:colorControlActivated">#5FA300</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:statusBarColor">#FFFFFF</item>
-        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:statusBarColor">#F7F7F4</item>
+        <item name="android:navigationBarColor">#F7F7F4</item>
         <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowBackground">@color/bg_light</item>
+        <item name="android:alertDialogTheme">@style/KoenektDialog</item>
+    </style>
+    <style name="AppTheme.Dark" parent="android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:fontFamily">@font/ibm_plex_sans</item>
+        <item name="android:colorAccent">#83CC17</item>
+        <item name="android:colorPrimary">#9AD635</item>
+        <item name="android:colorControlActivated">#83CC17</item>
+        <item name="android:statusBarColor">#1B1B1B</item>
+        <item name="android:navigationBarColor">#1B1B1B</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">@color/bg_dark</item>
+        <item name="android:alertDialogTheme">@style/KoenektDialog.Dark</item>
+    </style>
+    <style name="KoenektDialog" parent="android:style/Theme.DeviceDefault.Light.Dialog.Alert">
+        <item name="android:fontFamily">@font/ibm_plex_sans</item>
+        <item name="android:colorAccent">#4B8300</item>
+        <item name="android:colorControlActivated">#5FA300</item>
+        <item name="android:windowBackground">@drawable/dialog_light</item>
+    </style>
+    <style name="KoenektDialog.Dark" parent="android:style/Theme.DeviceDefault.Dialog.Alert">
+        <item name="android:fontFamily">@font/ibm_plex_sans</item>
+        <item name="android:colorAccent">#9AD635</item>
+        <item name="android:colorControlActivated">#83CC17</item>
+        <item name="android:windowBackground">@drawable/dialog_dark</item>
     </style>
 </resources>

@@ -1,6 +1,5 @@
 package za.co.koenekt.app;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -293,7 +292,7 @@ final class StoresScreen {
     // ------------------------------------------------------------------ customise
     private void customise() {
         String[] items = {"Tiles on the dashboard", "Stores to show", "Store types", (dash.group ? "Turn off" : "Turn on") + " grouping by store type"};
-        new AlertDialog.Builder(a).setTitle("Customise My stores").setItems(items, (d, w) -> {
+        Ui.dialog(a).setTitle("Customise My stores").setItems(items, (d, w) -> {
             if (w == 0) pickTiles(); else if (w == 1) pickStores(); else if (w == 2) pickTypeStore();
             else { dash.group = !dash.group; dash.save(); render(); }
         }).setNegativeButton("Close", null).show();
@@ -301,7 +300,7 @@ final class StoresScreen {
     private void pickTiles() {
         List<Metric> ms = metrics(); String[] names = new String[ms.size()]; boolean[] on = new boolean[ms.size()];
         for (int i = 0; i < names.length; i++) { names[i] = ms.get(i).label; on[i] = dash.tiles.contains(ms.get(i)); }
-        new AlertDialog.Builder(a).setTitle("Tiles on the dashboard").setMultiChoiceItems(names, on, (d, w, checked) -> on[w] = checked)
+        Ui.dialog(a).setTitle("Tiles on the dashboard").setMultiChoiceItems(names, on, (d, w, checked) -> on[w] = checked)
                 .setPositiveButton("Save", (d, w) -> {
                     dash.tiles.clear();
                     for (int i = 0; i < on.length; i++) if (on[i]) dash.tiles.add(ms.get(i));
@@ -312,7 +311,7 @@ final class StoresScreen {
     private void pickStores() {
         String[] names = new String[stores.size()]; boolean[] on = new boolean[stores.size()];
         for (int i = 0; i < names.length; i++) { names[i] = stores.get(i).optString("name"); on[i] = dash.shows(stores.get(i).optString("store")); }
-        new AlertDialog.Builder(a).setTitle("Stores to show").setMultiChoiceItems(names, on, (d, w, checked) -> on[w] = checked)
+        Ui.dialog(a).setTitle("Stores to show").setMultiChoiceItems(names, on, (d, w, checked) -> on[w] = checked)
                 .setPositiveButton("Save", (d, w) -> {
                     for (int i = 0; i < on.length; i++) dash.setShown(stores.get(i).optString("store"), on[i]);
                     if (dash.scope.startsWith("store:") && !dash.shows(dash.scope.substring(6))) dash.scope = "";
@@ -325,7 +324,7 @@ final class StoresScreen {
             String id = stores.get(i).optString("store");
             names[i] = stores.get(i).optString("name") + "  ·  " + dash.type(id);
         }
-        new AlertDialog.Builder(a).setTitle("Store types").setItems(names, (d, w) -> pickType(stores.get(w)))
+        Ui.dialog(a).setTitle("Store types").setItems(names, (d, w) -> pickType(stores.get(w)))
                 .setNegativeButton("Done", null).show();
     }
     private void pickType(JSONObject s) {
@@ -333,13 +332,13 @@ final class StoresScreen {
         List<String> choices = new ArrayList<>(dash.types());
         for (String t : new String[]{"Liquor store", "Bottle store", "Tavern", "Wholesale", "Supermarket", "Butchery"}) if (!choices.contains(t)) choices.add(t);
         choices.add("Other type…"); choices.add(StoreMath.NO_TYPE);
-        new AlertDialog.Builder(a).setTitle(s.optString("name")).setItems(choices.toArray(new String[0]), (d, w) -> {
+        Ui.dialog(a).setTitle(s.optString("name")).setItems(choices.toArray(new String[0]), (d, w) -> {
             String pick = choices.get(w);
             if (pick.equals("Other type…")) {
                 EditText input = new EditText(a); input.setSingleLine(true); input.setHint("e.g. Express");
                 input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
                 FrameLayout box = new FrameLayout(a); box.setPadding(dp(24), dp(8), dp(24), 0); box.addView(input);
-                new AlertDialog.Builder(a).setTitle("Store type").setView(box).setPositiveButton("Save", (d2, w2) -> {
+                Ui.dialog(a).setTitle("Store type").setView(box).setPositiveButton("Save", (d2, w2) -> {
                     dash.setType(id, input.getText().toString()); dash.save(); pickTypeStore(); render();
                 }).setNegativeButton("Cancel", null).show();
                 return;

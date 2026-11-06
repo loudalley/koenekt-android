@@ -1,11 +1,11 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **5 November 2026, Claude (Windows PC) — version 1.7.0 (12): My stores (live till
-sales per shop, Stores tab only for store logins) and Account → Allow screenshots on this phone. Built
-and signed on the PC (`dist/1.7.0/`), pushed to `main`; Play listing text, privacy page and eight
-screenshots updated; SUBMITTED to Google Play by the owner (in review; managed publishing off, so approval publishes it),
-published on the self-hosted F-Droid repo and copied to Google Drive. Not tried on a physical phone or a
-real shop PC.** Until Play approves it, Play still serves 1.6.1 (11).
+Last updated: **6 November 2026, Claude (Windows PC) — version 1.8.0 (13): the koenekt.co.za / People
+look (site palettes, Big Shoulders / IBM Plex fonts, 2dp corners, square-ended icons) and Account →
+Appearance (System / Light / Dark). Built and signed on the PC (`dist/1.8.0/`), pushed to `main`, being
+sent to Google Play at the owner's request and copied to Google Drive. NOT on F-Droid (not asked this
+time). Tried on the emulator only.** 1.7.0 (12) was in Play review; the 1.8.0 production release replaces
+it. F-Droid still serves 1.7.0.
 
 Previous release: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
 leaver controls (change/delete your account, forced password change after an admin reset,
@@ -839,3 +839,39 @@ downloaded it yet", then "probably screenshots and a short whats new with old fe
 - 5 Nov, later: the owner submitted the 4 changes on Play. Then "push to F-Droid and Drive too":
   `tools/fdroid_repo.py publish --push` from the main checkout gave `koenekt-fdroid` `d57dcf8`; the live index
   lists 1.7.0 (12) with APK hash `ca75316e…`. Same APK copied to `G:\My Drive\Koenekt Android\` (hash checked).
+
+**6 November 2026 — Claude (1.8.0, site look and appearance, Windows PC):** The owner: "we should keep to
+design language, please put fonts and the theme and icons, dark, light and system options on the app. show me
+mock ups"; approved the mockups (https://claude.ai/artifact/3DKJfKREjHCcF4yYCyHaRb, private to the owner) with
+"apply it push and play store and git and my drive".
+- Tokens are the website's `site.css` and People branch `koenekt-people-look` `console/static/koenekt-theme.css`
+  (light bg #F7F7F4, accent #5FA300 / text #4B8300; dark bg #1B1B1B, accent #83CC17 / text #9AD635).
+- `Ui.java`: colours are no longer constants; `Ui.apply(activity, dark)` sets both palettes' values, loads the
+  fonts and colours the window and system bars. Old names kept (BRAND = accent text, LIME = accent fill, INK, MUTED,
+  LINE, BG, SURFACE, TINT, DANGER, WARN...) plus SURFACE2, BORDER_STRONG, FIELD, TINT_LINE, ON_ACCENT. Every
+  `shape()` corner is capped at 2dp. `Ui.title` uses Big Shoulders Display at 22sp and up (x1.18), Plex Sans
+  SemiBold below; `Ui.label` and buttons use Plex Mono capitals. Avatars are square tints; a dot in `Ui.OUT` is
+  a hollow ring. `Ui.dialog()` replaces all 36 `new AlertDialog.Builder` (KoenektDialog / .Dark styles).
+  `Chart.series()` replaces the static SERIES so compare colours follow the mode.
+- Fonts in `res/font/` (theme default `@font/ibm_plex_sans`), copied with their OFL licences from the People look
+  branch; licences ship in `assets/licences/` and About names them. APK 170 KB -> 509 KB.
+- Appearance: Account → Appearance (segmented System / Light / Dark, icons `ic_phone`, `ic_sun`, `ic_moon`),
+  saved in the activity preferences as `appearance`. `applyAppearance()` repaints the shell and re-shows the
+  current screen without `recreate()` (the unlocked session lives in the activity); a half-filled form or an
+  open web page keeps its state and the next screen is in the new colours. `onConfigurationChanged` follows the
+  phone's dark mode when System is chosen (the manifest already handles uiMode). Pale `ic_logo_pale` and
+  `ic_brand_mark_pale` for dark.
+- Icons: the 14 line icons now use square caps, miter joins, 1.75 stroke.
+- Checks: `assembleRelease bundleRelease lintDebug` (lint "No issues found"), PolicyChecks 68, StoreChecks 23,
+  export checks, test_server_amendment OK. Same upload key `3e3a0931…`, aapt 13 / 1.8.0; APK `f8bf9420…`,
+  AAB `4fc24624…` (`dist/1.8.0/SHA256SUMS`).
+- Emulator (koenekt-test, debug against the local Link relay with made-up stores and a local People console
+  run from `C:\Projects\koenekt-people` with a temporary ADMS_HOME of synthetic staff): sign-in, Home, People,
+  person, Add employee, Who's in, My stores, store tills, Compare, Account in light and dark; Appearance switches
+  repaint at once; with System, `cmd uimode night yes/no` flips the app both ways. Fixed on the way: nav labels lost
+  their capitals to `setSingleLine` (now `setMaxLines(1)`), segment labels centred, "Tools" heading as a label,
+  compare column headings back to plain text (mono capitals broke "Southside"). Release APK: opens on Sign in,
+  window SECURE, survives a night-mode switch with no crash.
+- Play screenshots `dist/play-store/screenshots-1.8.0/` (1080x1920): 01 Home, 02 My stores, 03 store tills,
+  04 Compare (dark), 05 Who's in, 06 People, 07 person, 08 Add employee. All names and figures made up.
+- Not tested: a physical phone, Android 8-10, the WebView pages (People's own pages keep their own theme switch).

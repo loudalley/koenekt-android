@@ -2,16 +2,14 @@ package za.co.koenekt.app;
 
 import android.app.Activity;
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.app.KeyguardManager;
 import android.hardware.biometrics.BiometricPrompt;
 import android.hardware.biometrics.BiometricManager;
 import android.content.ClipData;
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.content.res.Configuration;
 import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Bundle;
@@ -79,7 +77,9 @@ public final class MainActivity extends Activity {
     static final int TAB_STORES = 5;
     private static final int PICK_FILE = 20, SAVE_FILE = 21, DEVICE_UNLOCK = 22, CONFIRM_DEVICE = 23, MAX_EXPORT = 20 * 1024 * 1024;
     /** Preference (this phone only; backups are off): Account → Allow screenshots on this phone. */
-    private static final String ALLOW_SCREENSHOTS = "allow_screenshots";
+    private static final String ALLOW_SCREENSHOTS = "allow_screenshots", APPEARANCE = "appearance";
+    /** System (follow the phone), light or dark; this phone only. */
+    private String appearance = Ui.SYSTEM, lockMessage = "";
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     /** My stores asks several shop PCs at once, and each answer may take up to 20 s. */
     private final ExecutorService linkWorker = Executors.newFixedThreadPool(4);
@@ -131,7 +131,11 @@ public final class MainActivity extends Activity {
     }
 
     @Override public void onCreate(Bundle state) {
+        appearance = getPreferences(MODE_PRIVATE).getString(APPEARANCE, Ui.SYSTEM);
+        boolean dark = Ui.wantsDark(this, appearance);
+        setTheme(dark ? R.style.AppTheme_Dark : R.style.AppTheme);
         super.onCreate(state);
+        Ui.apply(this, dark);
         vault = new SessionVault(this);
         if (android.os.Build.VERSION.SDK_INT >= 33) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
@@ -152,7 +156,7 @@ public final class MainActivity extends Activity {
     int dp(float n) { return Ui.dp(this, n); }
 
     private void buildShell() {
-        root = Ui.column(this); root.setBackgroundColor(Ui.SURFACE);
+        root = Ui.column(this); root.setBackgroundColor(Ui.BG);
         root.setOnApplyWindowInsetsListener((v, insets) -> {
             root.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
                     insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
@@ -169,7 +173,7 @@ public final class MainActivity extends Activity {
         content = new FrameLayout(this); content.setBackgroundColor(Ui.BG); root.addView(content, new LinearLayout.LayoutParams(-1, 0, 1));
         navLine = new View(this); navLine.setBackgroundColor(Ui.LINE);
         root.addView(navLine, new LinearLayout.LayoutParams(-1, Math.max(1, dp(0.5f))));
-        nav = Ui.row(this); nav.setBackgroundColor(Ui.SURFACE); nav.setPadding(0, dp(8), 0, dp(6));
+        nav = Ui.row(this); nav.setBackgroundColor(Ui.BG); nav.setPadding(0, 0, 0, dp(8));
         root.addView(nav, new LinearLayout.LayoutParams(-1, -2));
         shell = new FrameLayout(this); shell.addView(root); setContentView(shell);
         createWebView(); loginScreen(""); root.requestApplyInsets();
@@ -211,16 +215,18 @@ public final class MainActivity extends Activity {
         for (int i = 0; i < tabs.length; i++) {
             if (!hasTab(tabs[i])) continue;
             boolean selected = tabs[i] == tab;
+            // The site's look: a 2dp accent bar over the selected tab, mono capitals underneath.
             LinearLayout cell = Ui.column(this); cell.setGravity(Gravity.CENTER_HORIZONTAL);
+            View bar = new View(this); bar.setBackgroundColor(selected ? Ui.LIME : Color.TRANSPARENT);
+            cell.addView(bar, new LinearLayout.LayoutParams(-1, dp(2)));
             ImageView icon = Ui.icon(this, icons[i], selected ? Ui.BRAND : Ui.MUTED, 24);
-            icon.setPadding(dp(18), dp(4), dp(18), dp(4)); icon.setLayoutParams(new LinearLayout.LayoutParams(dp(60), dp(32)));
-            if (selected) icon.setBackground(Ui.shape(Ui.TINT, 16, this));
+            ((LinearLayout.LayoutParams) icon.getLayoutParams()).topMargin = dp(8);
             cell.addView(icon);
-            TextView label = Ui.text(this, names[i], 12, selected ? Ui.BRAND : Ui.MUTED); label.setPadding(0, dp(4), 0, 0); label.setGravity(Gravity.CENTER);
-            if (selected) label.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            TextView label = Ui.text(this, names[i], 10, selected ? Ui.BRAND : Ui.MUTED); Ui.mono(label, selected);
+            label.setLetterSpacing(0.04f); label.setMaxLines(1); label.setPadding(0, dp(5), 0, 0); label.setGravity(Gravity.CENTER);
             cell.addView(label);
             cell.setContentDescription(names[i]); cell.setClickable(true); cell.setFocusable(true);
-            cell.setBackground(Ui.pressable(Ui.shape(Color.TRANSPARENT, 16, this), 16, this));
+            cell.setBackground(Ui.pressable(Ui.shape(Color.TRANSPARENT, 0, this), 0, this));
             final int target = tabs[i]; cell.setOnClickListener(v -> showTab(target));
             nav.addView(cell, new LinearLayout.LayoutParams(0, -2, 1));
         }
@@ -392,12 +398,12 @@ public final class MainActivity extends Activity {
             @Override public void onProgressChanged(WebView view, int value) { progress.setProgress(value); }
             @Override public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
                 if (locked || !trusted(url)) { result.cancel(); return true; }
-                new AlertDialog.Builder(MainActivity.this).setMessage(message).setPositiveButton("OK", (d,w) -> result.confirm())
+                Ui.dialog(MainActivity.this).setMessage(message).setPositiveButton("OK", (d,w) -> result.confirm())
                         .setOnCancelListener(d -> result.cancel()).show(); return true;
             }
             @Override public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
                 if (locked || !trusted(url)) { result.cancel(); return true; }
-                new AlertDialog.Builder(MainActivity.this).setMessage(message).setPositiveButton("Continue", (d,w) -> result.confirm())
+                Ui.dialog(MainActivity.this).setMessage(message).setPositiveButton("Continue", (d,w) -> result.confirm())
                         .setNegativeButton("Cancel", (d,w) -> result.cancel()).setOnCancelListener(d -> result.cancel()).show(); return true;
             }
             // e.g. the Users page's "Reset password" asks for the temporary password
@@ -407,7 +413,7 @@ public final class MainActivity extends Activity {
                 box.addView(Ui.text(MainActivity.this, message, 15, Ui.INK)); Ui.gap(box, 12);
                 EditText answer = Ui.field(box, null, null, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
                 if (value != null) answer.setText(value);
-                new AlertDialog.Builder(MainActivity.this).setView(box)
+                Ui.dialog(MainActivity.this).setView(box)
                         .setPositiveButton("OK", (d,w) -> result.confirm(answer.getText().toString()))
                         .setNegativeButton("Cancel", (d,w) -> result.cancel()).setOnCancelListener(d -> result.cancel()).show(); return true;
             }
@@ -471,7 +477,7 @@ public final class MainActivity extends Activity {
         }
         Uri u = Uri.parse(url);
         if ("https".equals(u.getScheme()) || "mailto".equals(u.getScheme()) || "tel".equals(u.getScheme())) {
-            new AlertDialog.Builder(this).setTitle("Open outside Koenekt?").setMessage(u.getHost() == null ? url : u.getHost())
+            Ui.dialog(this).setTitle("Open outside Koenekt?").setMessage(u.getHost() == null ? url : u.getHost())
                     .setPositiveButton("Open", (d,w) -> { try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) { toast("No app can open this link."); } })
                     .setNegativeButton("Cancel", null).show();
         } else toast("This type of link is not supported.");
@@ -481,8 +487,8 @@ public final class MainActivity extends Activity {
     private void loginScreen(String message) {
         leaveWeb(); flow = null; currentTitle = "Koenekt"; setBar(null, false); showNav(false);
         LinearLayout page = page(); page.setPadding(dp(24), dp(44), dp(24), dp(28));
-        ((View) page.getParent()).setBackgroundColor(Ui.SURFACE);
-        ImageView logo = new ImageView(this); logo.setImageResource(R.drawable.ic_logo); logo.setAdjustViewBounds(true);
+        ((View) page.getParent()).setBackgroundColor(Ui.BG);
+        ImageView logo = new ImageView(this); logo.setImageResource(Ui.logo()); logo.setAdjustViewBounds(true);
         logo.setContentDescription("Koenekt"); page.addView(logo, new LinearLayout.LayoutParams(dp(150), -2));
         Ui.gap(page, 44); page.addView(Ui.title(this, "Sign in", 32)); Ui.gap(page, 8);
         page.addView(Ui.text(this, "Use your Koenekt account. You'll see the companies and tools your account allows.", 16, Ui.MUTED));
@@ -560,7 +566,7 @@ public final class MainActivity extends Activity {
         input.setText(host != null && host.endsWith(".people.koenekt.co.za") ? host.substring(0, host.indexOf('.')) : "people");
         input.setSelectAllOnFocus(true); input.requestFocus();
         FrameLayout box = new FrameLayout(this); box.setPadding(dp(24), dp(8), dp(24), 0); box.addView(input);
-        new AlertDialog.Builder(this).setTitle("Workspace")
+        Ui.dialog(this).setTitle("Workspace")
                 .setMessage("Your organisation's workspace name, from your administrator.")
                 .setView(box)
                 .setPositiveButton("Use", (d, w) -> {
@@ -595,7 +601,7 @@ public final class MainActivity extends Activity {
         if (peopleSession && mustChangePassword) { startPasswordChange(true); return; }
         leaveWeb(); flow = null; tab = TAB_HOME; currentTitle = "Koenekt"; setBar(null, false); showNav(true);
         LinearLayout page = page(); page.setPadding(dp(20), dp(24), dp(20), dp(28));
-        ImageView logo = new ImageView(this); logo.setImageResource(R.drawable.ic_logo); logo.setAdjustViewBounds(true);
+        ImageView logo = new ImageView(this); logo.setImageResource(Ui.logo()); logo.setAdjustViewBounds(true);
         logo.setContentDescription("Koenekt"); page.addView(logo, new LinearLayout.LayoutParams(dp(104), -2));
         Ui.gap(page, 28);
         String first = displayName.trim().isEmpty() ? "" : displayName.trim().split("\\s+")[0];
@@ -616,7 +622,7 @@ public final class MainActivity extends Activity {
             return;
         }
         if (tools.isEmpty()) return;
-        page.addView(Ui.title(this, "Tools", 18)); Ui.gap(page, 10);
+        page.addView(Ui.label(this, "Tools")); Ui.gap(page, 10);
         LinearLayout card = Ui.column(this); card.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, this)); card.setClipToOutline(true);
         for (int i = 0; i < tools.size(); i++) {
             AppPolicy.Feature f = tools.get(i);
@@ -629,7 +635,7 @@ public final class MainActivity extends Activity {
     private void addQuick(LinearLayout row, int icon, String title, String subtitle, Runnable action) {
         LinearLayout tile = Ui.card(this); tile.setMinimumHeight(dp(132));
         ImageView i = Ui.icon(this, icon, Ui.BRAND, 44); i.setPadding(dp(10), dp(10), dp(10), dp(10));
-        GradientDrawable circle = new GradientDrawable(); circle.setShape(GradientDrawable.OVAL); circle.setColor(Ui.TINT); i.setBackground(circle);
+        i.setBackground(Ui.outline(Ui.TINT, Ui.TINT_LINE, 1, 2, this));
         tile.addView(i); Ui.gap(tile, 14); tile.addView(Ui.title(this, title, 17)); Ui.gap(tile, 2);
         tile.addView(Ui.text(this, subtitle, 13, Ui.MUTED));
         tile.setBackground(Ui.pressable(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, this), 20, this));
@@ -652,6 +658,11 @@ public final class MainActivity extends Activity {
         String host = Uri.parse(peopleSession ? workspace : operator ? AppPolicy.ADMIN : AppPolicy.link()).getHost();
         if (host != null) words.addView(Ui.text(this, host, 13, Ui.MUTED));
         who.addView(words, new LinearLayout.LayoutParams(0, -2, 1)); page.addView(who); Ui.gap(page, 24);
+        page.addView(Ui.label(this, "Appearance")); Ui.gap(page, 8);
+        page.addView(appearanceSwitch()); Ui.gap(page, 8);
+        String how = Ui.LIGHT.equals(appearance) ? "Always light." : Ui.DARK_MODE.equals(appearance) ? "Always dark."
+                : "Follows your phone: " + (Ui.dark ? "dark" : "light") + " now.";
+        page.addView(Ui.text(this, how, 13, Ui.MUTED)); Ui.gap(page, 24);
         LinearLayout card = Ui.column(this); card.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, this)); card.setClipToOutline(true);
         card.addView(Ui.listRow(this, null, "Refresh access", "Reload your companies and permissions", null, this::refreshAccess));
         card.addView(Ui.divider(this, 16));
@@ -678,6 +689,52 @@ public final class MainActivity extends Activity {
         TextView version = Ui.text(this, "Koenekt " + BuildConfig.VERSION_NAME, 13, Ui.MUTED); version.setGravity(Gravity.CENTER); page.addView(version);
     }
 
+    /** System / Light / Dark, as the People site's appearance switch. */
+    private View appearanceSwitch() {
+        LinearLayout box = Ui.row(this); int pad = dp(3); box.setPadding(pad, pad, pad, pad);
+        box.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 2, this));
+        String[] values = {Ui.SYSTEM, Ui.LIGHT, Ui.DARK_MODE}, names = {"System", "Light", "Dark"};
+        int[] icons = {R.drawable.ic_phone, R.drawable.ic_sun, R.drawable.ic_moon};
+        for (int i = 0; i < values.length; i++) {
+            boolean on = values[i].equals(appearance); final String value = values[i];
+            LinearLayout seg = Ui.column(this); seg.setGravity(Gravity.CENTER); seg.setMinimumHeight(dp(60));
+            seg.addView(Ui.icon(this, icons[i], on ? Ui.BG : Ui.INK, 22));
+            TextView t = Ui.text(this, names[i], 12, on ? Ui.BG : Ui.INK); Ui.mono(t, true); t.setLetterSpacing(0.04f); t.setPadding(0, dp(4), 0, 0); t.setGravity(Gravity.CENTER);
+            seg.addView(t);
+            seg.setBackground(Ui.pressable(Ui.shape(on ? Ui.INK : Color.TRANSPARENT, 1, this), 1, this));
+            seg.setContentDescription("Appearance: " + names[i] + (on ? ", selected" : ""));
+            seg.setClickable(true); seg.setFocusable(true); seg.setOnClickListener(v -> setAppearance(value));
+            box.addView(seg, new LinearLayout.LayoutParams(0, -2, 1));
+        }
+        return box;
+    }
+    private void setAppearance(String value) {
+        if (value.equals(appearance)) return;
+        appearance = value; getPreferences(MODE_PRIVATE).edit().putString(APPEARANCE, value).apply();
+        applyAppearance(true);
+    }
+    /**
+     * Repaints in the chosen colours without restarting the activity (the unlocked session lives here).
+     * Open web pages and half-filled forms keep their state; the next screen they open is in the new colours.
+     */
+    private void applyAppearance(boolean force) {
+        boolean dark = Ui.wantsDark(this, appearance);
+        if (!force && dark == Ui.dark) return;
+        setTheme(dark ? R.style.AppTheme_Dark : R.style.AppTheme);
+        Ui.apply(this, dark);
+        if (root == null) return;
+        root.setBackgroundColor(Ui.BG); content.setBackgroundColor(Ui.BG); nav.setBackgroundColor(Ui.BG); navLine.setBackgroundColor(Ui.LINE);
+        barTitle.setTextColor(Ui.INK); backButton.setColorFilter(Ui.INK);
+        progress.setProgressTintList(ColorStateList.valueOf(Ui.LIME));
+        if (locked) { showLock(lockMessage); return; }
+        if (inWeb || flow != null) { if (nav.getVisibility() == View.VISIBLE) showNav(true); return; }
+        if (!signedIn()) loginScreen(notice); else showTab(tab);
+    }
+    @Override public void onConfigurationChanged(Configuration config) {
+        super.onConfigurationChanged(config);
+        if (Ui.SYSTEM.equals(appearance)) applyAppearance(false);   // the phone switched between light and dark
+    }
+
     /** Release builds (or debug with -PsecureScreens); other debug builds always allow screenshots. */
     private boolean secureBuild() {
         boolean debuggable = (getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
@@ -694,8 +751,8 @@ public final class MainActivity extends Activity {
         LinearLayout row = Ui.listRow(this, null, "Allow screenshots on this phone",
                 on ? "On: also screen recording and recent apps" : "Off: Koenekt is hidden from screenshots", null, null);
         Switch toggle = new Switch(this); toggle.setChecked(on); toggle.setContentDescription("Allow screenshots on this phone");
-        toggle.setThumbTintList(ColorStateList.valueOf(on ? Ui.LIME : android.graphics.Color.rgb(176, 184, 179)));
-        toggle.setTrackTintList(ColorStateList.valueOf(on ? Ui.LIME : Ui.MUTED));
+        toggle.setThumbTintList(ColorStateList.valueOf(on ? Ui.LIME : Ui.BORDER_STRONG));
+        toggle.setTrackTintList(ColorStateList.valueOf(on ? Ui.TINT_LINE : Ui.LINE));
         // The switch only moves once the setting has changed (turning it on asks for the phone's lock).
         toggle.setOnClickListener(v -> { toggle.setChecked(screenshotsAllowed()); toggleScreenshots(); });
         row.addView(toggle);
@@ -711,7 +768,7 @@ public final class MainActivity extends Activity {
         if (locked || afterConfirm != null) return;
         if (screenshotsAllowed()) { setScreenshotsAllowed(false); toast("Screenshots of Koenekt are blocked again."); return; }
         if (!vault.deviceSecured()) { toast("Set a screen lock on this phone first."); return; }
-        new AlertDialog.Builder(this).setTitle("Allow screenshots?")
+        Ui.dialog(this).setTitle("Allow screenshots?")
                 .setMessage("Screenshots and screen recordings of Koenekt will work on this phone, and its screens will show in recent apps.\n\n"
                         + "They can include ID numbers, pay and payroll. Screenshots go to the phone's gallery, where other apps and backups can reach them. Only share them with people allowed to see that information.\n\n"
                         + "This applies to this phone only. Confirm with your fingerprint or phone PIN.")
@@ -819,7 +876,7 @@ public final class MainActivity extends Activity {
         box.addView(Ui.text(this, "Your store login from Koenekt. It shows live sales for the stores it may see.", 14, Ui.MUTED)); Ui.gap(box, 12);
         EditText user = Ui.field(box, "Store login", "e.g. owner.shop", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         EditText pw = Ui.field(box, "Password", "Password", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        new AlertDialog.Builder(this).setTitle("Connect My stores").setView(box).setNegativeButton("Cancel", null)
+        Ui.dialog(this).setTitle("Connect My stores").setView(box).setNegativeButton("Cancel", null)
                 .setPositiveButton("Connect", (d, w) -> {
                     String u = user.getText().toString().trim(), p = pw.getText().toString();
                     if (u.isEmpty() || p.isEmpty()) { toast(getString(R.string.credentials_required)); return; }
@@ -836,7 +893,7 @@ public final class MainActivity extends Activity {
                 }).show();
     }
     private void disconnectStores() {
-        new AlertDialog.Builder(this).setTitle("Sign out of My stores?").setMessage("People and management stay signed in.")
+        Ui.dialog(this).setTitle("Sign out of My stores?").setMessage("People and management stay signed in.")
                 .setPositiveButton("Sign out", (d, w) -> {
                     linkLogout(); setLink(null, "");
                     if (!peopleSession && !operator) signOut(); else refreshAfterStores();
@@ -915,8 +972,8 @@ public final class MainActivity extends Activity {
     }
 
     private void about() {
-        new AlertDialog.Builder(this).setTitle("Koenekt " + BuildConfig.VERSION_NAME)
-                .setMessage("People, licences, Reporter updates and My stores.\n\nThis app connects to your existing Koenekt services over HTTPS. My stores shows live till figures that your shop PCs send through Koenekt while you have it open; the app keeps no copy of them after you leave it. Server permissions determine what you can view and change.\n\nPasswords and authenticator codes are not saved. Remembered session tokens are encrypted using Android Keystore and require device authentication to restore. Unlock with a strong biometric such as fingerprint, or the phone's PIN, pattern or password. Android 8 uses the device credential. Sign out forgets the saved login. Expired or revoked server sessions require a new Koenekt sign-in.\n\nStaff, attendance, payroll and licence information stays with your Koenekt service. Exported reports are saved only to a location you select. The app has no advertising or analytics SDKs. Screenshots, screen recordings and recent-app previews of Koenekt are blocked unless you turn on Account → Allow screenshots on this phone.\n\nFor account access or correction, contact your organisation's administrator. To delete your login, use Account → Delete my account; if you can no longer sign in, use Delete account below. Deleting a login does not erase employment records that the organisation must retain.\n\nAn internet connection is required. Phone biometrics unlock this app; staff fingerprint/face enrollment still uses the connected clocks.")
+        Ui.dialog(this).setTitle("Koenekt " + BuildConfig.VERSION_NAME)
+                .setMessage("People, licences, Reporter updates and My stores.\n\nThis app connects to your existing Koenekt services over HTTPS. My stores shows live till figures that your shop PCs send through Koenekt while you have it open; the app keeps no copy of them after you leave it. Server permissions determine what you can view and change.\n\nPasswords and authenticator codes are not saved. Remembered session tokens are encrypted using Android Keystore and require device authentication to restore. Unlock with a strong biometric such as fingerprint, or the phone's PIN, pattern or password. Android 8 uses the device credential. Sign out forgets the saved login. Expired or revoked server sessions require a new Koenekt sign-in.\n\nStaff, attendance, payroll and licence information stays with your Koenekt service. Exported reports are saved only to a location you select. The app has no advertising or analytics SDKs. Screenshots, screen recordings and recent-app previews of Koenekt are blocked unless you turn on Account → Allow screenshots on this phone.\n\nFor account access or correction, contact your organisation's administrator. To delete your login, use Account → Delete my account; if you can no longer sign in, use Delete account below. Deleting a login does not erase employment records that the organisation must retain.\n\nAn internet connection is required. Phone biometrics unlock this app; staff fingerprint/face enrollment still uses the connected clocks.\n\nFonts: IBM Plex Sans and IBM Plex Mono (© IBM Corp.) and Big Shoulders Display (© The Big Shoulders Project Authors), under the SIL Open Font License 1.1; the licences are included in the app.")
                 .setNeutralButton("Privacy policy", (d,w) -> openExternal(AppPolicy.PRIVACY_URL))
                 .setNegativeButton("Delete account", (d,w) -> openExternal(AppPolicy.DELETE_ACCOUNT_URL))
                 .setPositiveButton("Close", null).show();
@@ -928,7 +985,7 @@ public final class MainActivity extends Activity {
 
     void confirmSignOut() {
         if (busy) return;
-        new AlertDialog.Builder(this).setTitle("Sign out of this app?").setMessage("Clear the People and management sessions on this device.")
+        Ui.dialog(this).setTitle("Sign out of this app?").setMessage("Clear the People and management sessions on this device.")
                 .setPositiveButton("Sign out", (d,w) -> signOut()).setNegativeButton("Cancel", null).show();
     }
 
@@ -973,18 +1030,18 @@ public final class MainActivity extends Activity {
 
     private void showLock(String message) {
         if (shell == null) return;
-        locked = true; root.setVisibility(View.INVISIBLE);
+        locked = true; lockMessage = message; root.setVisibility(View.INVISIBLE);
         if (shield != null) shell.removeView(shield);
         LinearLayout panel = Ui.column(this); panel.setPadding(dp(28), dp(70), dp(28), dp(36));
         panel.setGravity(Gravity.CENTER); panel.setBackgroundColor(Ui.BG);
-        ImageView mark = new ImageView(this); mark.setImageResource(R.drawable.ic_brand_mark); mark.setContentDescription("Koenekt");
+        ImageView mark = new ImageView(this); mark.setImageResource(Ui.brandMark()); mark.setContentDescription("Koenekt");
         panel.addView(mark, new LinearLayout.LayoutParams(dp(54), dp(74)));
         Ui.gap(panel, 28); TextView heading = Ui.title(this, "Koenekt is locked", 26); heading.setGravity(Gravity.CENTER); panel.addView(heading);
         Ui.gap(panel, 10); TextView body = Ui.text(this, message, 16, Ui.MUTED); body.setGravity(Gravity.CENTER); panel.addView(body);
         Ui.gap(panel, 36); panel.addView(Ui.primary(this, "Unlock", this::requestUnlock), Ui.fill(this, 54));
         Ui.gap(panel, 8);
         panel.addView(Ui.quiet(this, "Sign out", () -> {
-            new AlertDialog.Builder(this).setTitle("Forget this saved login?")
+            Ui.dialog(this).setTitle("Forget this saved login?")
                     .setPositiveButton("Sign out", (d,w) -> signOut()).setNegativeButton("Cancel", null).show();
         }), Ui.fill(this, 48));
         shield = panel; shell.addView(shield, new FrameLayout.LayoutParams(-1, -1));
@@ -1116,7 +1173,7 @@ public final class MainActivity extends Activity {
         catch (Exception e) { toast("This Koenekt setup link is invalid."); if (locked) requestUnlock(); return; }
         if (target.equals(workspace)) { if (locked) requestUnlock(); return; }
         setupInProgress = true;
-        new AlertDialog.Builder(this).setTitle("Connect your organisation?").setMessage(Uri.parse(target).getHost() + "\n\nThis will forget any saved login on this phone.")
+        Ui.dialog(this).setTitle("Connect your organisation?").setMessage(Uri.parse(target).getHost() + "\n\nThis will forget any saved login on this phone.")
                 .setPositiveButton("Connect", (d,w) -> {
                     setupInProgress = false; workspace = target;
                     getPreferences(MODE_PRIVATE).edit().putString("workspace", workspace).apply(); signOut();
@@ -1295,7 +1352,7 @@ public final class MainActivity extends Activity {
     private void showError(String message) {
         if (locked) return;
         progress.setVisibility(View.GONE);
-        new AlertDialog.Builder(this).setTitle("Connection unavailable").setMessage(message)
+        Ui.dialog(this).setTitle("Connection unavailable").setMessage(message)
                 .setPositiveButton("Retry", (d,w) -> web.reload()).setNegativeButton("Home", (d,w) -> home()).show();
     }
     private void handleBack() {

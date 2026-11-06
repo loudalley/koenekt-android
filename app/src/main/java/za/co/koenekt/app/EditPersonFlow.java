@@ -59,7 +59,7 @@ final class EditPersonFlow implements MainActivity.Flow {
     private void back() {
         if (sending) return;
         if (answers().equals(original)) { a.finishFlow(false); return; }
-        new AlertDialog.Builder(a).setTitle("Discard your changes?")
+        Ui.dialog(a).setTitle("Discard your changes?")
                 .setPositiveButton("Discard", (d, w) -> a.finishFlow(false)).setNegativeButton("Keep editing", null).show();
     }
 
@@ -207,7 +207,7 @@ final class EditPersonFlow implements MainActivity.Flow {
         EditText field = Ui.field(view, set ? "New clock password" : "Clock password", "Digits only",
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
         field.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(8)});
-        AlertDialog.Builder builder = new AlertDialog.Builder(a).setView(view).setNegativeButton("Cancel", null)
+        AlertDialog.Builder builder = Ui.dialog(a).setView(view).setNegativeButton("Cancel", null)
                 .setPositiveButton("Save", null);
         if (set) builder.setNeutralButton("Remove", (d, w) -> sendClockPassword(""));
         AlertDialog dialog = builder.show();

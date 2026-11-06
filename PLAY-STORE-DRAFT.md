@@ -77,6 +77,7 @@ Your account
 - Opens with your fingerprint or phone PIN after you sign in.
 - Change your password, or delete your account from the app.
 - Screenshots are blocked by default; allow them on your own phone.
+- Light, dark or follow your phone.
 
 More tools
 

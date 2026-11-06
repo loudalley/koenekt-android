@@ -1,7 +1,6 @@
 package za.co.koenekt.app;
 
 import android.app.AlertDialog;
-import android.graphics.Color;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -50,10 +49,10 @@ final class PeopleScreen {
         LinearLayout screen = Ui.column(a);
         LinearLayout header = Ui.column(a); header.setPadding(dp(16), 0, dp(16), dp(4));
         LinearLayout search = Ui.row(a); search.setPadding(dp(14), 0, dp(6), 0);
-        search.setBackground(Ui.shape(Color.rgb(235, 239, 233), 16, a));
+        search.setBackground(Ui.outline(Ui.FIELD, Ui.BORDER_STRONG, 1, 2, a));
         search.addView(Ui.icon(a, R.drawable.ic_search, Ui.MUTED, 20));
         EditText q = new EditText(a); q.setHint("Search name, PIN or department"); q.setBackground(null); q.setSingleLine(true);
-        q.setTextSize(16); q.setTextColor(Ui.INK); q.setHintTextColor(Ui.MUTED); q.setPadding(dp(10), 0, 0, 0);
+        q.setTextSize(16); q.setTypeface(Ui.SANS); q.setTextColor(Ui.INK); q.setHintTextColor(Ui.MUTED); q.setPadding(dp(10), 0, 0, 0);
         q.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         q.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO); q.setText(query);
         q.addTextChangedListener(new TextWatcher() {
@@ -159,7 +158,7 @@ final class PeopleScreen {
         fact(view, "ID / passport", p.optString("id_number"));
         fact(view, "Birth date", AddEmployeeFlow.pretty(p.optString("birth_date")));
         fact(view, "Shift today", p.optString("shift_name"));
-        AlertDialog dialog = new AlertDialog.Builder(a).setView(view).setPositiveButton("Close", null).create();
+        AlertDialog dialog = Ui.dialog(a).setView(view).setPositiveButton("Close", null).create();
         MainActivity.Company place = companies.get(company);
         boolean active = "Active".equalsIgnoreCase(p.optString("status"));
         if (a.can("people_edit")) {
@@ -192,7 +191,7 @@ final class PeopleScreen {
                 + " is removed from the clocks at " + place.name + ", so it stops working.", 15, Ui.INK));
         Ui.gap(view, 10);
         view.addView(Ui.text(a, "Their attendance history and hours are kept, and they stay in People under Left.", 15, Ui.MUTED));
-        AlertDialog dialog = new AlertDialog.Builder(a).setView(view).setNegativeButton("Cancel", null)
+        AlertDialog dialog = Ui.dialog(a).setView(view).setNegativeButton("Cancel", null)
                 .setPositiveButton("Mark as left", (d, w) -> leave(p, place)).show();
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Ui.DANGER);
     }
@@ -209,7 +208,7 @@ final class PeopleScreen {
             }, message -> {
                 // The server can mark them as left and then fail to reach the clocks, so show the list as it is now.
                 loaded = false; if (body.isAttachedToWindow()) load();
-                new AlertDialog.Builder(a).setTitle("Could not finish marking " + name(p) + " as left").setMessage(message
+                Ui.dialog(a).setTitle("Could not finish marking " + name(p) + " as left").setMessage(message
                         + "\n\nIf they now show as Left, only the clock removal failed. Remove them from the clocks in People records.")
                         .setPositiveButton("OK", null).show();
             });
@@ -223,7 +222,7 @@ final class PeopleScreen {
                 + p.optString("pin") + " is never given to anyone else.", 15, Ui.INK));
         Ui.gap(view, 10);
         view.addView(Ui.text(a, "Their ID number and birth date are erased. This can't be undone.", 15, Ui.MUTED));
-        AlertDialog dialog = new AlertDialog.Builder(a).setView(view).setNegativeButton("Cancel", null)
+        AlertDialog dialog = Ui.dialog(a).setView(view).setNegativeButton("Cancel", null)
                 .setPositiveButton("Delete", (d, w) -> delete(p, place)).show();
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Ui.DANGER);
     }
@@ -237,7 +236,7 @@ final class PeopleScreen {
                 loaded = false; if (body.isAttachedToWindow()) load();
             }, message -> {
                 if (body.isAttachedToWindow()) showList();
-                new AlertDialog.Builder(a).setTitle("Could not delete " + name(p)).setMessage(message).setPositiveButton("OK", null).show();
+                Ui.dialog(a).setTitle("Could not delete " + name(p)).setMessage(message).setPositiveButton("OK", null).show();
             });
         } catch (Exception e) { a.toast("Could not delete " + name(p) + "."); }
     }

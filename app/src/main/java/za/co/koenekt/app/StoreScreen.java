@@ -1,6 +1,5 @@
 package za.co.koenekt.app;
 
-import android.graphics.Typeface;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -59,10 +58,10 @@ final class StoreScreen {
         LinearLayout tabs = Ui.row(a); page.addView(tabs); Ui.gap(page, 14);
         for (int i = 0; i < SECTIONS.length; i++) {
             final int which = i;
-            TextView t = Ui.text(a, SECTIONS[i], 14, i == section ? Ui.BRAND : Ui.INK);
-            t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL)); t.setGravity(Gravity.CENTER);
+            TextView t = Ui.text(a, SECTIONS[i], 12.5f, i == section ? Ui.BRAND : Ui.INK);
+            Ui.mono(t, true); t.setGravity(Gravity.CENTER);
             t.setPadding(dp(16), dp(8), dp(16), dp(8)); t.setMinHeight(dp(40));
-            t.setBackground(Ui.pressable(i == section ? Ui.shape(Ui.TINT, 20, a) : Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, a), 20, a));
+            t.setBackground(Ui.pressable(i == section ? Ui.outline(Ui.TINT, Ui.TINT_LINE, 1, 2, a) : Ui.outline(Ui.SURFACE, Ui.LINE, 1, 2, a), 2, a));
             t.setOnClickListener(v -> { section = which; render(); });
             LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-2, -2); if (i > 0) p.leftMargin = dp(8);
             tabs.addView(t, p);

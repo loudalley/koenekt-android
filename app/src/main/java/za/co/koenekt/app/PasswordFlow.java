@@ -80,7 +80,7 @@ final class PasswordFlow implements MainActivity.Flow {
                 + "your organisation.", 15, Ui.INK));
         Ui.gap(view, 16);
         EditText password = Ui.field(view, "Your password", null, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        AlertDialog dialog = new AlertDialog.Builder(a).setView(view).setNegativeButton("Cancel", null)
+        AlertDialog dialog = Ui.dialog(a).setView(view).setNegativeButton("Cancel", null)
                 .setPositiveButton("Delete account", null).show();
         TextView delete = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
         delete.setTextColor(Ui.DANGER);

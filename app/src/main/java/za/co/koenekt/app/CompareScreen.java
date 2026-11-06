@@ -1,7 +1,5 @@
 package za.co.koenekt.app;
 
-import android.app.AlertDialog;
-import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -78,7 +76,7 @@ final class CompareScreen {
     private void pickStores() {
         List<Figures> all = s.all(); String[] names = new String[all.size()]; boolean[] on = new boolean[all.size()];
         for (int i = 0; i < names.length; i++) { names[i] = all.get(i).name + "  ·  " + all.get(i).type; on[i] = !out.contains(all.get(i).id); }
-        new AlertDialog.Builder(a).setTitle("Stores in the comparison").setMultiChoiceItems(names, on, (d, w, c) -> on[w] = c)
+        Ui.dialog(a).setTitle("Stores in the comparison").setMultiChoiceItems(names, on, (d, w, c) -> on[w] = c)
                 .setPositiveButton("Compare", (d, w) -> { out.clear(); for (int i = 0; i < on.length; i++) if (!on[i]) out.add(all.get(i).id); render(); })
                 .setNegativeButton("Cancel", null).show();
     }
@@ -114,8 +112,8 @@ final class CompareScreen {
         LinearLayout head = Ui.row(a); head.setPadding(dp(12), dp(6), dp(8), dp(6));
         head.addView(new View(a), new LinearLayout.LayoutParams(0, 1, 1.3f));
         for (int k = 0; k < list.size(); k++) {
-            TextView t = Ui.label(a, list.get(k).name); t.setGravity(Gravity.END); t.setMaxLines(2);
-            t.setTextColor(Chart.SERIES[k % Chart.SERIES.length]);
+            TextView t = Ui.text(a, list.get(k).name, 13, Ui.INK); t.setTypeface(Ui.SANS_BOLD); t.setGravity(Gravity.END); t.setMaxLines(2);
+            t.setTextColor(Chart.series()[k % Chart.series().length]);
             head.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
         }
         c.addView(head);
@@ -127,7 +125,7 @@ final class CompareScreen {
             boolean any = m != Metric.TILLS && !Double.isNaN(StoreMath.value(best, m));   // more tills is not "better"
             for (Figures f : list) {
                 TextView v = Ui.text(a, StoreMath.format(f, m), 14, Ui.INK); v.setGravity(Gravity.END);
-                if (any && f == best && list.size() > 1) { v.setTextColor(Ui.BRAND); v.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD)); }
+                if (any && f == best && list.size() > 1) { v.setTextColor(Ui.BRAND); v.setTypeface(Ui.SANS_BOLD); }
                 r.addView(v, new LinearLayout.LayoutParams(0, -2, 1));
             }
             c.addView(r);
@@ -137,7 +135,7 @@ final class CompareScreen {
 
     /** Running total of sales through the day, up to six contenders, one line each. */
     private void race(LinearLayout page, List<Figures> bySales) {
-        int n = Math.min(bySales.size(), Chart.SERIES.length);
+        int n = Math.min(bySales.size(), Chart.series().length);
         page.addView(Ui.title(a, "Hour by hour", 17)); Ui.gap(page, 2);
         page.addView(Ui.text(a, "Sales so far today, added up hour by hour", 13, Ui.MUTED)); Ui.gap(page, 8);
         LinearLayout c = Ui.card(a);
@@ -147,7 +145,7 @@ final class CompareScreen {
         Ui.gap(c, 8);
         for (int i = 0; i < n; i++) {
             LinearLayout r = Ui.row(a); r.setPadding(0, dp(3), 0, dp(3));
-            r.addView(Ui.dot(a, Chart.SERIES[i]));
+            r.addView(Ui.dot(a, Chart.series()[i]));
             TextView t = Ui.text(a, "  " + bySales.get(i).name, 14, Ui.INK);
             r.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
             r.addView(Ui.text(a, StoreMath.money(bySales.get(i).sales), 14, Ui.MUTED));

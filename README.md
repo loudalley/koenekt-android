@@ -1,7 +1,7 @@
 # Koenekt for Android
 
 One Android app for the existing People, licensing, customer and Reporter update services.
-Version **1.7.0 (12)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
+Version **1.8.0 (13)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
 compile/target API 36. Java 17, Android Gradle Plugin 8.13.2, Gradle 8.13.
 
 Standalone public repository: [loudalley/koenekt-android](https://github.com/loudalley/koenekt-android).
@@ -244,6 +244,15 @@ dependencies. They use `../koenekt-people` by default; override with
 `KOENEKT_PEOPLE_REPO`. With no backend checkout they skip. Do not copy private
 backend source/history into this public app repository. All test data is synthetic
 and tests never contact production.
+
+## Release state, 6 November 2026 — 1.8.0
+
+1.8.0 gives the app the koenekt.co.za / People look: the site's light and dark palettes, Big Shoulders
+Display titles, IBM Plex Sans text and IBM Plex Mono labels and buttons (fonts bundled under the SIL OFL 1.1,
+licences in `app/src/main/assets/licences/`), 2dp corners and square-ended line icons. Account → Appearance
+offers System / Light / Dark (default System, saved per phone; the screen repaints without a restart, and
+System follows the phone's dark mode live). All colours and fonts live in `Ui.java` (`Ui.apply`); dialogs go
+through `Ui.dialog`. Mockups: https://claude.ai/artifact/3DKJfKREjHCcF4yYCyHaRb (private to the owner).
 
 ## Release state, 5 November 2026 — 1.7.0
 

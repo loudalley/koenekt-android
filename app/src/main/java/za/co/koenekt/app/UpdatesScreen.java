@@ -236,7 +236,7 @@ final class UpdatesScreen {
         fact(view, "Updater", updater.isEmpty() ? "" : updater + (isOld(updater) ? " — needs Reporter 1.9.85 first" : ""));
         fact(view, "Architecture", d.optString("arch"));
         fact(view, "PC id", id);
-        AlertDialog dialog = new AlertDialog.Builder(a).setView(scroll(view)).setPositiveButton("Close", null).create();
+        AlertDialog dialog = Ui.dialog(a).setView(scroll(view)).setPositiveButton("Close", null).create();
         Ui.gap(view, 18);
         view.addView(Ui.primary(a, "Update this PC", () -> { dialog.dismiss(); preview(false, false, Collections.singletonList(id)); }), Ui.fill(a, 52));
         if (f != null && !expired(f)) {
@@ -265,7 +265,7 @@ final class UpdatesScreen {
         view.addView(Ui.title(a, cancel ? "Cancel update request" : "Request an update now", 20)); Ui.gap(view, 8);
         view.addView(Ui.text(a, scope(all, ids) + (cancel || release.isEmpty() ? "" : "\nOnly release " + release), 14, Ui.MUTED)); Ui.gap(view, 12);
         LinearLayout results = Ui.column(a); results.addView(Ui.loading(a)); view.addView(results);
-        AlertDialog dialog = new AlertDialog.Builder(a).setView(scroll(view)).setNegativeButton("Close", null)
+        AlertDialog dialog = Ui.dialog(a).setView(scroll(view)).setNegativeButton("Close", null)
                 .setPositiveButton("Checking…", null).create();
         dialog.show();
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
@@ -302,10 +302,10 @@ final class UpdatesScreen {
                     : done + (done == 1 ? " PC" : " PCs") + " asked to update" + (skipped > 0 ? ", " + skipped + " skipped" : "")
                     + ". They are not updated until they report the new version.", 15, Ui.INK));
             Ui.gap(view, 12); addResults(view, rows);
-            new AlertDialog.Builder(a).setView(scroll(view)).setPositiveButton("OK", null).show();
+            Ui.dialog(a).setView(scroll(view)).setPositiveButton("OK", null).show();
             if (!all) ids.forEach(ticked::remove);
             if (body != null && body.isAttachedToWindow()) load();
-        }, message -> new AlertDialog.Builder(a).setTitle(cancel ? "Could not cancel" : "Could not request the update")
+        }, message -> Ui.dialog(a).setTitle(cancel ? "Could not cancel" : "Could not request the update")
                 .setMessage(message).setPositiveButton("OK", null).show());
     }
 
@@ -316,12 +316,12 @@ final class UpdatesScreen {
                 a.adminRequest(API + "devices/" + MainActivity.query(id) + "/pause", new JSONObject().put("paused", pause), data -> {
                     a.toast(shop(d) + ": updates " + (pause ? "paused." : "resumed."));
                     if (body != null && body.isAttachedToWindow()) load();
-                }, message -> new AlertDialog.Builder(a).setTitle("Could not " + (pause ? "pause" : "resume") + " updates")
+                }, message -> Ui.dialog(a).setTitle("Could not " + (pause ? "pause" : "resume") + " updates")
                         .setMessage(message).setPositiveButton("OK", null).show());
             } catch (Exception e) { a.toast("Could not prepare the request."); }
         };
         if (!pause) { go.run(); return; }
-        new AlertDialog.Builder(a).setTitle("Pause updates for " + who + "?")
+        Ui.dialog(a).setTitle("Pause updates for " + who + "?")
                 .setMessage("It is offered nothing until resumed, and any update it already started finishes.")
                 .setPositiveButton("Pause", (dlg, w) -> go.run()).setNegativeButton("Cancel", null).show();
     }
