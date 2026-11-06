@@ -4,8 +4,8 @@ Last updated: **6 November 2026, Claude (Windows PC) — version 1.8.0 (13): the
 look (site palettes, Big Shoulders / IBM Plex fonts, 2dp corners, square-ended icons) and Account →
 Appearance (System / Light / Dark). Built and signed on the PC (`dist/1.8.0/`), pushed to `main`, queued in
 Google Play for the owner to submit, and copied to Google Drive. NOT on F-Droid (not asked this
-time). Tried on the emulator only.** 1.7.0 (12) was in Play review; the 1.8.0 production release replaces
-it. F-Droid still serves 1.7.0.
+time). Tried on the emulator only.** 1.7.0 (12) is live on Google Play (published 5 November 2026)
+and on F-Droid and Drive.
 
 Previous release: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
 leaver controls (change/delete your account, forced password change after an admin reset,
