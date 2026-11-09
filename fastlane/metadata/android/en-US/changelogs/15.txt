@@ -1,0 +1,4 @@
+Join My stores with an invite: scan its QR code with your phone's camera, or tap Join with a code and type it, then choose your own username and password.
+• Store owners: Account → Team to invite staff (QR code to show or share), give a reset code, or remove a login.
+• Change or delete your store login in Account.
+• People pages now follow the app's Light or Dark choice.

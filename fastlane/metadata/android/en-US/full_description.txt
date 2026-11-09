@@ -7,6 +7,7 @@ Koenekt management accounts can also manage customers and licences and control R
 • Quick, three-step Add employee and a searchable People list
 • Who's in: live attendance at a glance
 • My stores: live till sales per shop, each till's cashier, voids and no-sale openings, and store-vs-store comparison (needs Koenekt Reporter on the shop's PC and a store login)
+• Join My stores with a QR code or a code to type, and choose your own username and password; owners invite and manage their staff
 • Screenshots blocked by default; allow them on your own phone in Account
 • Light, dark or follow your phone, in the same look as the Koenekt website
 • Existing Koenekt accounts and permissions

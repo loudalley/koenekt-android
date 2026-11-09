@@ -1,7 +1,7 @@
 # Koenekt for Android
 
 One Android app for the existing People, licensing, customer and Reporter update services.
-Version **1.8.1 (14)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
+Version **1.9.0 (15)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
 compile/target API 36. Java 17, Android Gradle Plugin 8.13.2, Gradle 8.13.
 
 Standalone public repository: [loudalley/koenekt-android](https://github.com/loudalley/koenekt-android).
@@ -244,6 +244,21 @@ dependencies. They use `../koenekt-people` by default; override with
 `KOENEKT_PEOPLE_REPO`. With no backend checkout they skip. Do not copy private
 backend source/history into this public app repository. All test data is synthetic
 and tests never contact production.
+
+## Release state, 9 November 2026 — 1.9.0 (join My stores with a code)
+
+1.9.0 lets people make their own My stores login from an invite (plan: Reporter repo
+`docs/proposals/KOENEKT-LINK-JOIN.md`, William chose its recommendations O1-O5). `JoinFlow`: type the code
+(`XXXX-XXXX`, filtered to the code alphabet) or arrive from the QR link `https://link.koenekt.co.za/j#CODE`
+(App Link, `autoVerify`; the relay serves `/.well-known/assetlinks.json` with the Play App Signing and upload
+certificates) or `koenekt://join/CODE` (the `/j` web page's button); the relay's `/api/join/check` says what
+it is for; the person chooses a username and password (`/api/join`) and is signed in to My stores. A reset
+code asks only for a new password. Account (store login): Change store password, Delete my store login
+(`/api/me/password`, `/api/me/delete`; Play's in-app deletion), and for owners **Team** (`TeamFlow`: logins,
+Invite staff with a QR code (`QrView` paints the relay's rows; no QR library, no camera permission) and Share,
+reset code, remove, revoke open invites). `AppPolicy.inviteCode/joinCode/isJoinLink`, `linkAllowed` gained the
+new relay paths only (PolicyChecks 109). Needs the relay from Reporter `0f38aa4` on srv1 first. Also carries
+1.8.1's dark-mode fix (held in Play).
 
 ## Release state, 9 November 2026 — 1.8.1
 

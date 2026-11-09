@@ -55,6 +55,29 @@ public class PolicyChecks {
         check(AppPolicy.linkAllowed(AppPolicy.LINK + "/api/login"), "relay sign-in");
         check(AppPolicy.linkAllowed(AppPolicy.LINK + "/api/stores"), "relay store list");
         check(AppPolicy.linkAllowed(AppPolicy.LINK + "/api/stores/a1b2c30000/live"), "relay live figures");
+        for (String path : new String[]{"join", "join/check", "me", "me/password", "me/delete", "invites", "invites/revoke",
+                "team", "team/remove", "team/reset"})
+            check(AppPolicy.linkAllowed(AppPolicy.LINK + "/api/" + path), "relay join/account call " + path);
+        for (String url : new String[]{"https://link.koenekt.co.za/op/invites", "https://link.koenekt.co.za/op/users/reset",
+                "https://link.koenekt.co.za/api/join/../../op/invites", "https://link.koenekt.co.za/api/team/remove/x",
+                "https://link.koenekt.co.za/api/join#K7QMXRT4", "https://link.koenekt.co.za/j"})
+            check(!AppPolicy.linkAllowed(url), "relay call refused: " + url);
+        // Invite codes and links (the QR, the web page's button, or typed).
+        check("K7QMXRT4".equals(AppPolicy.inviteCode(" k7qm-xrt4 ")), "typed code normalised");
+        for (String bad : new String[]{"K7QM-XRT", "K7QM-XRT45", "K7QM-XRT0", "K7QM-XRTO", "K7QM-XRT1", "K7QM XRTL", "", null})
+            check(AppPolicy.inviteCode(bad) == null, "code refused: " + bad);
+        check("K7QMXRT4".equals(AppPolicy.joinCode("https://link.koenekt.co.za/j#K7QMXRT4")), "QR link");
+        check("K7QMXRT4".equals(AppPolicy.joinCode("https://link.koenekt.co.za/j#k7qm-xrt4")), "QR link, dashed");
+        check("K7QMXRT4".equals(AppPolicy.joinCode("koenekt://join/K7QMXRT4")), "app link from the web page");
+        for (String link : new String[]{"http://link.koenekt.co.za/j#K7QMXRT4", "https://link.koenekt.co.za.evil.com/j#K7QMXRT4",
+                "https://evil.com/j#K7QMXRT4", "https://link.koenekt.co.za/j?code=K7QMXRT4", "https://link.koenekt.co.za/other#K7QMXRT4",
+                "https://user@link.koenekt.co.za/j#K7QMXRT4", "https://link.koenekt.co.za:444/j#K7QMXRT4", "https://link.koenekt.co.za/j",
+                "koenekt://join/K7QMXRT", "koenekt://join/K7QMXRT4/x", "koenekt://join/K7QMXRT4?x=1", "koenekt://workspace/K7QMXRT4"}) {
+            boolean refused = false; try { AppPolicy.joinCode(link); } catch (IllegalArgumentException e) { refused = true; }
+            check(refused, "invite link refused: " + link);
+        }
+        check(AppPolicy.isJoinLink("https://link.koenekt.co.za/j#X") && AppPolicy.isJoinLink("koenekt://join/X")
+                && !AppPolicy.isJoinLink("koenekt://workspace/demo"), "join links told apart from setup links");
         for (String url : new String[]{"http://link.koenekt.co.za/api/stores", "https://link.koenekt.co.za.evil.com/api/stores",
                 "https://link.koenekt.co.za/op/agents", "https://link.koenekt.co.za/agent/poll", "https://link.koenekt.co.za/api/stores/../op/live",
                 "https://user@link.koenekt.co.za/api/stores", "https://link.koenekt.co.za:8443/api/stores",

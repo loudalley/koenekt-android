@@ -27,6 +27,20 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="koenekt" android:host="workspace" />
             </intent-filter>
+            <!-- My stores invites: the QR link (verified against link.koenekt.co.za/.well-known/assetlinks.json) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="link.koenekt.co.za" android:path="/j" />
+            </intent-filter>
+            <!-- ...and the "Open in the Koenekt app" button on that page -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="koenekt" android:host="join" />
+            </intent-filter>
         </activity>
     </application>
 </manifest>

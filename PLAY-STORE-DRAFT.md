@@ -94,8 +94,9 @@ A Koenekt workspace and an internet connection are required.
 - Privacy policy: DONE, https://loudalley.github.io/koenekt-android/privacy.html (Koenekt (Pty) Ltd, POPIA,
   retention as supplied by the owner). Source is `docs/` on `main` (GitHub Pages).
 - Public deletion-request URL: DONE, https://loudalley.github.io/koenekt-android/delete-account.html.
-  In-app deletion: Account → Delete my account since 1.6.0. About & privacy also
-  links to the external deletion and privacy pages.
+  In-app deletion: Account → Delete my account since 1.6.0; My stores logins people make
+  themselves (1.9.0, join with an invite code): Account → Delete my store login. About & privacy
+  also links to the external deletion and privacy pages, which cover both.
 - Review access to a synthetic customer workspace with instructions that do not
   depend on a reviewer's access to the operator's personal authenticator. Do not
   disable production master MFA to facilitate review.
@@ -113,7 +114,7 @@ send information to Koenekt services.
 
 | Area | Behaviour to account for |
 | --- | --- |
-| Account/personal information | Username and credentials for account access; staff names, identifiers, contact and other fields where used by People |
+| Account/personal information | Username and credentials for account access; staff names, identifiers, contact and other fields where used by People. Since 1.9.0 people create a My stores login in the app (chosen username; password sent over HTTPS, kept only as a hash on the Link service; deletable in the app). No email or phone number. |
 | Attendance and employment | Attendance, shifts, categories, rates, payroll and audit activity when the account uses them |
 | Files/photos | User-selected imports and logos are uploaded to the selected service; reports are exported to a chosen destination |
 | Licensing/device information | Licence/customer data and existing enrolled-PC update status in the management interface |

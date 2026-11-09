@@ -11,7 +11,7 @@
 <p class="crumb"><a href="./">Koenekt</a></p>
 <h1>Privacy policy</h1>
 <p class="meta">Koenekt Android app and the Koenekt People, licence, Link and Reporter update services it connects to.<br>
-Effective: 5 November 2026</p>
+Effective: 9 November 2026</p>
 
 <h2>Who we are</h2>
 <p>Koenekt is operated by Koenekt (Pty) Ltd, South Africa ("Koenekt", "we").
@@ -33,6 +33,7 @@ Koenekt is responsible.</p>
 <tr><td>Files you choose to upload (staff imports, logos, licence files)</td><td>Importing data and branding. Only files you pick in Android's file picker are sent.</td></tr>
 <tr><td>Licence, customer and enrolled-PC update status (management accounts only)</td><td>Issuing and managing licences and Reporter updates.</td></tr>
 <tr><td>My stores (store logins only): your shops' sales figures for today, such as sales, receipts, items sold, payments, and each till's cashier name, voids and no-sale drawer openings; gross profit and debtors for owner logins only</td><td>Showing a shop's trading live. When you open My stores, the question goes through the Koenekt Link service to the Reporter program on the shop's own PC, which reads the tills and sends the answer back. Link passes the answer on and keeps it only in memory until your phone has it (at most 15 minutes); it records that a request happened, not the figures.</td></tr>
+<tr><td>My stores login you make yourself: a username you choose and a password, when you join with an invite code from a store owner or Koenekt</td><td>Signing in to My stores. The password is sent over HTTPS to the Koenekt Link service and kept there only as a one-way hash (scrypt); it is never stored on the phone. Invite and reset codes are kept only as hashes and work once. The store owner sees their team's usernames, role and last sign-in, and can remove a staff login or give a reset code. No email address or phone number is asked for.</td></tr>
 <tr><td>Session, login and activity records kept by the services (for example sign-in times, IP address and an audit trail of changes)</td><td>Security, preventing misuse and showing administrators who changed what.</td></tr>
 </table>
 <p>Which of these you can see or change depends on the permissions your organisation's
@@ -52,7 +53,7 @@ administrator has given your account. The services check those permissions on ev
 <h2>What the app does not do</h2>
 <ul>
 <li>No advertising or analytics SDKs, and no selling of personal information.</li>
-<li>No access to your contacts, location, camera or microphone. The app requests only Internet access and Android's biometric prompt.</li>
+<li>No access to your contacts, location, camera or microphone. The app requests only Internet access and Android's biometric prompt. An invite's QR code is read by your phone's own camera app, which opens Koenekt.</li>
 <li>Staff fingerprint or face enrolment for time clocks is done on the clocks, not through your phone.</li>
 </ul>
 
@@ -71,6 +72,7 @@ access set by your organisation. Management accounts require an authenticator co
 <ul>
 <li>Login accounts: until you delete the account in the app (Account → Delete my account), your organisation deletes it, or you ask us to; emailed requests are completed within 30 days. After deletion only the username is kept, so the activity log stays accurate and the name can't be reused.</li>
 <li>Attendance and payroll records: at least 1 year, and longer where your organisation must keep them under employment or tax law.</li>
+<li>My stores logins: until you delete it in the app (Account → Delete my store login), the store owner removes it, or you ask us to. Invite and reset codes: dropped 30 days after they were used, revoked or expired.</li>
 <li>Audit and security logs (sign-ins, changes, IP addresses): 6 months.</li>
 <li>The saved sign-in on your phone: until you sign out or uninstall the app, and it stops working when the server session expires (at most 30 days).</li>
 </ul>

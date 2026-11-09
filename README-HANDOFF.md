@@ -1,9 +1,13 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **9 November 2026, Claude (Windows PC) — version 1.8.1 (14): People and licence pages inside the
-app follow the app's Appearance (they were half light in dark mode). Built and signed on the PC (`dist/1.8.1/`),
-pushed to `main`, uploaded to Google Play but held (saved for later) until the next feature release. NOT on F-Droid or Drive (not asked).
-Tried on the emulator only.** 1.8.0 (13), the koenekt.co.za look and Account → Appearance, is live on Google Play (published 6 November).
+Last updated: **9 November 2026, Claude (Windows PC) — version 1.9.0 (15): join My stores with a QR code or a
+typed code and choose your own username and password; owners' Team screen (invite staff, reset codes, remove);
+change/delete your store login. Built and signed (`dist/1.9.0/`), pushed to `main`. NOT uploaded to Play,
+F-Droid or Drive yet: the Link relay update (Reporter repo `0f38aa4`/`626ec2b`, bundle in its `dist/`) must be
+installed on srv1 first, or Join answers 404. Tried on the emulator against a local relay only.**
+Before that: version 1.8.1 (14), People and licence pages follow the app's Appearance; saved for later in Play
+(1.9.0 replaces it).
+**Earlier the same day:** 1.8.0 (13), the koenekt.co.za look and Account → Appearance, is live on Google Play (published 6 November).
 Play Console: production release 14 (1.8.1) saved with the 14.txt notes (only warning: no deobfuscation file);
 HELD by the owner (9 Nov) to ship with the next feature release: the change is "saved for later" in Publishing
 overview, not submitted. The fix stays on `main`; the next release (versionCode 15+) carries it and replaces draft 14.
@@ -15,6 +19,38 @@ self-hosted F-Droid repo and copied to Google Drive at the user's request; not y
 a phone. Its People server update is installed.** People server
 amendment and the accounts server update are both INSTALLED on the production People console.
 
+
+## 1.9.0 (15) — 9 November 2026, Claude
+
+- William: "plan out qr code joining ... type code manually, they then create their own user and password stored
+  on the server", then "go with your recommendations" (O1 owners invite staff only; O2 7 days Koenekt / 48 h
+  owners, single use; O3 reset codes, Koenekt's typed/View password kept for logins it makes; O4 a code for
+  another customer needs a new login; O5 no shop-PC pairing now).
+- Relay (Reporter repo, `server/link_relay.py`, `server/qr.py`): invites (SHA-256 only), `/api/join/check`,
+  `/api/join`, `/api/me`, `/api/me/password|delete`, owner `/api/invites`, `/api/team`, `/api/team/remove|reset`,
+  `/j`, `/.well-known/assetlinks.json` (02:D0:04… Play App Signing, 3E:3A:09… upload key). Licence site Link tab:
+  Invite (QR card, print), invite list, Reset code.
+- App: `JoinFlow` (code → what it is for → username/password; reset codes: password only), `TeamFlow` (owners),
+  `QrView` (paints the relay's QR rows, black on white), Account rows (Join with a code / Connect; Team; Change
+  store password; Delete my store login), sign-in "Join My stores with a code", manifest App Link
+  (`https://link.koenekt.co.za/j`, `autoVerify`) and `koenekt://join`. A join link while locked opens the join
+  screen after unlocking (`resumeScreen` now resumes `JoinFlow`, and `TeamFlow` while the store session is valid).
+- Privacy page (effective 9 Nov): self-made store logins (hash only, no email/phone), codes as hashes, the
+  phone's camera reads the QR; retention. Delete-account page: Account → Delete my store login. Full description
+  +1 line; changelog 15.txt; PLAY-STORE-DRAFT Data safety note (account created in the app, deletable).
+- Checks: `assembleRelease bundleRelease lintDebug` ("No issues found"), PolicyChecks 109 (41 new), StoreChecks 23,
+  export checks, test_server_amendment OK. Upload key `3e3a0931…`; aapt 15 / 1.9.0; APK `1a68017a…`, AAB
+  `31e3a43c…` (`dist/1.9.0/SHA256SUMS`).
+- Emulator (debug, `-PdevLink=http://10.0.2.2:18298`, local relay with a made-up PC "Demo Shops" / Northgate,
+  Southside): QR link via `am start -d https://link.koenekt.co.za/j#…` opens Join with the code checked (owner,
+  2 stores); created demo.owner → signed in; Team lists logins; Invite staff → QR + code + Share sheet (the
+  screenshot's QR decodes with OpenCV to the link); typed code (lower case, stray 0 dropped) and `koenekt://join/…`
+  both work; weak password refused by the relay with the message shown above the fields; staff sees both stores;
+  Delete my store login → signed out, the relay refuses that login. Not tried: a physical phone, App Link
+  verification (needs the relay on srv1), Change store password and owner reset on the phone (relay-tested).
+- **Next:** William installs the relay bundle on srv1 (Reporter handoff has the command); check
+  `https://link.koenekt.co.za/.well-known/assetlinks.json` and `/j`; then upload 1.9.0 to Play (replaces the
+  saved-for-later 1.8.1), and F-Droid/Drive if wanted.
 
 ## 1.8.1 (14) — 9 November 2026, Claude
 

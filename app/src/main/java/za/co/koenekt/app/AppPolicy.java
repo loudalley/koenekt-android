@@ -51,7 +51,48 @@ public final class AppPolicy {
             return u.getScheme() != null && u.getScheme().equals(base.getScheme()) && u.getRawUserInfo() == null
                     && base.getHost().equals(u.getHost()) && base.getPort() == u.getPort()
                     && u.getRawQuery() == null && u.getRawFragment() == null
-                    && path != null && path.matches("/api/(login|logout|stores|stores/[A-Za-z0-9_-]{4,64}/live)");
+                    && path != null && path.matches("/api/(login|logout|stores|stores/[A-Za-z0-9_-]{4,64}/live"
+                    + "|join|join/check|me|me/password|me/delete|invites|invites/revoke|team|team/remove|team/reset)");
+        } catch (Exception e) { return false; }
+    }
+
+    /** Invite codes: 8 characters from this alphabet (no 0/O, 1/I/L), shown as XXXX-XXXX. */
+    public static final String CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+    /** "k7qm-xrt4 " -> "K7QMXRT4"; null unless it could be an invite code. */
+    public static String inviteCode(String typed) {
+        if (typed == null) return null;
+        String code = typed.replaceAll("[\\s-]", "").toUpperCase(java.util.Locale.ROOT);
+        if (code.length() != 8) return null;
+        for (int i = 0; i < code.length(); i++) if (CODE_ALPHABET.indexOf(code.charAt(i)) < 0) return null;
+        return code;
+    }
+    public static String prettyCode(String code) { return code.length() == 8 ? code.substring(0, 4) + "-" + code.substring(4) : code; }
+
+    /**
+     * The code in an invite link: https://link.koenekt.co.za/j#CODE (the QR; the code is in the
+     * fragment so it never reaches a server log) or koenekt://join/CODE (the web page's button).
+     * Anything else is refused; the code is still checked by the relay before anything is made.
+     */
+    public static String joinCode(String link) {
+        try {
+            URI u = new URI(link);
+            if (u.getRawUserInfo() != null || u.getRawQuery() != null) throw new IllegalArgumentException();
+            String code = null;
+            if ("https".equals(u.getScheme()) && "link.koenekt.co.za".equals(u.getHost()) && u.getPort() == -1
+                    && ("/j".equals(u.getRawPath()) || "/j/".equals(u.getRawPath())))
+                code = inviteCode(u.getRawFragment());
+            else if ("koenekt".equals(u.getScheme()) && "join".equals(u.getHost()) && u.getPort() == -1
+                    && u.getRawFragment() == null && u.getRawPath() != null && u.getRawPath().matches("/[A-Za-z0-9-]{8,9}"))
+                code = inviteCode(u.getRawPath().substring(1));
+            if (code == null) throw new IllegalArgumentException();
+            return code;
+        } catch (Exception e) { throw new IllegalArgumentException("This invite link is not valid."); }
+    }
+    public static boolean isJoinLink(String link) {
+        try {
+            URI u = new URI(link);
+            return ("https".equals(u.getScheme()) && "link.koenekt.co.za".equals(u.getHost()))
+                    || ("koenekt".equals(u.getScheme()) && "join".equals(u.getHost()));
         } catch (Exception e) { return false; }
     }
 

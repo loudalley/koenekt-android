@@ -552,6 +552,8 @@ public final class MainActivity extends Activity {
                 });
             });
         });
+        Ui.gap(page, 8);
+        page.addView(Ui.secondary(this, "Join My stores with a code", () -> startJoin(null)), Ui.fill(this, 52));
         Ui.gap(page, 24);
         page.addView(Ui.text(this, "After signing in, open the app with your fingerprint or phone PIN. Your password is never stored on this phone.", 13.5f, Ui.MUTED));
         Ui.gap(page, 4);
@@ -670,8 +672,19 @@ public final class MainActivity extends Activity {
         LinearLayout card = Ui.column(this); card.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, this)); card.setClipToOutline(true);
         card.addView(Ui.listRow(this, null, "Refresh access", "Reload your companies and permissions", null, this::refreshAccess));
         card.addView(Ui.divider(this, 16));
-        if (linkToken.isEmpty()) card.addView(Ui.listRow(this, null, "Connect My stores", "Sign in with the store login Koenekt gave you", null, this::connectStores));
-        else card.addView(Ui.listRow(this, null, "My stores: " + linkUser, "Sign out of My stores on this phone", null, this::disconnectStores));
+        if (linkToken.isEmpty()) {
+            card.addView(Ui.listRow(this, null, "Join My stores with a code", "From an invite: choose your own login", null, () -> startJoin(null)));
+            card.addView(Ui.divider(this, 16));
+            card.addView(Ui.listRow(this, null, "Connect My stores", "Sign in with a store login you already have", null, this::connectStores));
+        } else {
+            if ("owner".equals(linkRole)) {
+                card.addView(Ui.listRow(this, null, "Team", "Invite staff, reset codes, remove logins", null, this::startTeam));
+                card.addView(Ui.divider(this, 16));
+            }
+            card.addView(Ui.listRow(this, null, "Change store password", "For " + linkUser + "; other phones are signed out", null, this::changeStorePassword));
+            card.addView(Ui.divider(this, 16));
+            card.addView(Ui.listRow(this, null, "My stores: " + linkUser, "Sign out of My stores on this phone", null, this::disconnectStores));
+        }
         card.addView(Ui.divider(this, 16));
         boolean ownAccount = peopleSession && !role.equals("master");   // master's login is managed by Koenekt
         if (ownAccount) {
@@ -688,6 +701,11 @@ public final class MainActivity extends Activity {
             Ui.gap(page, 4);
             TextView delete = Ui.quiet(this, "Delete my account", () -> PasswordFlow.confirmDelete(this));
             delete.setTextColor(Ui.DANGER); page.addView(delete, Ui.fill(this, 48));
+        }
+        if (!linkToken.isEmpty()) {
+            Ui.gap(page, 4);
+            TextView deleteStore = Ui.quiet(this, "Delete my store login", this::deleteStoreLogin);
+            deleteStore.setTextColor(Ui.DANGER); page.addView(deleteStore, Ui.fill(this, 48));
         }
         Ui.gap(page, 20);
         TextView version = Ui.text(this, "Koenekt " + BuildConfig.VERSION_NAME, 13, Ui.MUTED); version.setGravity(Gravity.CENTER); page.addView(version);
@@ -908,6 +926,102 @@ public final class MainActivity extends Activity {
                     if (!peopleSession && !operator) signOut(); else refreshAfterStores();
                 }).setNegativeButton("Cancel", null).show();
     }
+    /** Join My stores with an invite code (typed, or from its QR link). */
+    void startJoin(String code) {
+        if (busy || locked) return;
+        leaveWeb(); showNav(false); flow = new JoinFlow(this, code); flow.show();
+    }
+    /** Back out of joining: to Account when signed in, else to Sign in. */
+    void leaveJoin() {
+        flow = null;
+        if (signedIn()) showTab(TAB_ACCOUNT); else loginScreen("");
+    }
+    /** The relay made the login (or set the new password) and signed this phone in to My stores. */
+    void joined(String token, String username, String role, boolean reset) {
+        if (token == null || token.isEmpty()) { toast("The login was made, but signing in failed. Sign in with it."); leaveJoin(); return; }
+        if (!linkToken.isEmpty() && !linkToken.equals(token)) linkLogout();
+        setLink(new String[]{token, role}, username);
+        flow = null; tab = TAB_STORES;
+        if (!peopleSession && !operator) applyPerson(null);
+        notice = reset ? "Your new password is saved." : "Welcome to My stores, " + username + ".";
+        refreshAfterStores();
+    }
+    void startTeam() {
+        if (busy || locked || linkToken.isEmpty() || !"owner".equals(linkRole)) return;
+        leaveWeb(); showNav(false); flow = new TeamFlow(this); flow.show();
+    }
+    /** The Android share sheet (e.g. WhatsApp) with an invite's link and code. */
+    void shareText(String subject, String text) {
+        Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain")
+                .putExtra(Intent.EXTRA_SUBJECT, subject).putExtra(Intent.EXTRA_TEXT, text);
+        try { externalTask = true; startActivity(Intent.createChooser(send, subject)); }
+        catch (Exception e) { externalTask = false; toast("No app can share this."); }
+    }
+    /** Relay calls before there is a store session (check a code, join). */
+    void linkPublic(String method, String path, JSONObject body, Done ok, Consumer<String> failed) {
+        int attempt = epoch; String url = AppPolicy.link() + path;
+        linkWorker.execute(() -> {
+            try {
+                JSONObject data = linkApi(url, method, body, "");
+                runOnUiThread(() -> { if (attempt == epoch && !isDestroyed()) ok.accept(data); });
+            } catch (Exception e) {
+                String message = friendly(e);
+                runOnUiThread(() -> { if (attempt == epoch && !isDestroyed()) failed.accept(message); });
+            }
+        });
+    }
+    /** Account: change the My stores password (POST /api/me/password); this phone stays signed in. */
+    private void changeStorePassword() {
+        if (busy || locked || linkToken.isEmpty()) return;
+        LinearLayout box = Ui.column(this); box.setPadding(dp(24), dp(8), dp(24), 0);
+        box.addView(Ui.text(this, "For " + linkUser + ". This phone stays signed in; other phones need the new password.", 14, Ui.MUTED)); Ui.gap(box, 12);
+        int secret = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD;
+        EditText old = Ui.field(box, "Current password", null, secret);
+        EditText fresh = Ui.field(box, "New password", "At least 10 characters", secret);
+        EditText again = Ui.field(box, "New password again", null, secret);
+        android.app.AlertDialog dialog = Ui.dialog(this).setTitle("Change store password").setView(box)
+                .setNegativeButton("Cancel", null).setPositiveButton("Save", null).show();
+        TextView save = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
+        save.setOnClickListener(v -> {
+            String o = old.getText().toString(), n = fresh.getText().toString();
+            if (o.isEmpty()) { old.setError("Enter your current password"); return; }
+            if (n.length() < 10) { fresh.setError("At least 10 characters"); return; }
+            if (!n.equals(again.getText().toString())) { again.setError("The two passwords are different"); return; }
+            try {
+                save.setEnabled(false);
+                linkRequest("POST", "/api/me/password", new JSONObject().put("old", o).put("new", n), data -> {
+                    dialog.dismiss(); toast("Your store password is changed.");
+                }, message -> { save.setEnabled(true); fresh.setText(""); again.setText(""); fresh.setError(message); });
+            } catch (Exception e) { save.setEnabled(true); }
+        });
+    }
+    /** Account: delete this My stores login (POST /api/me/delete). People and management stay as they are. */
+    private void deleteStoreLogin() {
+        if (busy || locked || linkToken.isEmpty()) return;
+        LinearLayout view = Ui.column(this); view.setPadding(dp(24), dp(20), dp(24), dp(4));
+        view.addView(Ui.title(this, "Delete your store login?", 20)); Ui.gap(view, 12);
+        view.addView(Ui.text(this, "Your My stores login " + linkUser + " and its password are deleted from Koenekt and every phone using it is signed out. "
+                + "The shop's figures are not affected. The log keeps that this login existed.", 15, Ui.INK));
+        Ui.gap(view, 16);
+        EditText password = Ui.field(view, "Your store password", null, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        android.app.AlertDialog dialog = Ui.dialog(this).setView(view).setNegativeButton("Cancel", null)
+                .setPositiveButton("Delete login", null).show();
+        TextView delete = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
+        delete.setTextColor(Ui.DANGER);
+        delete.setOnClickListener(v -> {
+            String typed = password.getText().toString();
+            if (typed.isEmpty()) { password.setError("Enter your password"); return; }
+            try {
+                delete.setEnabled(false);
+                linkRequest("POST", "/api/me/delete", new JSONObject().put("password", typed), data -> {
+                    dialog.dismiss(); setLink(null, "");
+                    toast("Your store login is deleted.");
+                    if (!peopleSession && !operator) signOut(); else refreshAfterStores();
+                }, message -> { delete.setEnabled(true); password.setText(""); password.setError(message); });
+            } catch (Exception e) { delete.setEnabled(true); }
+        });
+    }
+
     /** Saves the changed set of sessions (asks for the fingerprint or PIN again), then shows Home. */
     private void refreshAfterStores() {
         storesScreen = null;
@@ -982,7 +1096,7 @@ public final class MainActivity extends Activity {
 
     private void about() {
         Ui.dialog(this).setTitle("Koenekt " + BuildConfig.VERSION_NAME)
-                .setMessage("People, licences, Reporter updates and My stores.\n\nThis app connects to your existing Koenekt services over HTTPS. My stores shows live till figures that your shop PCs send through Koenekt while you have it open; the app keeps no copy of them after you leave it. Server permissions determine what you can view and change.\n\nPasswords and authenticator codes are not saved. Remembered session tokens are encrypted using Android Keystore and require device authentication to restore. Unlock with a strong biometric such as fingerprint, or the phone's PIN, pattern or password. Android 8 uses the device credential. Sign out forgets the saved login. Expired or revoked server sessions require a new Koenekt sign-in.\n\nStaff, attendance, payroll and licence information stays with your Koenekt service. Exported reports are saved only to a location you select. The app has no advertising or analytics SDKs. Screenshots, screen recordings and recent-app previews of Koenekt are blocked unless you turn on Account → Allow screenshots on this phone.\n\nFor account access or correction, contact your organisation's administrator. To delete your login, use Account → Delete my account; if you can no longer sign in, use Delete account below. Deleting a login does not erase employment records that the organisation must retain.\n\nAn internet connection is required. Phone biometrics unlock this app; staff fingerprint/face enrollment still uses the connected clocks.\n\nFonts: IBM Plex Sans and IBM Plex Mono (© IBM Corp.) and Big Shoulders Display (© The Big Shoulders Project Authors), under the SIL Open Font License 1.1; the licences are included in the app.")
+                .setMessage("People, licences, Reporter updates and My stores.\n\nThis app connects to your existing Koenekt services over HTTPS. My stores shows live till figures that your shop PCs send through Koenekt while you have it open; the app keeps no copy of them after you leave it. Server permissions determine what you can view and change.\n\nPasswords and authenticator codes are not saved. Remembered session tokens are encrypted using Android Keystore and require device authentication to restore. Unlock with a strong biometric such as fingerprint, or the phone's PIN, pattern or password. Android 8 uses the device credential. Sign out forgets the saved login. Expired or revoked server sessions require a new Koenekt sign-in.\n\nStaff, attendance, payroll and licence information stays with your Koenekt service. Exported reports are saved only to a location you select. The app has no advertising or analytics SDKs. Screenshots, screen recordings and recent-app previews of Koenekt are blocked unless you turn on Account → Allow screenshots on this phone.\n\nFor account access or correction, contact your organisation's administrator. To delete your login, use Account → Delete my account (a My stores login: Account → Delete my store login); if you can no longer sign in, use Delete account below. A My stores login you make with an invite code keeps only a hash of your password on Koenekt's server; the app never stores it. The app does not use the camera: your phone's own camera reads an invite's QR code. Deleting a login does not erase employment records that the organisation must retain.\n\nAn internet connection is required. Phone biometrics unlock this app; staff fingerprint/face enrollment still uses the connected clocks.\n\nFonts: IBM Plex Sans and IBM Plex Mono (© IBM Corp.) and Big Shoulders Display (© The Big Shoulders Project Authors), under the SIL Open Font License 1.1; the licences are included in the app.")
                 .setNeutralButton("Privacy policy", (d,w) -> openExternal(AppPolicy.PRIVACY_URL))
                 .setNegativeButton("Delete account", (d,w) -> openExternal(AppPolicy.DELETE_ACCOUNT_URL))
                 .setPositiveButton("Close", null).show();
@@ -1177,6 +1291,7 @@ public final class MainActivity extends Activity {
         if (intent.getData() != null) handleSetupLink(intent.getData());
     }
     private void handleSetupLink(Uri link) {
+        if (AppPolicy.isJoinLink(link.toString())) { handleJoinLink(link); return; }
         final String target;
         try { target = AppPolicy.setupWorkspace(link.toString()); }
         catch (Exception e) { toast("This Koenekt setup link is invalid."); if (locked) requestUnlock(); return; }
@@ -1188,6 +1303,15 @@ public final class MainActivity extends Activity {
                     getPreferences(MODE_PRIVATE).edit().putString("workspace", workspace).apply(); signOut();
                 }).setNegativeButton("Cancel", (d,w) -> { setupInProgress = false; if (locked) requestUnlock(); })
                 .setOnCancelListener(d -> { setupInProgress = false; if (locked) requestUnlock(); }).show();
+    }
+
+    /** An invite's QR link or the web page's button: open the join screen with the code filled in. */
+    private void handleJoinLink(Uri link) {
+        final String code;
+        try { code = AppPolicy.joinCode(link.toString()); }
+        catch (Exception e) { toast("This invite link is not valid. Type the code instead."); if (locked) requestUnlock(); return; }
+        if (locked) { leaveWeb(); flow = new JoinFlow(this, code); requestUnlock(); return; }   // shown after unlocking
+        startJoin(code);
     }
 
     private JSONObject api(String url, JSONObject payload) throws Exception { return api(url, "POST", payload); }
@@ -1391,7 +1515,9 @@ public final class MainActivity extends Activity {
     }
     /** After unlocking: an add or edit flow keeps its answers; tabs reload their data. */
     private void resumeScreen() {
-        if (flow != null && peopleSession) { showNav(false); flow.show(); }
+        if (flow != null && (peopleSession || flow instanceof JoinFlow || (flow instanceof TeamFlow && !linkToken.isEmpty()))) {
+            showNav(false); flow.show();
+        }
         else showTab(tab);
     }
     // API 33+ uses the registered OnBackInvokedCallback; older Android uses this callback.
