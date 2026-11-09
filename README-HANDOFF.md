@@ -1,10 +1,13 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
 Last updated: **9 November 2026, Claude (Windows PC) — version 1.9.0 (15): join My stores with a QR code or a
-typed code and choose your own username and password; owners' Team screen (invite staff, reset codes, remove);
-change/delete your store login. Built and signed (`dist/1.9.0/`), pushed to `main`. NOT uploaded to Play,
-F-Droid or Drive yet: the Link relay update (Reporter repo `0f38aa4`/`626ec2b`, bundle in its `dist/`) must be
-installed on srv1 first, or Join answers 404. Tried on the emulator against a local relay only.**
+typed code and choose your own username and password; owners' Team screen; change/delete your store login; and
+open any till in My stores (its own sales, payments, refunds, hours and items, as on the website; needs
+Reporter 1.9.105+). Rebuilt and signed (`dist/1.9.0/`, the first 1.9.0 build moved to
+`dist/1.9.0/superseded-first-build/`, never distributed), pushed to `main`, queued in Play for the owner to
+submit AFTER the Link relay bundle `koenekt-link-stage-20261109c.zip` is installed on srv1 (until then Join
+answers 404: checked 9 Nov, `/api/join/check`, `/j` and `/.well-known/assetlinks.json` all 404 on srv1).
+Copied to Google Drive. NOT on F-Droid yet.**
 Before that: version 1.8.1 (14), People and licence pages follow the app's Appearance; saved for later in Play
 (1.9.0 replaces it).
 **Earlier the same day:** 1.8.0 (13), the koenekt.co.za look and Account → Appearance, is live on Google Play (published 6 November).
@@ -938,3 +941,20 @@ mock ups"; approved the mockups (https://claude.ai/artifact/3DKJfKREjHCcF4yYCyHa
   screenshots replaced (uploaded as v18-*.png, ordered as above), full description gained "Light, dark or follow
   your phone."; AI asset declaration "Don't label assets". Publishing overview shows "Submit 3 changes for review",
   left for the owner. APK copied to G:\My Drive\Koenekt Android\ (hash checked). F-Droid not updated.
+
+**9 November 2026 — Claude (1.9.0 till pages and release, Windows PC):** The owner: "you know what we did on the
+website for the tills. we need that, we also need the qr joining. lets roll it".
+- The QR/code joining was already built as 1.9.0 (`c58729a`). Added till pages to it: `StoreScreen.tillPage` opens
+  a till from the Tills tab when the answer carries `tills[].detail` (Reporter 1.9.105, `bdeb6d0`); tiles (Sales,
+  Receipts, Average basket, GP % for owners or Last sale for staff), "On this till" (cashier now, worked it today,
+  events), then Today (by hour, payments, refunds and money out, "On this till today") and Items (names and
+  departments looked up by item number in the store's items; departments from the detail). `StoreMath.qty` keeps
+  weighed quantities' decimals in every items list. Staff answers have GP stripped by the PC and the relay, per till too.
+- Checks: lint "No issues found", PolicyChecks 109, StoreChecks 25 (2 new: qty), export checks, test_server_amendment OK.
+  Same key `3e3a0931…`; 1.9.0 (15) APK `a99b816a…`, AAB `7cda0b0c…`.
+- Emulator (debug against the Reporter repo's real relay on localhost, made-up shops whose pretend PCs now also send
+  per-till detail as 1.9.105 does): Southside → Tills → Open this till → Till 1 page, Today and Items (a weighed item
+  "7.708 sold"), Back to the Tills tab. Release APK opens on Sign in with Join my stores with a code; no crash.
+- Rollout state checked: website till pages are live (srv1 `portal.js` = local); Reporter 1.9.105 is uploaded and
+  MEGAFRESH (pilot) runs it; `update_admin.py promote rel_1.9.105_105` was refused for the agent by the auto-mode
+  check (production deploy), so the owner runs it. Link relay on srv1 is still the old one (join endpoints 404).

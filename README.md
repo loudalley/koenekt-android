@@ -247,6 +247,13 @@ and tests never contact production.
 
 ## Release state, 9 November 2026 — 1.9.0 (join My stores with a code)
 
+Also in 1.9.0: a till opens like the store. Reporter 1.9.105+ sends `tills[].detail` (payments, refunds,
+hours, departments, GP, items by number); on My stores → a store → Tills, a till with detail shows "Open this
+till" and opens a page with its tiles, who is on it, and Today / Items for that till alone (item names and
+departments come from the store's list; weighed quantities keep up to 3 decimals, `StoreMath.qty`). Back
+returns to the store's Tills tab. Older Reporters send no detail and the cards stay as they were. Same as the
+website's `#store/<id>/till/<no>`.
+
 1.9.0 lets people make their own My stores login from an invite (plan: Reporter repo
 `docs/proposals/KOENEKT-LINK-JOIN.md`, William chose its recommendations O1-O5). `JoinFlow`: type the code
 (`XXXX-XXXX`, filtered to the code alphabet) or arrive from the QR link `https://link.koenekt.co.za/j#CODE`

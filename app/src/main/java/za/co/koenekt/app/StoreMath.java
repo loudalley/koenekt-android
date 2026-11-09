@@ -125,6 +125,12 @@ public final class StoreMath {
     public static String count(double v) {
         return Double.isNaN(v) ? "—" : String.format(Locale.ROOT, "%,.0f", v).replace(',', ' ');
     }
+    /** Quantity sold: whole units as a count, weighed items (1.235 kg) with up to 3 decimals. */
+    public static String qty(double v) {
+        if (Double.isNaN(v) || Math.abs(v - Math.rint(v)) < 0.0005) return count(v);
+        String s = String.format(Locale.ROOT, "%,.3f", v).replace(',', ' ');
+        return s.replaceAll("0+$", "");
+    }
     public static String format(Figures f, Metric m) {
         double v = value(f, m);
         if (Double.isNaN(v)) return "—";

@@ -55,6 +55,9 @@ public class StoreChecks {
         check(StoreMath.format(a, Metric.GP_PCT).equals("23.0%"), "GP text");
         check(StoreMath.format(off, Metric.VOIDS).equals("—"), "no figure text");
         check(StoreMath.clock("2026-11-03T14:32:10").equals("14:32") && StoreMath.clock("").isEmpty(), "clock");
+        check(StoreMath.qty(12).equals("12") && StoreMath.qty(1.235).equals("1.235") && StoreMath.qty(2.5).equals("2.5"),
+                "weighed quantities keep decimals: " + StoreMath.qty(1.235));
+        check(StoreMath.qty(1200.0004).equals("1 200"), "whole quantities stay counts");
         System.out.println("Store checks passed: " + checks);
     }
 }
