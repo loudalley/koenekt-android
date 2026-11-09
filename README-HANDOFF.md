@@ -958,3 +958,7 @@ website for the tills. we need that, we also need the qr joining. lets roll it".
 - Rollout state checked: website till pages are live (srv1 `portal.js` = local); Reporter 1.9.105 is uploaded and
   MEGAFRESH (pilot) runs it; `update_admin.py promote rel_1.9.105_105` was refused for the agent by the auto-mode
   check (production deploy), so the owner runs it. Link relay on srv1 is still the old one (join endpoints 404).
+- Play Console (owner's Chrome): production release 15 (1.9.0) created with the AAB and the 15.txt notes (only warning:
+  no deobfuscation file); it replaces held draft 14 (1.8.1). Publishing overview: "Submit 1 change for review", left
+  for the owner, to click only after the relay bundle 20261109c is installed on srv1. Listing and screenshots unchanged.
+  APK copied to Google Drive (hash checked).
