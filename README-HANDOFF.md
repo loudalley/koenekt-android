@@ -2,10 +2,11 @@
 
 Last updated: **9 November 2026, Claude (Windows PC) — version 1.8.1 (14): People and licence pages inside the
 app follow the app's Appearance (they were half light in dark mode). Built and signed on the PC (`dist/1.8.1/`),
-pushed to `main`, uploaded to Google Play production for the owner to submit. NOT on F-Droid or Drive (not asked).
+pushed to `main`, uploaded to Google Play but held (saved for later) until the next feature release. NOT on F-Droid or Drive (not asked).
 Tried on the emulator only.** 1.8.0 (13), the koenekt.co.za look and Account → Appearance, is live on Google Play (published 6 November).
 Play Console: production release 14 (1.8.1) saved with the 14.txt notes (only warning: no deobfuscation file);
-Publishing overview shows "Submit 1 change for review" for the owner to click.
+HELD by the owner (9 Nov) to ship with the next feature release: the change is "saved for later" in Publishing
+overview, not submitted. The fix stays on `main`; the next release (versionCode 15+) carries it and replaces draft 14.
 
 Previous release: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
 leaver controls (change/delete your account, forced password change after an admin reset,
