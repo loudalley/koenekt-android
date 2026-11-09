@@ -204,6 +204,10 @@ F-Droid: each release is also published to the self-hosted repository
 `https://loudalley.github.io/koenekt-fdroid/repo`, with release notes from
 `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`. See `fdroid/README.md`.
 
+Website (owner, 9 Nov 2026: "push all our new apps to website always"): every release also goes to
+koenekt.co.za downloads. In `C:\Projects\koenekt-website` run `.\deploy\deploy.ps1`; it copies the newest
+`dist/<version>/*.apk` here to `/downloads/files/Koenekt.apk`. Keep that page's Android text true for new features.
+
 Build output:
 
 - `app/build/outputs/apk/release/app-release.apk`

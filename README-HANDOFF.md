@@ -10,7 +10,9 @@ answers 404: checked 9 Nov, `/api/join/check`, `/j` and `/.well-known/assetlinks
 Copied to Google Drive. NOT on F-Droid yet. UPDATE 9 Nov: the owner installed relay bundle 20261109c on srv1 (all OK)
 and promoted Reporter 1.9.105; checked from the PC: /health, /.well-known/assetlinks.json (za.co.koenekt.app, certs
 02:D0:04… and 3E:3A:09…) and /j answer 200, /api/join/check answers "not valid or has expired" for a made-up code,
-the licence site's link.js has Invite. Play: the owner may now submit 1.9.0.**
+the licence site's link.js has Invite. SUBMITTED to Play 9 Nov 18:14 (in review; publishes on approval), published on
+F-Droid (koenekt-fdroid 273fc69; GitHub Pages was still building at hand-over) and on the website
+(koenekt.co.za/downloads/files/Koenekt.apk = a99b816a…, deploy 20261109181552; downloads text now mentions invites).**
 Before that: version 1.8.1 (14), People and licence pages follow the app's Appearance; saved for later in Play
 (1.9.0 replaces it).
 **Earlier the same day:** 1.8.0 (13), the koenekt.co.za look and Account → Appearance, is live on Google Play (published 6 November).
