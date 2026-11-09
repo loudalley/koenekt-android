@@ -7,7 +7,10 @@ Reporter 1.9.105+). Rebuilt and signed (`dist/1.9.0/`, the first 1.9.0 build mov
 `dist/1.9.0/superseded-first-build/`, never distributed), pushed to `main`, queued in Play for the owner to
 submit AFTER the Link relay bundle `koenekt-link-stage-20261109c.zip` is installed on srv1 (until then Join
 answers 404: checked 9 Nov, `/api/join/check`, `/j` and `/.well-known/assetlinks.json` all 404 on srv1).
-Copied to Google Drive. NOT on F-Droid yet.**
+Copied to Google Drive. NOT on F-Droid yet. UPDATE 9 Nov: the owner installed relay bundle 20261109c on srv1 (all OK)
+and promoted Reporter 1.9.105; checked from the PC: /health, /.well-known/assetlinks.json (za.co.koenekt.app, certs
+02:D0:04… and 3E:3A:09…) and /j answer 200, /api/join/check answers "not valid or has expired" for a made-up code,
+the licence site's link.js has Invite. Play: the owner may now submit 1.9.0.**
 Before that: version 1.8.1 (14), People and licence pages follow the app's Appearance; saved for later in Play
 (1.9.0 replaces it).
 **Earlier the same day:** 1.8.0 (13), the koenekt.co.za look and Account → Appearance, is live on Google Play (published 6 November).
