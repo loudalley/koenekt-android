@@ -1,0 +1,3 @@
+People and licence pages now follow the app's Light, Dark or System choice in Account → Appearance, so they no longer show light while the app is dark (or the other way round). The pages' own appearance switch is hidden in the app.
+
+Already in Koenekt: the koenekt.co.za look, My stores (live till sales per shop), Who's in by department or shop, add and edit staff, leavers, clock passwords, change or delete your account, the screenshots switch, and switching workspace.

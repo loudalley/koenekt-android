@@ -370,12 +370,16 @@ public final class MainActivity extends Activity {
             @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) {
                 progress.setVisibility(View.VISIBLE);
             }
+            @Override public void onPageCommitVisible(WebView view, String url) {
+                if (!locked && trusted(url)) syncWebAppearance();
+            }
             @Override public void onPageFinished(WebView view, String url) {
                 progress.setVisibility(View.GONE);
                 if (locked || !trusted(url)) return;
                 if (AppPolicy.sameOrigin(workspace, url) && Uri.parse(url).getPath().equals("/login") && peopleSession) {
                     peopleSession = false; caps.clear(); notice = "Your People session ended. Sign in again to continue.";
                 }
+                syncWebAppearance();
                 installMobileSupport();
             }
             @Override public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
@@ -725,7 +729,12 @@ public final class MainActivity extends Activity {
         if (root == null) return;
         root.setBackgroundColor(Ui.BG); content.setBackgroundColor(Ui.BG); nav.setBackgroundColor(Ui.BG); navLine.setBackgroundColor(Ui.LINE);
         barTitle.setTextColor(Ui.INK); backButton.setColorFilter(Ui.INK);
+        for (int i = 0; i < barActions.getChildCount(); i++) {   // a web page keeps its bar, so recolour its icons
+            View action = barActions.getChildAt(i);
+            if (action instanceof android.widget.ImageView) ((android.widget.ImageView) action).setColorFilter(Ui.INK);
+        }
         progress.setProgressTintList(ColorStateList.valueOf(Ui.LIME));
+        if (web != null) { web.setBackgroundColor(Ui.BG); if (!locked && trusted(web.getUrl())) syncWebAppearance(); }
         if (locked) { showLock(lockMessage); return; }
         if (inWeb || flow != null) { if (nav.getVisibility() == View.VISIBLE) showNav(true); return; }
         if (!signedIn()) loginScreen(notice); else showTab(tab);
@@ -1234,6 +1243,22 @@ public final class MainActivity extends Activity {
             out.write(buffer, 0, n);
         }
         return out.toByteArray();
+    }
+
+    /**
+     * People and the licence site keep their own System / Light / Dark choice (localStorage
+     * "koenekt-theme", read before first paint). Inside the app the app's Appearance decides, so
+     * each page is given the app's colours, and remembers them for the next page it opens, and the
+     * page's own switch is hidden. Style is set through the DOM, which those sites' CSP allows.
+     */
+    private void syncWebAppearance() {
+        String mode = Ui.dark ? "dark" : "light";
+        web.evaluateJavascript("(function(m){try{localStorage.setItem('koenekt-theme',m)}catch(e){}"
+                + "var r=document.documentElement;r.setAttribute('data-theme',m);r.setAttribute('data-theme-choice',m);"
+                + "try{if(window.KoenektTheme)window.KoenektTheme.choose(m)}catch(e){}"
+                + "var hide=function(){var l=document.querySelectorAll('select[data-kp-theme],#themeSwitch');"
+                + "for(var i=0;i<l.length;i++){l[i].style.setProperty('display','none','important');l[i].setAttribute('aria-hidden','true')}};"
+                + "hide();setTimeout(hide,800)})(" + JSONObject.quote(mode) + ")", null);
     }
 
     private void installMobileSupport() {

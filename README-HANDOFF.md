@@ -1,11 +1,9 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **6 November 2026, Claude (Windows PC) — version 1.8.0 (13): the koenekt.co.za / People
-look (site palettes, Big Shoulders / IBM Plex fonts, 2dp corners, square-ended icons) and Account →
-Appearance (System / Light / Dark). Built and signed on the PC (`dist/1.8.0/`), pushed to `main`, queued in
-Google Play for the owner to submit, and copied to Google Drive. NOT on F-Droid (not asked this
-time). Tried on the emulator only.** 1.7.0 (12) is live on Google Play (published 5 November 2026)
-and on F-Droid and Drive.
+Last updated: **9 November 2026, Claude (Windows PC) — version 1.8.1 (14): People and licence pages inside the
+app follow the app's Appearance (they were half light in dark mode). Built and signed on the PC (`dist/1.8.1/`),
+pushed to `main`, uploaded to Google Play production for the owner to submit. NOT on F-Droid or Drive (not asked).
+Tried on the emulator only.** 1.8.0 (13): the koenekt.co.za look and Account → Appearance (6 November).
 
 Previous release: **29 October 2026, Claude (Windows PC) — version 1.6.0 (10), account and
 leaver controls (change/delete your account, forced password change after an admin reset,
@@ -13,6 +11,27 @@ delete leavers, clock passwords), built and signed on the PC, pushed, published 
 self-hosted F-Droid repo and copied to Google Drive at the user's request; not yet tried on
 a phone. Its People server update is installed.** People server
 amendment and the accounts server update are both INSTALLED on the production People console.
+
+
+## 1.8.1 (14) — 9 November 2026, Claude
+
+- Cause: `assets/mobile.js` injected `body{background:#f6f8f5}` into every People page, so in dark mode the page
+  background stayed light around dark cards. Now `body{background:var(--bg,#F7F7F4)}` (People's theme token).
+- People (`static/koenekt-theme.js`) and the licence site (`admin.html` inline script) keep their own
+  System/Light/Dark in localStorage `koenekt-theme`, read before first paint, and decide System by the WebView's
+  `prefers-color-scheme`, which need not match the app. `MainActivity.syncWebAppearance()` (on
+  `onPageCommitVisible`, `onPageFinished`, and from `applyAppearance`) sets that key and `<html data-theme>` to the
+  app's resolved `light`/`dark`, calls `KoenektTheme.choose` when present, and hides `select[data-kp-theme]` and
+  `#themeSwitch` via element styles (the licence CSP blocks injected `<style>`, not DOM styles). Later pages paint
+  in the right colours from the stored key. No JS bridge added.
+- `applyAppearance` also recolours the web bar's refresh/menu icons and the WebView background.
+- Checks: `assembleRelease bundleRelease lintDebug` (lint "No issues found"), PolicyChecks 68, StoreChecks 23,
+  export checks, test_server_amendment OK. Upload key `3e3a0931…`, aapt 14 / 1.8.1; APK `ecafe211…`, AAB
+  `dd2a2246…` (`dist/1.8.1/SHA256SUMS`).
+- Emulator (debug, local People console from `C:\Projects\koenekt-people-look` = People `main` c5d4485, synthetic
+  staff): phone light + app Dark → Reports and People records fully dark; app Light → light; System + `cmd uimode
+  night yes/no` with Reports open → the page and bar icons flip live both ways.
+- Not tested: physical phone, the licence pages (operator login), Android 8-10.
 
 ## Repository and current state
 

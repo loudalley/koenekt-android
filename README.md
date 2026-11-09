@@ -1,7 +1,7 @@
 # Koenekt for Android
 
 One Android app for the existing People, licensing, customer and Reporter update services.
-Version **1.8.0 (13)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
+Version **1.8.1 (14)**; application ID **za.co.koenekt.app**; Android 8.0 or later;
 compile/target API 36. Java 17, Android Gradle Plugin 8.13.2, Gradle 8.13.
 
 Standalone public repository: [loudalley/koenekt-android](https://github.com/loudalley/koenekt-android).
@@ -244,6 +244,17 @@ dependencies. They use `../koenekt-people` by default; override with
 `KOENEKT_PEOPLE_REPO`. With no backend checkout they skip. Do not copy private
 backend source/history into this public app repository. All test data is synthetic
 and tests never contact production.
+
+## Release state, 9 November 2026 — 1.8.1
+
+1.8.1 makes the People and licence pages inside the app follow the app's Appearance. Those sites keep their
+own System / Light / Dark choice in localStorage `koenekt-theme`, read before first paint; the app now sets it
+to the app's resolved colours (`light` or `dark`) on every trusted page (`MainActivity.syncWebAppearance`, on
+commit-visible and page-finished, and again when Appearance or the phone's dark mode changes) and hides the
+page's own switch (`select[data-kp-theme]`, `#themeSwitch`). Only the DOM is touched, so the sites' CSP is not
+an issue; there is still no JavaScript bridge. The real cause of the half-light pages was the app's own
+`mobile.js`, which forced `body{background:#f6f8f5}`; it now uses the page's `var(--bg)`. The web bar's refresh and
+menu icons are recoloured when the appearance changes.
 
 ## Release state, 6 November 2026 — 1.8.0
 
