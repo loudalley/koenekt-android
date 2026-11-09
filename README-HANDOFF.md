@@ -11,8 +11,8 @@ Copied to Google Drive. NOT on F-Droid yet. UPDATE 9 Nov: the owner installed re
 and promoted Reporter 1.9.105; checked from the PC: /health, /.well-known/assetlinks.json (za.co.koenekt.app, certs
 02:D0:04… and 3E:3A:09…) and /j answer 200, /api/join/check answers "not valid or has expired" for a made-up code,
 the licence site's link.js has Invite. SUBMITTED to Play 9 Nov 18:14 (in review; publishes on approval), published on
-F-Droid (koenekt-fdroid 273fc69 pushed; its GitHub Pages build failed during a GitHub Actions major outage on 9 Nov,
-re-run 42672424657 queued; the live index still listed 1.7.0 at hand-over: check index-v1.json lists 1.9.0 / a99b816a…) and on the website
+F-Droid (koenekt-fdroid 273fc69; its first Pages build failed in a GitHub Actions outage, a fresh Pages build after
+the outage (run 42679182622) succeeded: the live index lists 1.9.0 (15), APK a99b816a…) and on the website
 (koenekt.co.za/downloads/files/Koenekt.apk = a99b816a…, deploy 20261109181552; downloads text now mentions invites).**
 Before that: version 1.8.1 (14), People and licence pages follow the app's Appearance; saved for later in Play
 (1.9.0 replaces it).
