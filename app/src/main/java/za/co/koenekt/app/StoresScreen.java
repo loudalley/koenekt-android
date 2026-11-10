@@ -25,10 +25,12 @@ import za.co.koenekt.app.StoreMath.Figures;
 import za.co.koenekt.app.StoreMath.Metric;
 
 /**
- * My stores: live till figures for every store a store login may see, through the Koenekt Link relay.
- * The dashboard is customisable on the phone (tiles, stores shown, store types, grouping, sort order).
- * Holds the shared answers for the store and compare screens, and refreshes every 60 s while one of
- * them is open; never in the background.
+ * My stores, through the Koenekt Link relay, in sections as on the website:
+ * Dashboard (the owner's own layout, saved on the relay; DashboardScreen), Live (today's till figures for every
+ * store, customisable on the phone: tiles, stores shown, store types, grouping, sort order), Compare (past
+ * periods, store against store, type or group; PeriodScreen), Reports (Range, Ordering, ROSI, Turnover run on the
+ * shop PC; ReportsScreen, owners) and Groups (GroupsScreen, owners). Holds the shared live answers and refreshes
+ * them every 60 s while Live or the Dashboard is open; never in the background.
  */
 final class StoresScreen {
     static final int REFRESH_MS = 60_000;
@@ -48,17 +50,70 @@ final class StoresScreen {
     private Runnable view = this::render;     // what is on screen: the dashboard, one store or compare
     private StoreScreen storeScreen;
     private CompareScreen compareScreen;
+    /** dash, live, compare, reports or groups. */
+    String section = "";
+    final PastData past = new PastData(this);
+    private final DashboardScreen dashboard;
+    private final PeriodScreen period;
+    private final ReportsScreen reports;
+    private final GroupsScreen groupsScreen;
 
-    StoresScreen(MainActivity activity) { a = activity; dash = new Dash(activity); }
+    StoresScreen(MainActivity activity) {
+        a = activity; dash = new Dash(activity);
+        // after `a`: each section keeps the activity
+        dashboard = new DashboardScreen(this); period = new PeriodScreen(this);
+        reports = new ReportsScreen(this); groupsScreen = new GroupsScreen(this);
+    }
     int dp(float n) { return a.dp(n); }
     boolean owner() { return "owner".equals(a.linkRole()); }
 
     // ------------------------------------------------------------------ data
     /** Opens the dashboard and starts the 60-second refresh. */
     void show() {
-        view = this::render; storeScreen = null; compareScreen = null;
+        if (section.isEmpty()) section = owner() ? "dash" : "live";
+        storeScreen = null; compareScreen = null; view = sectionView();
         start();
     }
+    private Runnable sectionView() {
+        switch (section) {
+            case "dash": return dashboard::render;
+            case "compare": return period::render;
+            case "reports": return reports::render;
+            case "groups": return groupsScreen::render;
+            default: return this::render;
+        }
+    }
+    /** Dashboard · Live · Compare · Reports · Groups, under the app bar of each section. */
+    void sections(LinearLayout page) {
+        String[][] all = {{"dash", "Dashboard"}, {"live", "Live"}, {"compare", "Compare"}, {"reports", "Reports"}, {"groups", "Groups"}};
+        HorizontalScrollView scroll = new HorizontalScrollView(a); scroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout row = Ui.row(a); scroll.addView(row);
+        for (String[] sec : all) {
+            if (!owner() && (sec[0].equals("reports") || sec[0].equals("groups"))) continue;
+            boolean on = sec[0].equals(section);
+            LinearLayout cell = Ui.column(a); cell.setGravity(Gravity.CENTER_HORIZONTAL);
+            TextView t = Ui.text(a, sec[1], 12.5f, on ? Ui.INK : Ui.MUTED); Ui.mono(t, on); t.setPadding(dp(12), dp(10), dp(12), dp(8));
+            cell.addView(t);
+            android.view.View bar = new android.view.View(a); bar.setBackgroundColor(on ? Ui.LIME : android.graphics.Color.TRANSPARENT);
+            cell.addView(bar, new LinearLayout.LayoutParams(-1, dp(2)));
+            cell.setContentDescription(sec[1] + (on ? ", selected" : "")); cell.setClickable(true); cell.setFocusable(true);
+            cell.setBackground(Ui.pressable(Ui.shape(android.graphics.Color.TRANSPARENT, 0, a), 0, a));
+            final String key = sec[0];
+            cell.setOnClickListener(v -> openSection(key));
+            row.addView(cell);
+        }
+        page.addView(scroll);
+        page.addView(Ui.divider(a, 0)); Ui.gap(page, 14);
+    }
+    void openSection(String key) {
+        if (key.equals(section) && storeScreen == null && compareScreen == null) return;
+        section = key; storeScreen = null; compareScreen = null; view = sectionView();
+        start();
+    }
+    /** Live answers are asked only for the sections that show them. */
+    private boolean wantsLive() { return section.equals("live") || storeScreen != null || compareScreen != null || (section.equals("dash") && dashboard.wantsLive()); }
+    /** Redraws whatever is on screen (a section's data arrived). */
+    void redraw() { a.redraw(view); }
     private void start() {
         int me = ++run; timer.removeCallbacksAndMessages(null);
         view.run(); refresh(me);
@@ -72,7 +127,7 @@ final class StoresScreen {
             listLoaded = true; listError = ""; stores.clear();
             JSONArray rows = data.optJSONArray("stores");
             if (rows != null) for (int i = 0; i < rows.length(); i++) if (rows.optJSONObject(i) != null) stores.add(rows.optJSONObject(i));
-            for (JSONObject s : stores) if (dash.shows(s.optString("store"))) ask(me, s.optString("store"), 0);
+            if (wantsLive()) for (JSONObject s : stores) if (dash.shows(s.optString("store"))) ask(me, s.optString("store"), 0);
             a.redraw(view);
         }, message -> { if (live(me)) { listError = message; a.redraw(view); } });
         timer.postDelayed(() -> { if (live(me)) refresh(me); }, REFRESH_MS);
@@ -178,19 +233,12 @@ final class StoresScreen {
     // ------------------------------------------------------------------ dashboard
     private void render() {
         view = this::render;
-        a.setBar("My stores", false,
+        a.setBar("Live", false,
                 Ui.iconButton(a, R.drawable.ic_compare, "Compare stores", () -> openCompare(Metric.SALES)),
                 Ui.iconButton(a, R.drawable.ic_tune, "Customise dashboard", this::customise),
                 Ui.iconButton(a, R.drawable.ic_refresh, "Refresh", this::refreshNow));
         LinearLayout page = a.page(); page.setPadding(dp(16), dp(4), dp(16), dp(28));
-        if (!listLoaded) {
-            if (listError.isEmpty()) page.addView(Ui.loading(a)); else page.addView(Ui.notice(a, listError, true));
-            return;
-        }
-        if (stores.isEmpty()) {
-            page.addView(message("No stores yet. A store appears here once its shop PC is approved for your login. Ask Koenekt if one is missing."));
-            return;
-        }
+        if (!ready(page)) return;
         HorizontalScrollView scroll = new HorizontalScrollView(a); scroll.setHorizontalScrollBarEnabled(false);
         LinearLayout chips = Ui.row(a); scroll.addView(chips); page.addView(scroll); Ui.gap(page, 14);
         addChip(chips, scopeLabel(), this::pickScope);
@@ -239,6 +287,20 @@ final class StoresScreen {
             Ui.gap(page, 4);
             page.addView(Ui.text(a, "Tip: give each store a type (Customise → Store types) to group them and compare type against type.", 13, Ui.MUTED));
         }
+    }
+
+    /** The section row, then false (and a spinner, error or "no stores") until the store list is in. */
+    boolean ready(LinearLayout page) {
+        sections(page);
+        if (!listLoaded) {
+            if (listError.isEmpty()) page.addView(Ui.loading(a)); else page.addView(Ui.notice(a, listError, true));
+            return false;
+        }
+        if (stores.isEmpty()) {
+            page.addView(message("No stores yet. A store appears here once its shop PC is approved for your login. Ask Koenekt if one is missing."));
+            return false;
+        }
+        return true;
     }
 
     private LinearLayout storeCard(List<Figures> list) {
@@ -354,7 +416,7 @@ final class StoresScreen {
     void openCompare(Metric metric) {
         compareScreen = new CompareScreen(this, metric); storeScreen = null; view = compareScreen::render; view.run();
     }
-    void back() { storeScreen = null; compareScreen = null; render(); }
+    void back() { storeScreen = null; compareScreen = null; view = sectionView(); view.run(); }
 
     // ------------------------------------------------------------------ settings on this phone
     /** The dashboard's layout, per store login, kept on this phone only (no figures). */

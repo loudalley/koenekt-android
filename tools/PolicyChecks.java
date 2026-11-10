@@ -58,6 +58,16 @@ public class PolicyChecks {
         for (String path : new String[]{"join", "join/check", "me", "me/password", "me/delete", "invites", "invites/revoke",
                 "team", "team/remove", "team/reset"})
             check(AppPolicy.linkAllowed(AppPolicy.LINK + "/api/" + path), "relay join/account call " + path);
+        // Dashboard, Compare, Reports and Groups (Reporter 1.9.106 relay)
+        for (String path : new String[]{"stores/a1b2c30000/range", "stores/a1b2c30000/order", "stores/a1b2c30000/rosi",
+                "stores/a1b2c30000/turnover", "groups", "groups/delete", "me/dashboard", "history",
+                "history?from=2026-11-01&to=2026-11-09"})
+            check(AppPolicy.linkAllowed(AppPolicy.LINK + "/api/" + path), "relay reports call " + path);
+        for (String url : new String[]{"https://link.koenekt.co.za/api/stores?from=2026-11-01&to=2026-11-09",
+                "https://link.koenekt.co.za/api/history?from=2026-11-01&to=2026-11-09&x=1",
+                "https://link.koenekt.co.za/api/history?stores=../op", "https://link.koenekt.co.za/api/stores/a1b2c30000/delete",
+                "https://link.koenekt.co.za/api/history/../op/agents?from=2026-11-01&to=2026-11-09"})
+            check(!AppPolicy.linkAllowed(url), "relay call refused: " + url);
         for (String url : new String[]{"https://link.koenekt.co.za/op/invites", "https://link.koenekt.co.za/op/users/reset",
                 "https://link.koenekt.co.za/api/join/../../op/invites", "https://link.koenekt.co.za/api/team/remove/x",
                 "https://link.koenekt.co.za/api/join#K7QMXRT4", "https://link.koenekt.co.za/j"})

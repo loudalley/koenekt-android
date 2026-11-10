@@ -1,5 +1,11 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
+Last updated: **10 November 2026, Claude (Windows PC) — version 1.10.0 (16), built, NOT released: My stores in
+sections as on the website (Dashboard, Live, Compare, Reports, Groups). Needs the Reporter 1.9.106 Link relay on srv1
+(William installs the bundle) and Reporter 1.9.106 on the shop PCs; until then Dashboard/Compare say no past days
+have arrived and Reports say the store's Reporter is older than 1.9.106. Release (Play, F-Droid, website) waits for
+the owner after the relay is installed.** Details in the 1.10.0 section below; 1.9.0 (15) stays the live release.
+
 Last updated: **9 November 2026, Claude (Windows PC) — version 1.9.0 (15): join My stores with a QR code or a
 typed code and choose your own username and password; owners' Team screen; change/delete your store login; and
 open any till in My stores (its own sales, payments, refunds, hours and items, as on the website; needs
@@ -28,6 +34,42 @@ self-hosted F-Droid repo and copied to Google Drive at the user's request; not y
 a phone. Its People server update is installed.** People server
 amendment and the accounts server update are both INSTALLED on the production People console.
 
+
+## 1.10.0 (16) — 10 November 2026, Claude (built, not released)
+
+- William: "build the reports we have on reporter into the website for historical and order reports and rosi ... i
+  also want to be able to do it from the android app. features we add to the reporter app should be available on the
+  android app also. the shop dashboard as we have it should be called Live, the historicals and month to date and shop
+  comparisons ... a different section so we can pit the shops/shop types against each other, every owner should have a
+  customisable dashboard ... default layout ... reset layout button and save layout button. shop grouping". Decisions
+  (asked): daily totals stored on srv1; all four reports; reports owners only; owners make their own groups.
+- API and the shared dashboard layout: Reporter repo `docs/LINK-REPORTS-API.md` (relay `server/link_data.py`,
+  `server/link_relay.py`; Reporter `app/linkreports.py`). Website: `koenekt-website/site/assets/js/portal-more.js`.
+- App: the Stores tab has a section row. Dashboard (`DashboardScreen`, owners land here; staff land on Live): tiles
+  from the shared layout (kpi, trend, ranking, table, live), period and comparison chips, Customise (tune icon) with
+  per-tile chips, Up/Down/Remove, Add a tile, Save layout (POST /api/me/dashboard) and Reset layout. Live is the old
+  My stores screen, renamed (its phone-only tiles/types/grouping unchanged). Compare (`PeriodScreen`): period,
+  against last year or the period before, store/group/shop type (relay type families)/detailed type, rank by any
+  figure, top-6 lines by day, every figure per row and "Together". Reports (`ReportsScreen`, owners): Range,
+  Ordering, ROSI, Turnover; store, dates (quick periods or date pickers), cover days, ROSI by group/dept and month
+  sheet; polls "pending" every few seconds while open. Groups (`GroupsScreen`, owners): make, rename, choose stores,
+  delete. `PastData` loads /api/history (one call widened to cover every tile, cached 10 min), /api/groups and the
+  layout; `HistoryMath` (plain Java) does periods and sums exactly as the website: totals add, GP % from the sums,
+  stock from each store's last day that has it, per trading day, stock days, % change or GP points.
+- `AppPolicy.linkAllowed`: adds stores/{id}/(range|order|rosi|turnover), history, groups, groups/delete, me/dashboard;
+  a query only on /api/history and only `from=YYYY-MM-DD&to=YYYY-MM-DD`. `Chart.days()` draws a line per day with gaps
+  for closed days (a lone day is a dot).
+- Checks run: PolicyChecks 123, StoreChecks 45 (20 new for HistoryMath); `assembleDebug`, lint clean; debug build on
+  the `koenekt-test` emulator against the REAL relay code in a local stand-in (made-up shops, People pointed at an
+  unused local port so no login went anywhere else): Dashboard figures matched the website exactly (R 823 454,
+  25.4%, +10.2%), Compare, a Range report, Groups made on the website, Customise → tile scope → Save layout read back
+  from the relay. The emulator's old release-signed copy of the app was uninstalled for the debug build.
+- Release files (signed with the upload key 3E:3A:09…, lint clean): `dist/1.10.0/Koenekt-1.10.0.apk`
+  96edace03e116d839c674bbc2275353d27dd05a28a2b8a13f49d1b798f9b90be, `dist/1.10.0/Koenekt-1.10.0.aab`
+  a5a8cdf836fb6a34487085b0ca605452a41df6eebc62b8456444d1bfd2afbb1f; Play notes `fastlane/.../changelogs/16.txt`
+  (417 characters).
+- Not done: release (Play, F-Droid, website download), real-device test. The Live section's phone-only "store types"
+  are still separate from Koenekt's shop types on the relay.
 
 ## 1.9.0 (15) — 9 November 2026, Claude
 

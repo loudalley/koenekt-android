@@ -47,11 +47,15 @@ public final class AppPolicy {
     public static boolean linkAllowed(String url) {
         try {
             URI u = new URI(url), base = new URI(link());
-            String path = u.getRawPath();
+            String path = u.getRawPath(), query = u.getRawQuery();
+            // Only daily totals take a query, and only two dates (docs/LINK-REPORTS-API.md in the Reporter repo).
+            boolean queryOk = query == null
+                    || ("/api/history".equals(path) && query.matches("from=\\d{4}-\\d{2}-\\d{2}&to=\\d{4}-\\d{2}-\\d{2}"));
             return u.getScheme() != null && u.getScheme().equals(base.getScheme()) && u.getRawUserInfo() == null
                     && base.getHost().equals(u.getHost()) && base.getPort() == u.getPort()
-                    && u.getRawQuery() == null && u.getRawFragment() == null
-                    && path != null && path.matches("/api/(login|logout|stores|stores/[A-Za-z0-9_-]{4,64}/live"
+                    && queryOk && u.getRawFragment() == null
+                    && path != null && path.matches("/api/(login|logout|stores|stores/[A-Za-z0-9_-]{4,64}/(live|range|order|rosi|turnover)"
+                    + "|history|groups|groups/delete|me/dashboard"
                     + "|join|join/check|me|me/password|me/delete|invites|invites/revoke|team|team/remove|team/reset)");
         } catch (Exception e) { return false; }
     }

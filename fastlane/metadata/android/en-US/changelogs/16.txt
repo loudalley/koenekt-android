@@ -1,0 +1,5 @@
+My stores now has Dashboard, Live, Compare, Reports and Groups, as on koenekt.co.za:
+• Dashboard: your own tiles for month to date, last month or the year, against last year. Save layout keeps it here and on the website.
+• Compare stores, shop types or your groups on any figure.
+• Owners: run Range, Ordering, ROSI and Turnover reports on the shop PC, and make groups.
+Needs Koenekt Reporter 1.9.106 on the shop PC.

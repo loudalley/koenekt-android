@@ -58,6 +58,59 @@ public class StoreChecks {
         check(StoreMath.qty(12).equals("12") && StoreMath.qty(1.235).equals("1.235") && StoreMath.qty(2.5).equals("2.5"),
                 "weighed quantities keep decimals: " + StoreMath.qty(1.235));
         check(StoreMath.qty(1200.0004).equals("1 200"), "whole quantities stay counts");
+        history();
         System.out.println("Store checks passed: " + checks);
+    }
+
+    private static za.co.koenekt.app.HistoryMath.Day day(double turnover, double excl, double cost, double stock) {
+        za.co.koenekt.app.HistoryMath.Day d = new za.co.koenekt.app.HistoryMath.Day();
+        d.turnover = turnover; d.salesExcl = excl; d.cost = cost; d.gpValue = Double.isNaN(excl) ? Double.NaN : excl - cost; d.stock = stock;
+        return d;
+    }
+
+    /** Past days (Dashboard, Compare): the same sums as the website (made-up stores). */
+    private static void history() {
+        java.time.LocalDate today = java.time.LocalDate.of(2026, 11, 10);
+        za.co.koenekt.app.HistoryMath.History h = new za.co.koenekt.app.HistoryMath.History();
+        java.util.TreeMap<String, za.co.koenekt.app.HistoryMath.Day> s1 = new java.util.TreeMap<>(), s2 = new java.util.TreeMap<>();
+        s1.put("2026-11-01", day(1150, 1000, 750, 50000)); s1.put("2026-11-02", day(2300, 2000, 1400, 52000));
+        s1.put("2026-11-03", day(0, 0, 0, Double.NaN));                       // closed: not a trading day
+        s2.put("2026-11-01", day(575, 500, 400, Double.NaN)); s2.put("2025-11-01", day(500, 434.78, 330, Double.NaN));
+        h.stores.put("s1", s1); h.stores.put("s2", s2);
+        za.co.koenekt.app.HistoryMath.Agg a = za.co.koenekt.app.HistoryMath.agg(h, List.of("s1", "s2"), "2026-11-01", "2026-11-09", true);
+        check(a.turnover == 4025 && a.days == 2 && a.stores == 2, "period sums over trading days");
+        check(Math.abs(a.value(za.co.koenekt.app.HistoryMath.Metric.GP_PCT) - 100.0 * 950 / 3500) < 1e-9, "GP % from the sums, not an average");
+        check(a.stock == 52000, "stock from each store's last day that has it");
+        check(a.value(za.co.koenekt.app.HistoryMath.Metric.PER_DAY) == 2012.5, "turnover per trading day");
+        check(Math.abs(a.value(za.co.koenekt.app.HistoryMath.Metric.STOCK_DAYS) - 52000 / (2550.0 / 2)) < 1e-9, "stock days");
+        za.co.koenekt.app.HistoryMath.Agg staff = za.co.koenekt.app.HistoryMath.agg(h, List.of("s1"), "2026-11-01", "2026-11-09", false);
+        check(Double.isNaN(staff.value(za.co.koenekt.app.HistoryMath.Metric.GP_VALUE)) && staff.turnover == 3450, "staff: no GP");
+        check(za.co.koenekt.app.HistoryMath.agg(h, List.of("s1"), "2025-01-01", "2025-12-31", true) == null, "no days, no figures");
+        za.co.koenekt.app.HistoryMath.Agg last = za.co.koenekt.app.HistoryMath.agg(h, List.of("s2"), "2025-11-01", "2025-11-09", true);
+        za.co.koenekt.app.HistoryMath.Agg now = za.co.koenekt.app.HistoryMath.agg(h, List.of("s2"), "2026-11-01", "2026-11-09", true);
+        check(Math.abs(za.co.koenekt.app.HistoryMath.change(now, last, za.co.koenekt.app.HistoryMath.Metric.TURNOVER) - 15) < 1e-9, "change in %");
+        double pts = za.co.koenekt.app.HistoryMath.change(now, last, za.co.koenekt.app.HistoryMath.Metric.GP_PCT);
+        check(Math.abs(pts - (20 - 100 * 104.78 / 434.78)) < 1e-6, "GP change in points");
+        check(za.co.koenekt.app.HistoryMath.verdict(-5, za.co.koenekt.app.HistoryMath.Metric.COST) == 1
+                && za.co.koenekt.app.HistoryMath.verdict(5, za.co.koenekt.app.HistoryMath.Metric.STOCK) == 0, "lower cost is better; stock is neutral");
+        check(za.co.koenekt.app.HistoryMath.changeText(-0.34, za.co.koenekt.app.HistoryMath.Metric.GP_PCT).equals("▼ −0.3 pts"), "change text");
+        double[] line = za.co.koenekt.app.HistoryMath.series(h, List.of("s1"), "2026-10-31", "2026-11-02", za.co.koenekt.app.HistoryMath.Metric.TURNOVER, true);
+        check(line.length == 3 && Double.isNaN(line[0]) && line[2] == 2300, "a day per point, gaps stay gaps");
+
+        String[] mtd = za.co.koenekt.app.HistoryMath.period("mtd", today);
+        check(mtd[0].equals("2026-11-01") && mtd[1].equals("2026-11-09"), "month to date ends yesterday");
+        String[] first = za.co.koenekt.app.HistoryMath.period("mtd", java.time.LocalDate.of(2026, 12, 1));
+        check(first[0].equals("2026-11-01") && first[1].equals("2026-11-30"), "on the 1st, month to date is last month");
+        String[] wtd = za.co.koenekt.app.HistoryMath.period("wtd", java.time.LocalDate.of(2026, 11, 9));    // a Monday
+        check(wtd[0].equals("2026-11-02") && wtd[1].equals("2026-11-08"), "on a Monday, week to date is last week");
+        String[] lm = za.co.koenekt.app.HistoryMath.period("last_month", today);
+        check(lm[0].equals("2026-10-01") && lm[1].equals("2026-10-31"), "last month");
+        String[] py = za.co.koenekt.app.HistoryMath.against(new String[]{"2028-02-01", "2028-02-29"}, "prev_year");
+        check(py[0].equals("2027-02-01") && py[1].equals("2027-02-28"), "a leap day a year back");
+        String[] pp = za.co.koenekt.app.HistoryMath.against(mtd, "prev_period");
+        check(pp[0].equals("2026-10-23") && pp[1].equals("2026-10-31"), "the period before has the same length");
+        check(za.co.koenekt.app.HistoryMath.against(mtd, "none") == null, "no comparison");
+        check(za.co.koenekt.app.HistoryMath.range(mtd, today).equals("1 Nov – 9 Nov")
+                && za.co.koenekt.app.HistoryMath.nice("2025-11-01", today).equals("1 Nov 2025"), "dates as text");
     }
 }
