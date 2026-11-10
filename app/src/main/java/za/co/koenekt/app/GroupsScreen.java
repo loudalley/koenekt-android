@@ -41,7 +41,8 @@ final class GroupsScreen {
             List<String> names = new ArrayList<>();
             for (String id : PastData.strings(group.optJSONArray("stores"))) { JSONObject st = s.store(id); names.add(st == null ? "A store" : st.optString("name")); }
             boolean editable = group.optBoolean("editable") && s.past.canEditGroups;
-            card.addView(Ui.listRow(a, null, group.optString("name"), String.join(", ", names), editable ? null : "Read only",
+            String acc = s.accounts().size() > 1 && !group.optString("account").isEmpty() ? group.optString("account") + " · " : "";
+            card.addView(Ui.listRow(a, null, group.optString("name"), acc + String.join(", ", names), editable ? null : "Read only",
                     editable ? () -> edit(group) : null));
         }
         page.addView(card, Ui.fill(a, -1));
@@ -49,34 +50,53 @@ final class GroupsScreen {
 
     private void edit(JSONObject group) {
         if (!s.past.canEditGroups || s.past.groups == null) { a.toast("Only a store owner can change groups."); return; }
+        if (group == null) {          // a new group lives in one account: ask which, when the login owns several
+            List<String> owned = new ArrayList<>();
+            for (String acc : s.accounts()) for (JSONObject st : s.stores)
+                if (acc.equals(st.optString("account")) && "owner".equals(st.optString("role"))) { owned.add(acc); break; }
+            if (owned.size() > 1) {
+                Ui.choose(a, "Group stores of", owned.toArray(new String[0]), -1, w -> named(null, owned.get(w)));
+                return;
+            }
+            named(null, owned.isEmpty() ? "" : owned.get(0));
+            return;
+        }
+        named(group, group.optString("account"));
+    }
+    private void named(JSONObject group, String account) {
         EditText name = new EditText(a); name.setSingleLine(true); name.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
         name.setHint("e.g. North"); name.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(40)});
         if (group != null) name.setText(group.optString("name"));
         FrameLayout wrap = new FrameLayout(a); wrap.setPadding(dp(24), dp(8), dp(24), 0); wrap.addView(name);
         android.app.AlertDialog.Builder b = Ui.dialog(a).setTitle(group == null ? "New group" : "Group name").setView(wrap)
-                .setPositiveButton("Next", (d, w) -> pickStores(group, name.getText().toString().trim()))
+                .setPositiveButton("Next", (d, w) -> pickStores(group, name.getText().toString().trim(), account))
                 .setNegativeButton("Cancel", null);
         if (group != null) b.setNeutralButton("Delete", (d, w) -> Ui.dialog(a).setTitle("Delete " + group.optString("name") + "?")
                 .setMessage("The stores stay as they are; only the group goes, here and on the website.")
-                .setPositiveButton("Delete", (d2, w2) -> send("/api/groups/delete", body(group.optString("id"), null, null)))
+                .setPositiveButton("Delete", (d2, w2) -> send("/api/groups/delete", body(group.optString("id"), null, null, account)))
                 .setNegativeButton("Cancel", null).show());
         b.show();
     }
-    private void pickStores(JSONObject group, String name) {
+    private void pickStores(JSONObject group, String name, String account) {
         if (name.isEmpty()) { a.toast("Give the group a name."); return; }
-        String[] names = new String[s.stores.size()]; boolean[] on = new boolean[s.stores.size()];
+        List<JSONObject> list = new ArrayList<>();            // only the stores of the group's account
+        for (JSONObject st : s.stores) if (account.isEmpty() || st.optString("account").isEmpty() || account.equals(st.optString("account"))) list.add(st);
+        String[] names = new String[list.size()]; boolean[] on = new boolean[list.size()];
         List<String> had = group == null ? new ArrayList<>() : PastData.strings(group.optJSONArray("stores"));
-        for (int i = 0; i < names.length; i++) { names[i] = s.stores.get(i).optString("name"); on[i] = had.contains(s.stores.get(i).optString("store")); }
+        for (int i = 0; i < names.length; i++) { names[i] = list.get(i).optString("name"); on[i] = had.contains(list.get(i).optString("store")); }
         Ui.dialog(a).setTitle("Stores in " + name).setMultiChoiceItems(names, on, (d, w, checked) -> on[w] = checked)
                 .setPositiveButton("Save group", (d, w) -> {
                     JSONArray ids = new JSONArray();
-                    for (int i = 0; i < on.length; i++) if (on[i]) ids.put(s.stores.get(i).optString("store"));
-                    send("/api/groups", body(group == null ? null : group.optString("id"), name, ids));
+                    for (int i = 0; i < on.length; i++) if (on[i]) ids.put(list.get(i).optString("store"));
+                    send("/api/groups", body(group == null ? null : group.optString("id"), name, ids, account));
                 }).setNegativeButton("Cancel", null).show();
     }
-    private static JSONObject body(String id, String name, JSONArray stores) {
+    private static JSONObject body(String id, String name, JSONArray stores, String account) {
         JSONObject o = new JSONObject();
-        try { if (id != null) o.put("id", id); if (name != null) o.put("name", name); if (stores != null) o.put("stores", stores); } catch (Exception ignored) { }
+        try {
+            if (id != null) o.put("id", id); if (name != null) o.put("name", name); if (stores != null) o.put("stores", stores);
+            if (account != null && !account.isEmpty()) o.put("account", account);
+        } catch (Exception ignored) { }
         return o;
     }
     private void send(String path, JSONObject body) {

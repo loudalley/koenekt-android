@@ -79,7 +79,23 @@ final class StoresScreen {
         reports = new ReportsScreen(this); groupsScreen = new GroupsScreen(this);
     }
     int dp(float n) { return a.dp(n); }
-    boolean owner() { return "owner".equals(a.linkRole()); }
+    /** Owner of its own account, or of any store it also sees in another account (the relay sends each store's role). */
+    boolean owner() {
+        if ("owner".equals(a.linkRole())) return true;
+        for (JSONObject s : stores) if ("owner".equals(s.optString("role"))) return true;
+        return false;
+    }
+    /** May this login see GP and run reports for this store? */
+    boolean ownerOf(String id) {
+        JSONObject s = store(id);
+        return s == null || s.optString("role").isEmpty() ? "owner".equals(a.linkRole()) : "owner".equals(s.optString("role"));
+    }
+    /** The accounts of the stores this login sees (more than one when Koenekt gave it other accounts). */
+    java.util.List<String> accounts() {
+        java.util.TreeSet<String> out = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (JSONObject s : stores) if (!s.optString("account").isEmpty()) out.add(s.optString("account"));
+        return new java.util.ArrayList<>(out);
+    }
 
     // ------------------------------------------------------------------ data
     /** Opens the dashboard and starts the 60-second refresh. */

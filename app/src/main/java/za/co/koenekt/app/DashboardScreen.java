@@ -22,7 +22,7 @@ import za.co.koenekt.app.StoreMath.Figures;
  */
 final class DashboardScreen {
     private static final String[][] KINDS = {{"kpi", "Figure"}, {"trend", "Trend by day"}, {"ranking", "Ranking"}, {"table", "Table"}, {"live", "Live today"}};
-    static final String[][] BYS = {{"store", "Store"}, {"group", "Your groups"}, {"type", "Shop type"}, {"shoptype", "Shop type (detailed)"}};
+    static final String[][] BYS = {{"store", "Store"}, {"group", "Your groups"}, {"type", "Shop type"}, {"shoptype", "Shop type (detailed)"}, {"account", "Account"}};
     private static final String[][] SIZES = {{"s", "Small (two to a row)"}, {"m", "Full width"}};
     private final StoresScreen s;
     private final MainActivity a;

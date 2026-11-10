@@ -119,6 +119,14 @@ final class PastData {
     /** Who is compared: each store, each of the owner's groups, or each shop type (set by Koenekt on the relay). */
     List<Entity> entities(String by) {
         List<Entity> out = new ArrayList<>();
+        if ("account".equals(by)) {
+            for (String acc : s.accounts()) {
+                List<String> ids = new ArrayList<>();
+                for (JSONObject st : s.stores) if (acc.equals(st.optString("account"))) ids.add(st.optString("store"));
+                out.add(new Entity(acc, acc, ids));
+            }
+            return out;
+        }
         if ("group".equals(by)) {
             if (groups != null) for (int i = 0; i < groups.length(); i++) {
                 JSONObject g = groups.optJSONObject(i); if (g == null) continue;

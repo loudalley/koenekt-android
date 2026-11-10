@@ -43,15 +43,20 @@ final class ReportsScreen {
         LinearLayout page = a.page(); page.setPadding(dp(16), dp(4), dp(16), dp(28));
         if (!s.ready(page)) return;
         if (!s.owner()) { page.addView(s.message("Reports are for store owners.")); return; }
-        if (s.store(store) == null) store = s.stores.get(0).optString("store");
+        java.util.List<JSONObject> mine = new java.util.ArrayList<>();      // reports: only stores this login owns
+        for (JSONObject st : s.stores) if (s.ownerOf(st.optString("store"))) mine.add(st);
+        if (mine.isEmpty()) { page.addView(s.message("Reports are for store owners.")); return; }
+        if (s.store(store) == null || !s.ownerOf(store)) store = mine.get(0).optString("store");
         if (from.isEmpty()) { String[] p = HistoryMath.period("mtd", PastData.today()); from = p[0]; to = PastData.today().toString(); }
         DashboardScreen.HorizontalChips chips = new DashboardScreen(s).new HorizontalChips(page);
         chips.add(HistoryMath.label(KINDS, kind), () -> pick("Report", KINDS, kind, v -> {
             kind = v; all = false;
             if (kind.equals("order") && to.compareTo(PastData.today().toString()) >= 0) { LocalDate y = PastData.today().minusDays(1); to = y.toString(); from = y.minusDays(27).toString(); }
             render(); }));
-        String[][] st = new String[s.stores.size()][];
-        for (int i = 0; i < st.length; i++) st[i] = new String[]{s.stores.get(i).optString("store"), s.stores.get(i).optString("name")};
+        boolean many = s.accounts().size() > 1;
+        String[][] st = new String[mine.size()][];
+        for (int i = 0; i < st.length; i++) st[i] = new String[]{mine.get(i).optString("store"),
+                mine.get(i).optString("name") + (many && !mine.get(i).optString("account").isEmpty() ? " · " + mine.get(i).optString("account") : "")};
         chips.add(s.store(store).optString("name"), () -> pick("Store", st, store, v -> { store = v; render(); }));
         LocalDate today = PastData.today();
         chips.add(HistoryMath.range(new String[]{from, to}, today), this::pickDates);
