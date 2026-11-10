@@ -66,6 +66,21 @@ final class PastData {
     void forget() { history = null; historyAt = 0; groups = null; }
     /** What is loaded so far (empty before the first answer). */
     History history() { return history != null ? history : new History(); }
+    /** The history plus today's live figures from each store's Live answer (the dashboard's "Include today"). */
+    History withToday() {
+        java.util.Map<String, Day> live = new java.util.HashMap<>();
+        String now = today().toString();
+        for (org.json.JSONObject st : s.stores) {
+            org.json.JSONObject r = s.answers.get(st.optString("store"));
+            if (r == null || !r.optString("day").startsWith(now)) continue;
+            Day d = new Day(); d.turnover = StoresScreen.num(r, "sales"); if (Double.isNaN(d.turnover)) d.turnover = 0;
+            d.salesExcl = StoresScreen.num(r, "sales_excl"); d.gpValue = StoresScreen.num(r, "gp_value");
+            d.cost = Double.isNaN(d.salesExcl) || Double.isNaN(d.gpValue) ? Double.NaN : d.salesExcl - d.gpValue;
+            org.json.JSONArray items = r.optJSONArray("items"); d.itemsSold = items == null ? 0 : items.length();
+            live.put(st.optString("store"), d);
+        }
+        return HistoryMath.withToday(history(), live, today());
+    }
     private static long days(String a, String b) { return ChronoUnit.DAYS.between(LocalDate.parse(a), LocalDate.parse(b)) + 1; }
 
     static History parse(JSONObject data) {

@@ -110,6 +110,17 @@ public class StoreChecks {
         String[] pp = za.co.koenekt.app.HistoryMath.against(mtd, "prev_period");
         check(pp[0].equals("2026-10-23") && pp[1].equals("2026-10-31"), "the period before has the same length");
         check(za.co.koenekt.app.HistoryMath.against(mtd, "none") == null, "no comparison");
+        String[] live = za.co.koenekt.app.HistoryMath.period("mtd", today, true);
+        check(live[0].equals("2026-11-01") && live[1].equals("2026-11-10"), "month to date with today runs to today");
+        check(za.co.koenekt.app.HistoryMath.period("mtd", java.time.LocalDate.of(2026, 12, 1), true)[0].equals("2026-12-01"), "on the 1st, today alone");
+        check(za.co.koenekt.app.HistoryMath.period("last_month", today, true)[1].equals("2026-10-31"), "a closed period ignores today");
+        check(za.co.koenekt.app.HistoryMath.range(live, today).equals("1 Nov – today"), "today named");
+        java.util.Map<String, za.co.koenekt.app.HistoryMath.Day> liveDays = new java.util.HashMap<>();
+        liveDays.put("s2", day(1150, 1000, 700, Double.NaN)); liveDays.put("s9", day(230, 200, 150, Double.NaN));
+        za.co.koenekt.app.HistoryMath.History plus = za.co.koenekt.app.HistoryMath.withToday(h, liveDays, today);
+        za.co.koenekt.app.HistoryMath.Agg mtdLive = za.co.koenekt.app.HistoryMath.agg(plus, List.of("s1", "s2", "s9"), live[0], live[1], true);
+        check(mtdLive.turnover == 4025 + 1150 + 230 && mtdLive.stores == 3, "today's live figures add to month to date, even for a store with no past days");
+        check(!h.stores.get("s2").containsKey("2026-11-10"), "the loaded history is not changed");
         check(za.co.koenekt.app.HistoryMath.range(mtd, today).equals("1 Nov – 9 Nov")
                 && za.co.koenekt.app.HistoryMath.nice("2025-11-01", today).equals("1 Nov 2025"), "dates as text");
     }

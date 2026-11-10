@@ -33,7 +33,9 @@ final class DashboardScreen {
     private int dp(float n) { return a.dp(n); }
     private JSONObject layout() { return s.past.layout != null ? s.past.layout : PastData.defaults(); }
 
+    boolean today() { return layout().optBoolean("today", true); }
     boolean wantsLive() {
+        if (today()) return true;
         JSONArray t = layout().optJSONArray("tiles");
         if (t != null) for (int i = 0; i < t.length(); i++) if ("live".equals(t.optJSONObject(i) == null ? "" : t.optJSONObject(i).optString("kind"))) return true;
         return false;
@@ -43,7 +45,7 @@ final class DashboardScreen {
 
     private String[] period(JSONObject tile) {
         String key = tile.optString("period", layout().optString("period", "mtd"));
-        return HistoryMath.period(key, PastData.today());
+        return HistoryMath.period(key, PastData.today(), today());
     }
     private String[] against(JSONObject tile, String[] p) {
         return HistoryMath.against(p, tile.optString("compare", layout().optString("compare", "prev_year")));
@@ -58,7 +60,7 @@ final class DashboardScreen {
     /** The days every tile needs, so one call fetches them all. */
     private String[] needed() {
         String lo = null, hi = null; JSONArray tiles = layout().optJSONArray("tiles");
-        LocalDate y = PastData.today().minusDays(1);
+        LocalDate y = today() ? PastData.today() : PastData.today().minusDays(1);
         if (tiles != null) for (int i = 0; i < tiles.length(); i++) {
             JSONObject t = tiles.optJSONObject(i); if (t == null || !usable(t) || t.optString("kind").equals("live")) continue;
             List<String[]> spans = new ArrayList<>();
@@ -89,6 +91,8 @@ final class DashboardScreen {
         HorizontalChips chips = new HorizontalChips(page);
         chips.add(HistoryMath.label(HistoryMath.PERIODS, L.optString("period", "mtd")), () -> pick("Period", HistoryMath.PERIODS, L.optString("period", "mtd"), v -> set(L, "period", v)));
         chips.add(HistoryMath.label(HistoryMath.COMPARES, L.optString("compare", "prev_year")), () -> pick("Compare with", HistoryMath.COMPARES, L.optString("compare", "prev_year"), v -> set(L, "compare", v)));
+        chips.add(today() ? "Today included (live)" : "Past days only", () -> { put(L, "today", !today()); changed(); s.refreshNow(); });
+        if (today()) { page.addView(Ui.text(a, "Week, month and year to date include today, live from the tills and updated every minute.", 12.5f, Ui.MUTED)); Ui.gap(page, 10); }
         if (!s.past.historyError.isEmpty()) { page.addView(Ui.notice(a, s.past.historyError, true)); Ui.gap(page, 12); }
         if (!note.isEmpty()) { page.addView(Ui.text(a, note, 13.5f, Ui.MUTED)); Ui.gap(page, 8); }
         if (edit || s.past.dirty) layoutButtons(page);
@@ -143,8 +147,9 @@ final class DashboardScreen {
         LocalDate today = PastData.today();
         String[] p = period(t), c = against(t, p);
         List<String> ids = s.past.scopeIds(t.optJSONObject("scope"));
+        HistoryMath.History h = today() ? s.past.withToday() : s.past.history();
         if (kind.equals("kpi")) {
-            Agg now = HistoryMath.agg(s.past.history(), ids, p[0], p[1], s.owner()), before = c == null ? null : HistoryMath.agg(s.past.history(), ids, c[0], c[1], s.owner());
+            Agg now = HistoryMath.agg(h, ids, p[0], p[1], s.owner()), before = c == null ? null : HistoryMath.agg(h, ids, c[0], c[1], s.owner());
             box.addView(Ui.label(a, m.label));
             TextView v = Ui.title(a, now == null ? "—" : HistoryMath.format(now.value(m), m), 22); v.setSingleLine(true); Ui.gap(box, 6); box.addView(v); Ui.gap(box, 6);
             double ch = HistoryMath.change(now, before, m);
@@ -152,18 +157,18 @@ final class DashboardScreen {
             String vs = layout().optString("compare", "prev_year");
             if (!Double.isNaN(ch)) box.addView(changeView(ch, m, " vs " + ("prev_period".equals(t.optString("compare", vs)) ? "the period before" : "last year")));
         } else if (kind.equals("trend")) {
-            int days = Math.max(1, t.optInt("days", 30)); LocalDate y = today.minusDays(1);
+            int days = Math.max(1, t.optInt("days", 30)); LocalDate y = today() ? today : today.minusDays(1);
             String from = y.minusDays(days - 1).toString(), to = y.toString();
             box.addView(Ui.label(a, m.label + " by day · last " + days + " days"));
             box.addView(Ui.text(a, s.past.scopeName(t.optJSONObject("scope")), 12.5f, Ui.MUTED)); Ui.gap(box, 8);
             Chart chart = new Chart(a);
-            chart.days(new double[][]{HistoryMath.series(s.past.history(), ids, from, to, m, s.owner())}, dayLabels(from, days, today), v -> HistoryMath.format(v, m));
+            chart.days(new double[][]{HistoryMath.series(h, ids, from, to, m, s.owner())}, dayLabels(from, days, today), v -> HistoryMath.format(v, m));
             box.addView(chart, new LinearLayout.LayoutParams(-1, dp(170)));
         } else if (kind.equals("ranking")) {
             String by = t.optString("by", "store");
             box.addView(Ui.label(a, m.label + " by " + HistoryMath.label(BYS, by).toLowerCase(java.util.Locale.ROOT)));
             box.addView(Ui.text(a, HistoryMath.range(p, today), 12.5f, Ui.MUTED)); Ui.gap(box, 8);
-            ranking(box, s.past.entities(by), m, p, c, 10);
+            ranking(box, s.past.entities(by), m, p, c, 10, h);
         } else if (kind.equals("table")) {
             String by = t.optString("by", "store");
             box.addView(Ui.label(a, "By " + HistoryMath.label(BYS, by).toLowerCase(java.util.Locale.ROOT)));
@@ -171,7 +176,7 @@ final class DashboardScreen {
             List<Metric> cols = new ArrayList<>();
             for (String k : PastData.strings(t.optJSONArray("metrics"))) if (metricOk(Metric.of(k), s.owner())) cols.add(Metric.of(k));
             for (PastData.Entity e : s.past.entities(by)) {
-                Agg now = HistoryMath.agg(s.past.history(), e.ids, p[0], p[1], s.owner()), before = c == null ? null : HistoryMath.agg(s.past.history(), e.ids, c[0], c[1], s.owner());
+                Agg now = HistoryMath.agg(h, e.ids, p[0], p[1], s.owner()), before = c == null ? null : HistoryMath.agg(h, e.ids, c[0], c[1], s.owner());
                 box.addView(Ui.divider(a, 0));
                 LinearLayout r = Ui.column(a); r.setPadding(0, dp(8), 0, dp(8));
                 r.addView(Ui.title(a, e.name, 15));
@@ -212,12 +217,12 @@ final class DashboardScreen {
         return Ui.text(a, HistoryMath.changeText(ch, m) + tail, 12.5f, v > 0 ? Ui.BRAND : v < 0 ? Ui.DANGER : Ui.MUTED);
     }
     /** Bars, best first (lowest first where lower is better), with the change against the comparison. */
-    void ranking(LinearLayout box, List<PastData.Entity> list, Metric m, String[] p, String[] c, int max) {
+    void ranking(LinearLayout box, List<PastData.Entity> list, Metric m, String[] p, String[] c, int max, HistoryMath.History h) {
         List<Object[]> rows = new ArrayList<>();
         for (PastData.Entity e : list) {
-            Agg now = HistoryMath.agg(s.past.history(), e.ids, p[0], p[1], s.owner());
+            Agg now = HistoryMath.agg(h, e.ids, p[0], p[1], s.owner());
             if (now == null || Double.isNaN(now.value(m))) continue;
-            Agg before = c == null ? null : HistoryMath.agg(s.past.history(), e.ids, c[0], c[1], s.owner());
+            Agg before = c == null ? null : HistoryMath.agg(h, e.ids, c[0], c[1], s.owner());
             rows.add(new Object[]{e.name, now.value(m), HistoryMath.change(now, before, m)});
         }
         rows.sort((x, y) -> (m.lower ? 1 : -1) * Double.compare((double) x[1], (double) y[1]));

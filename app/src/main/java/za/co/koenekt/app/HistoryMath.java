@@ -119,6 +119,28 @@ public final class HistoryMath {
             {"last_month", "Last month"}, {"last_30", "Last 30 days"}, {"ytd", "Year to date"}, {"last_year", "Last year"}};
     public static final String[][] COMPARES = {{"prev_year", "Same days last year"}, {"prev_period", "The period before"}, {"none", "No comparison"}};
 
+    /** Periods that run "to date": with today's live figures they end today instead of yesterday. */
+    public static boolean toDate(String key) { return "wtd".equals(key) || "mtd".equals(key) || "ytd".equals(key); }
+    /** {from, to}; with withToday a to-date period runs to today (its figures from Live). */
+    public static String[] period(String key, LocalDate today, boolean withToday) {
+        if (!withToday || !toDate(key)) return period(key, today);
+        LocalDate a = "wtd".equals(key) ? today.with(DayOfWeek.MONDAY) : "mtd".equals(key) ? today.withDayOfMonth(1) : today.withDayOfYear(1);
+        return new String[]{a.toString(), today.toString()};
+    }
+    /** A copy of the history with today's live figures added for the stores whose day is not there yet. */
+    public static History withToday(History h, Map<String, Day> live, LocalDate today) {
+        History out = new History(); out.from = h.from; out.to = h.to.compareTo(today.toString()) < 0 ? today.toString() : h.to;
+        out.latest.putAll(h.latest);
+        for (Map.Entry<String, TreeMap<String, Day>> e : h.stores.entrySet()) out.stores.put(e.getKey(), e.getValue());
+        for (Map.Entry<String, Day> e : live.entrySet()) {
+            TreeMap<String, Day> days = out.stores.get(e.getKey());
+            if (days != null && days.containsKey(today.toString())) continue;
+            TreeMap<String, Day> copy = days == null ? new TreeMap<>() : new TreeMap<>(days);
+            copy.put(today.toString(), e.getValue()); out.stores.put(e.getKey(), copy);
+        }
+        return out;
+    }
+
     /** {from, to}: past days only; today is on Live. */
     public static String[] period(String key, LocalDate today) {
         LocalDate y = today.minusDays(1), a, b = y;
@@ -148,7 +170,10 @@ public final class HistoryMath {
         LocalDate d = LocalDate.parse(date);
         return d.getDayOfMonth() + " " + MONTHS[d.getMonthValue() - 1] + (d.getYear() != today.getYear() ? " " + d.getYear() : "");
     }
-    public static String range(String[] p, LocalDate today) { return p[0].equals(p[1]) ? nice(p[0], today) : nice(p[0], today) + " – " + nice(p[1], today); }
+    public static String range(String[] p, LocalDate today) {
+        String end = p[1].equals(today.toString()) ? "today" : nice(p[1], today);
+        return p[0].equals(p[1]) ? end : nice(p[0], today) + " – " + end;
+    }
 
     // ---------------------------------------------------------------- text
     public static String format(double v, Metric m) {
@@ -168,7 +193,7 @@ public final class HistoryMath {
     }
 
     /** The dashboard every owner starts with (shared with the website; null from the relay means this one). */
-    public static final String DEFAULT_LAYOUT = "{\"version\":1,\"period\":\"mtd\",\"compare\":\"prev_year\",\"tiles\":["
+    public static final String DEFAULT_LAYOUT = "{\"version\":1,\"period\":\"mtd\",\"compare\":\"prev_year\",\"today\":true,\"tiles\":["
             + "{\"id\":\"k1\",\"kind\":\"kpi\",\"metric\":\"turnover\",\"scope\":{\"type\":\"all\"}},"
             + "{\"id\":\"k2\",\"kind\":\"kpi\",\"metric\":\"gp_pct\",\"scope\":{\"type\":\"all\"}},"
             + "{\"id\":\"k3\",\"kind\":\"kpi\",\"metric\":\"gp_value\",\"scope\":{\"type\":\"all\"}},"
