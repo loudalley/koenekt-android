@@ -64,9 +64,10 @@ amendment and the accounts server update are both INSTALLED on the production Pe
   60-second rounds while scrolled down the page never moved, figures changed in place, the list re-sorted once per
   completed round; a store opened as tapped and stayed open through a round (figures updated); a till page held
   through a round; the Dashboard showed in under 6 s with live asks running (was 10–15 s+).
-- Release files (upload key 3E:3A:09…): `dist/1.10.1/Koenekt-1.10.1.apk`
-  ae5e71ff86f9461987168fb32824dda781b200d12900a739e82842f732c7649b, `dist/1.10.1/Koenekt-1.10.1.aab`
-  f627284b4c434dac575774b3f9fa9eccfd1a92050542e25a912704da151ba3e2; Play notes `changelogs/17.txt` (425 characters,
+- Release files (upload key 3E:3A:09…), built from the clean tree at 4ebaba2, which also holds 320bab4 (Dashboard and
+  Compare include today's live figures, another session's work): `dist/1.10.1/Koenekt-1.10.1.apk`
+  4dd2389397fe9206e1962bb0a28baeaad2ce5495a7ebf445d99391a6635ca71a, `dist/1.10.1/Koenekt-1.10.1.aab`
+  06177a063da076a94506a3c0aa2b9212e55c324eb836305f001e98331823f6f2; Play notes `changelogs/17.txt` (425 characters,
   carries 16's notes plus the fix). Not done: release (Play, F-Droid, website, Drive), test on a real phone with
   the real master account.
 
