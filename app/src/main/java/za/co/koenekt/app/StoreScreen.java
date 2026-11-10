@@ -33,6 +33,7 @@ final class StoreScreen {
     private final String id;
     private int section, itemSort;   // itemSort: 0 sales, 1 quantity, 2 GP
     private int tillNo = -1;          // the till opened from the Tills tab, or -1 for the whole store
+    private JSONObject lastTill;      // that till's last figures, kept for a round in which it was not read
 
     StoreScreen(StoresScreen stores, String storeId) { s = stores; a = stores.a; id = storeId; }
     private int dp(float n) { return a.dp(n); }
@@ -49,7 +50,10 @@ final class StoreScreen {
         JSONObject r = s.answers.get(id);
         if (r == null) { if (st.equals("asking")) page.addView(Ui.loading(a)); return; }
         JSONObject till = tillNo < 0 ? null : tillRow(r, tillNo);
-        if (tillNo >= 0 && till == null) tillNo = -1;   // that till sent no figures of its own this time
+        // A till that was not read this round keeps its page, with its last figures marked as such.
+        if (till != null) lastTill = till;
+        else if (tillNo >= 0 && lastTill != null) till = stale(lastTill);
+        else tillNo = -1;
         if (till != null) { tillPage(page, f, r, till); return; }
 
         LinearLayout row = Ui.row(a); row.setGravity(Gravity.TOP); page.addView(row, Ui.fill(a, -1));
@@ -155,6 +159,9 @@ final class StoreScreen {
         String name = t.optString("name"), title = "Till " + t.optString("no");
         return !name.isEmpty() && !name.equalsIgnoreCase(title) ? title + " · " + name : title;
     }
+    private static JSONObject stale(JSONObject t) {
+        try { return new JSONObject(t.toString()).put("stale", true); } catch (JSONException e) { return t; }
+    }
     private static JSONObject tillRow(JSONObject r, int no) {
         JSONArray rows = r.optJSONArray("tills");
         if (rows != null) for (int i = 0; i < rows.length(); i++) {
@@ -167,7 +174,7 @@ final class StoreScreen {
     /** One till's own page: tiles, who is on it, then Today and Items for that till alone. */
     private void tillPage(LinearLayout page, Figures store, JSONObject r, JSONObject t) {
         a.setBar(tillTitle(t), true, Ui.iconButton(a, R.drawable.ic_refresh, "Refresh", s::refreshNow));
-        a.onBack(() -> { tillNo = -1; section = 2; render(); });
+        a.onBack(() -> { tillNo = -1; lastTill = null; section = 2; render(); });
         JSONObject d = t.optJSONObject("detail");
         Figures f = new Figures(); f.name = store.name + " · " + tillTitle(t); f.asOf = store.asOf;
         f.sales = StoresScreen.num(t, "sales"); f.receipts = StoresScreen.num(t, "receipts");
@@ -282,7 +289,7 @@ final class StoreScreen {
                 TextView open = Ui.text(a, "Open this till  ›", 12.5f, Ui.BRAND); Ui.mono(open, true); c.addView(open);
                 c.setBackground(Ui.pressable(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 2, a), 2, a));
                 c.setClickable(true); c.setFocusable(true); c.setContentDescription(title + ". Open this till");
-                c.setOnClickListener(v -> { tillNo = no; section = 0; render(); });
+                c.setOnClickListener(v -> { tillNo = no; lastTill = null; section = 0; render(); });
             }
         }
     }

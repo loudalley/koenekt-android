@@ -105,7 +105,7 @@ final class ReportsScreen {
             try {
                 if (status.equals("pending") && tries < 200) {
                     timer.postDelayed(() -> { if (results.get(k) == box) ask(k, box, tries + 1); }, Math.max(3, data.optInt("retry_after", 5)) * 1000L);
-                    if (showing()) render();
+                    if (showing()) s.redraw();
                     return;
                 }
                 if (status.equals("ok")) box.put("state", "ok").put("result", data.optJSONObject("result"));
@@ -117,11 +117,11 @@ final class ReportsScreen {
                     box.put("state", "error").put("error", err);
                 }
             } catch (Exception ignored) { }
-            if (showing()) render();
+            if (showing()) s.redraw();
         }, message -> {
             if (results.get(k) != box) return;
             try { box.put("state", "error").put("error", message); } catch (Exception ignored) { }
-            if (showing()) render();
+            if (showing()) s.redraw();
         });
     }
     private boolean showing() { return a.showingStores() && "reports".equals(s.section); }

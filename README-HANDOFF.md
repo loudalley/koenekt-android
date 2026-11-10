@@ -1,5 +1,10 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
+Last updated: **10 November 2026, Claude (Windows PC) — version 1.10.1 (17), built, NOT released: fixes My stores
+jumping on an account with many stores (pages jumped back and forth as live figures came in, the list re-sorted under
+the finger so a tap opened the wrong store, a till page closed when its till skipped a read). Replaces the unreleased
+1.10.0 (16); same release conditions (Reporter 1.9.106 relay on srv1 first).** Details in the 1.10.1 section below.
+
 Last updated: **10 November 2026, Claude (Windows PC) — version 1.10.0 (16), built, NOT released: My stores in
 sections as on the website (Dashboard, Live, Compare, Reports, Groups). Needs the Reporter 1.9.106 Link relay on srv1
 (William installs the bundle) and Reporter 1.9.106 on the shop PCs; until then Dashboard/Compare say no past days
@@ -34,6 +39,36 @@ self-hosted F-Droid repo and copied to Google Drive at the user's request; not y
 a phone. Its People server update is installed.** People server
 amendment and the accounts server update are both INSTALLED on the production People console.
 
+
+## 1.10.1 (17) — 10 November 2026, Claude (built, not released)
+
+- William: "on the master account ... the pages jump back and forth as the monetary updates roll in, so itll throw me
+  out of stores and enter stores randomly. this is a major issue". Causes found (all in 1.9.0 and 1.10.0):
+  every store's live answer rebuilt the whole page (dozens a minute with many stores); each rebuild made a new
+  ScrollView drawn at the top before the position came back a frame later (the jump); the store list re-ranked on
+  every answer, so the row under the finger changed between looking and tapping (the wrong store opened); Reports
+  re-rendered every poll (back to the top); a till page closed whenever its till was not read in a round; Refresh
+  went back to the top; and the 4-connection pool was filled by live asks (each held up to 20 s on the relay), so
+  the dashboard, reports and opening a store waited behind them (the first Dashboard sat on a spinner for 15 s+).
+- Fix: `StoresScreen.redraw()` coalesces (400 ms) and waits until the screen has been left alone 1.5 s
+  (`MainActivity.untilQuiet()`: finger down, touches and scroll/fling tracked in `dispatchTouchEvent` and the page's
+  scroll listener); it also drops redraws while another tab shows. `MainActivity.redraw()` rebuilds the content
+  inside the SAME ScrollView (`page()` reuses it), so the position never moves. The Live list keeps a steady order
+  (`steady()`/`rankAgain()`): ranked when the section opens, the sort or scope changes, Back, Refresh, or a round of
+  answers is complete; a tap within 700 ms of the rows moving is ignored. Report polls go through the same redraw.
+  A till page keeps the till's last figures (marked "last figures") when it is not read. Refresh keeps the place.
+  Live asks (`…/live`) run on their own 6-connection pool (`liveWorker`).
+- Checks: PolicyChecks 123, StoreChecks 51; `assembleRelease bundleRelease lintDebug`, lint "No issues found".
+  Emulator (`koenekt-test`, debug build) against the REAL relay code with 24 made-up stores answering at random
+  times with changing figures (scratchpad `stores_many_relay.py`, a variant of the demo relay): over three
+  60-second rounds while scrolled down the page never moved, figures changed in place, the list re-sorted once per
+  completed round; a store opened as tapped and stayed open through a round (figures updated); a till page held
+  through a round; the Dashboard showed in under 6 s with live asks running (was 10–15 s+).
+- Release files (upload key 3E:3A:09…): `dist/1.10.1/Koenekt-1.10.1.apk`
+  ae5e71ff86f9461987168fb32824dda781b200d12900a739e82842f732c7649b, `dist/1.10.1/Koenekt-1.10.1.aab`
+  f627284b4c434dac575774b3f9fa9eccfd1a92050542e25a912704da151ba3e2; Play notes `changelogs/17.txt` (425 characters,
+  carries 16's notes plus the fix). Not done: release (Play, F-Droid, website, Drive), test on a real phone with
+  the real master account.
 
 ## 1.10.0 (16) — 10 November 2026, Claude (built, not released)
 

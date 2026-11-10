@@ -83,6 +83,11 @@ public final class MainActivity extends Activity {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     /** My stores asks several shop PCs at once, and each answer may take up to 20 s. */
     private final ExecutorService linkWorker = Executors.newFixedThreadPool(4);
+    /**
+     * Live till asks wait up to 20 s each on the relay while a shop PC reads its tills. They get their own
+     * connections, so with many stores they never queue the dashboard, a report or opening a store behind them.
+     */
+    private final ExecutorService liveWorker = Executors.newFixedThreadPool(6);
     /** My stores (Koenekt Link relay) session: a bearer token, never a password. */
     private String linkToken = "", linkUser = "", linkRole = "";
     private StoresScreen storesScreen;
@@ -280,15 +285,44 @@ public final class MainActivity extends Activity {
     }
     /** Scrolling page with comfortable side margins. */
     LinearLayout page() {
+        if (redrawing != null) {   // a redraw fills the same scrolling page again, so its position never moves
+            ScrollView same = redrawing; redrawing = null;
+            LinearLayout l = (LinearLayout) same.getChildAt(0); l.removeAllViews(); l.setPadding(dp(20), dp(8), dp(20), dp(28));
+            return l;
+        }
         ScrollView scroll = new ScrollView(this); scroll.setFillViewport(true);
+        // A fling keeps scrolling after the finger lifts: that counts as the user using the page too.
+        scroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> lastTouch = android.os.SystemClock.uptimeMillis());
         LinearLayout l = Ui.column(this); l.setPadding(dp(20), dp(8), dp(20), dp(28)); scroll.addView(l); mount(scroll); return l;
     }
 
-    /** Redraws the current page (new figures arrived) without jumping back to the top. */
+    /**
+     * Redraws the current page (new figures arrived) where the user is. The page's content is rebuilt inside the
+     * same ScrollView, so the scroll position is never lost and the page never flashes at the top. If the render
+     * shows something else (not a page), that replaces it as usual.
+     */
     void redraw(Runnable render) {
-        int y = content.getChildCount() > 0 && content.getChildAt(0) instanceof ScrollView s ? s.getScrollY() : 0;
-        render.run();
-        if (y > 0 && content.getChildCount() > 0 && content.getChildAt(0) instanceof ScrollView s) s.post(() -> s.scrollTo(0, y));
+        View old = content.getChildCount() > 0 ? content.getChildAt(0) : null;
+        redrawing = old instanceof ScrollView s && s.getChildCount() == 1 && s.getChildAt(0) instanceof LinearLayout ? s : null;
+        try { render.run(); } finally { redrawing = null; }
+    }
+    private ScrollView redrawing;
+
+    /** When the user last touched or scrolled the screen, and whether a finger is on it now. */
+    private long lastTouch;
+    private boolean touching;
+    static final long QUIET_MS = 1500;
+    @Override public boolean dispatchTouchEvent(android.view.MotionEvent e) {
+        int action = e.getActionMasked();
+        if (action == android.view.MotionEvent.ACTION_DOWN) touching = true;
+        else if (action == android.view.MotionEvent.ACTION_UP || action == android.view.MotionEvent.ACTION_CANCEL) touching = false;
+        lastTouch = android.os.SystemClock.uptimeMillis();
+        return super.dispatchTouchEvent(e);
+    }
+    /** Milliseconds until the screen has been left alone for QUIET_MS; 0 when new figures may redraw it now. */
+    long untilQuiet() {
+        if (touching) return QUIET_MS;
+        return Math.max(0, lastTouch + QUIET_MS - android.os.SystemClock.uptimeMillis());
     }
 
     boolean can(String cap) { return caps.contains(cap); }
@@ -1038,7 +1072,7 @@ public final class MainActivity extends Activity {
     void linkRequest(String method, String path, JSONObject body, Done ok, Consumer<String> failed) {
         int attempt = epoch; String token = linkToken, url = AppPolicy.link() + path;
         if (token.isEmpty()) return;
-        linkWorker.execute(() -> {
+        (path.endsWith("/live") ? liveWorker : linkWorker).execute(() -> {
             try {
                 JSONObject data = linkApi(url, method, body, token);
                 runOnUiThread(() -> { if (attempt == epoch && token.equals(linkToken) && !isDestroyed()) ok.accept(data); });
@@ -1554,7 +1588,7 @@ public final class MainActivity extends Activity {
         if (authentication != null) authentication.cancel();
         if (confirmation != null) confirmation.cancel();
         afterConfirm = null;
-        epoch++; worker.shutdownNow(); linkWorker.shutdownNow(); cancelExport();
+        epoch++; worker.shutdownNow(); linkWorker.shutdownNow(); liveWorker.shutdownNow(); cancelExport();
         if (uploadCallback != null) uploadCallback.onReceiveValue(null);
         if (web != null) { if (web.getParent() instanceof ViewGroup parent) parent.removeView(web); web.destroy(); }
         super.onDestroy();

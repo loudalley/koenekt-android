@@ -57,6 +57,20 @@ final class StoresScreen {
     private final PeriodScreen period;
     private final ReportsScreen reports;
     private final GroupsScreen groupsScreen;
+    /**
+     * New figures arrive one store at a time (dozens a minute on an account with many stores). They redraw the
+     * page once, after a short pause, and never while the user is touching or scrolling it.
+     */
+    private static final long SETTLE_MS = 400;
+    private final Runnable redrawTask = this::redrawWhenQuiet;
+    private boolean redrawPending;
+    /** Store ids in the order the list last showed them: rows keep their place while answers come in. */
+    private final List<String> order = new ArrayList<>();
+    private boolean reorder = true;
+    /** When the rows last moved; a tap just after that is ignored, so it cannot open the store that slid under it. */
+    private long movedAt;
+    /** Live answers still due in this round; the list is ranked again when they are all in. */
+    private int due;
 
     StoresScreen(MainActivity activity) {
         a = activity; dash = new Dash(activity);
@@ -111,14 +125,28 @@ final class StoresScreen {
         start();
     }
     /** Live answers are asked only for the sections that show them. */
-    private boolean wantsLive() { return section.equals("live") || storeScreen != null || compareScreen != null || (section.equals("dash") && dashboard.wantsLive()); }
-    /** Redraws whatever is on screen (a section's data arrived). */
-    void redraw() { a.redraw(view); }
-    private void start() {
-        int me = ++run; timer.removeCallbacksAndMessages(null);
-        view.run(); refresh(me);
+    private boolean wantsLive() { return section.equals("live") || storeScreen != null || compareScreen != null || (section.equals("dash") && dashboard.wantsLive())
+            || (section.equals("compare") && period.withToday); }
+    /** A section's data arrived: redraw whatever is on screen once the user leaves it alone for a moment. */
+    void redraw() {
+        if (redrawPending) return;
+        redrawPending = true; timer.postDelayed(redrawTask, SETTLE_MS);
     }
-    void refreshNow() { start(); }
+    private void redrawWhenQuiet() {
+        if (!a.showingStores()) { redrawPending = false; return; }   // another tab is showing: it is drawn on return
+        long wait = a.untilQuiet();
+        if (wait > 0) { timer.postDelayed(redrawTask, wait); return; }
+        redrawPending = false; a.redraw(view);
+    }
+    private void start() { start(false); }
+    /** Asks again; a refresh of the page on screen keeps its scroll position. */
+    private void start(boolean keepPlace) {
+        int me = ++run; timer.removeCallbacksAndMessages(null);
+        redrawPending = false; reorder = true; due = 0;
+        if (keepPlace) a.redraw(view); else view.run();
+        refresh(me);
+    }
+    void refreshNow() { start(true); }
     private boolean live(int me) { return me == run && a.showingStores(); }
 
     private void refresh(int me) {
@@ -127,9 +155,9 @@ final class StoresScreen {
             listLoaded = true; listError = ""; stores.clear();
             JSONArray rows = data.optJSONArray("stores");
             if (rows != null) for (int i = 0; i < rows.length(); i++) if (rows.optJSONObject(i) != null) stores.add(rows.optJSONObject(i));
-            if (wantsLive()) for (JSONObject s : stores) if (dash.shows(s.optString("store"))) ask(me, s.optString("store"), 0);
-            a.redraw(view);
-        }, message -> { if (live(me)) { listError = message; a.redraw(view); } });
+            if (wantsLive()) for (JSONObject s : stores) if (dash.shows(s.optString("store"))) { due++; ask(me, s.optString("store"), 0); }
+            redraw();
+        }, message -> { if (live(me)) { listError = message; redraw(); } });
         timer.postDelayed(() -> { if (live(me)) refresh(me); }, REFRESH_MS);
     }
 
@@ -150,8 +178,38 @@ final class StoresScreen {
             else if (status.equals("unknown")) state.put(id, "gone");
             else if (status.equals("pending")) state.put(id, "error: The shop PC did not answer in time. It tries again in a minute.");
             else state.put(id, "error: " + data.optString("error", "The shop PC could not read its tills."));
-            a.redraw(view);
-        }, message -> { if (live(me)) { state.put(id, "error: " + message); a.redraw(view); } });
+            answered();
+        }, message -> { if (live(me)) { state.put(id, "error: " + message); answered(); } });
+    }
+    /** One store of this round has its answer (or gave up); once all have, the list may be ranked again. */
+    private void answered() {
+        if (due > 0 && --due == 0) reorder = true;
+        redraw();
+    }
+
+    /**
+     * The list in a steady order: ranked when the page opens, the sort changes or a round of answers is complete,
+     * and otherwise each store keeps its row while its figures change.
+     */
+    private List<Figures> steady(List<Figures> list) {
+        List<Figures> ranked = StoreMath.rank(list, dash.sort);
+        List<Figures> out = new ArrayList<>();
+        for (String id : order) for (Figures f : ranked) if (f.id.equals(id)) { out.add(f); break; }
+        for (Figures f : ranked) if (!out.contains(f)) out.add(f);   // a store new to the list goes after the others
+        return out;
+    }
+    private void rankAgain() {
+        if (!reorder) return;
+        reorder = false;
+        List<String> next = new ArrayList<>();
+        for (Figures f : StoreMath.rank(all(), dash.sort)) next.add(f.id);
+        if (!order.isEmpty() && !next.equals(order)) movedAt = android.os.SystemClock.uptimeMillis();
+        order.clear(); order.addAll(next);
+    }
+    /** A tap on a store row, unless the rows moved a moment ago. */
+    private void tapStore(String id) {
+        if (android.os.SystemClock.uptimeMillis() - movedAt < 700) return;
+        openStore(id);
     }
 
     JSONObject store(String id) {
@@ -245,10 +303,11 @@ final class StoresScreen {
         addChip(chips, "Sort: " + dash.sort.label, () -> {
             List<Metric> ms = metrics(); String[] names = new String[ms.size()];
             for (int i = 0; i < names.length; i++) names[i] = ms.get(i).label;
-            Ui.choose(a, "Sort stores by", names, Math.max(0, ms.indexOf(dash.sort)), w -> { dash.sort = ms.get(w); dash.save(); render(); });
+            Ui.choose(a, "Sort stores by", names, Math.max(0, ms.indexOf(dash.sort)), w -> { dash.sort = ms.get(w); dash.save(); reorder = true; render(); });
         });
         if (!listError.isEmpty()) { page.addView(Ui.notice(a, listError, true)); Ui.gap(page, 12); }
 
+        rankAgain();
         List<Figures> shown = shown();
         Figures total = StoreMath.total("All", shown);
         LinearLayout grid = Ui.column(a); page.addView(grid);
@@ -280,9 +339,9 @@ final class StoresScreen {
                         + StoreMath.money(t.sales) + share
                         + (owner() && !Double.isNaN(StoreMath.gpPct(t)) ? " · GP " + StoreMath.format(t, Metric.GP_PCT) : ""), 13.5f, Ui.MUTED));
                 Ui.gap(page, 8);
-                page.addView(storeCard(StoreMath.rank(g.getValue(), dash.sort))); Ui.gap(page, 18);
+                page.addView(storeCard(steady(g.getValue()))); Ui.gap(page, 18);
             }
-        } else page.addView(storeCard(StoreMath.rank(shown, dash.sort)));
+        } else page.addView(storeCard(steady(shown)));
         if (dash.types().isEmpty() && shown.size() > 1) {
             Ui.gap(page, 4);
             page.addView(Ui.text(a, "Tip: give each store a type (Customise → Store types) to group them and compare type against type.", 13, Ui.MUTED));
@@ -310,7 +369,7 @@ final class StoresScreen {
             if (i > 0) card.addView(Ui.divider(a, 16));
             boolean ok = "ok".equals(state.get(f.id));
             String value = dash.sort == Metric.SALES || !f.answered ? StoreMath.money(f.sales) : StoreMath.format(f, dash.sort);
-            card.addView(Ui.listRow(a, Ui.dot(a, ok ? Ui.LIME : Ui.OUT), f.name, line(f), value, () -> openStore(f.id)));
+            card.addView(Ui.listRow(a, Ui.dot(a, ok ? Ui.LIME : Ui.OUT), f.name, line(f), value, () -> tapStore(f.id)));
         }
         return card;
     }
@@ -348,7 +407,7 @@ final class StoresScreen {
         keys.add(""); names.add("All stores");
         for (String t : dash.types()) { keys.add("type:" + t); names.add(t + " (type)"); }
         for (JSONObject s : stores) if (dash.shows(s.optString("store"))) { keys.add("store:" + s.optString("store")); names.add(s.optString("name")); }
-        Ui.choose(a, "Show", names.toArray(new String[0]), Math.max(0, keys.indexOf(dash.scope)), w -> { dash.scope = keys.get(w); dash.save(); render(); });
+        Ui.choose(a, "Show", names.toArray(new String[0]), Math.max(0, keys.indexOf(dash.scope)), w -> { dash.scope = keys.get(w); dash.save(); reorder = true; render(); });
     }
 
     // ------------------------------------------------------------------ customise
@@ -416,7 +475,7 @@ final class StoresScreen {
     void openCompare(Metric metric) {
         compareScreen = new CompareScreen(this, metric); storeScreen = null; view = compareScreen::render; view.run();
     }
-    void back() { storeScreen = null; compareScreen = null; view = sectionView(); view.run(); }
+    void back() { storeScreen = null; compareScreen = null; view = sectionView(); reorder = true; view.run(); }
 
     // ------------------------------------------------------------------ settings on this phone
     /** The dashboard's layout, per store login, kept on this phone only (no figures). */
