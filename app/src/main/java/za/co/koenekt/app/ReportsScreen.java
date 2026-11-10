@@ -21,6 +21,10 @@ import java.util.Map;
  * Reporter 1.9.106+ through the relay (POST /api/stores/{id}/{report}); the same reports as the PC and the website.
  * The relay answers "pending" while the PC works (a big shop can take minutes); the phone asks again every few
  * seconds while this section is open. Answers stay in memory only.
+ *
+ * Suppliers (Reporter 1.9.107+): Range, Ordering and ROSI can run for one supplier or several (none ticked = every
+ * supplier). The list comes from the shop's last range or order answer and is remembered per store; Ordering then
+ * splits its lines per supplier, so one supplier's order (a milk run) can be read on its own.
  */
 final class ReportsScreen {
     private static final String[][] KINDS = {{"range", "Range report"}, {"order", "Ordering"}, {"rosi", "ROSI"}, {"turnover", "Turnover & tenders"}};
@@ -31,12 +35,63 @@ final class ReportsScreen {
     private final Handler timer = new Handler(Looper.getMainLooper());
     private String store = "", kind = "range", from = "", to = "", by = "group", cover = "";
     private boolean month, all;
+    private String sup1 = "";                                              // order answer: show one supplier's lines
     /** Report key -> {"state": asking|ok|error, "result"|"error", "started"}. */
     private final Map<String, JSONObject> results = new HashMap<>();
+    /** Store -> ticked supplier names (empty: every supplier). */
+    private final Map<String, java.util.List<String>> sups = new HashMap<>();
 
     ReportsScreen(StoresScreen stores) { s = stores; a = stores.a; }
     private int dp(float n) { return a.dp(n); }
-    private String key() { return String.join("|", store, kind, from, to, kind.equals("order") ? cover : "", kind.equals("rosi") ? by + month : ""); }
+    private String key() { return String.join("|", store, kind, from, to, kind.equals("order") ? cover : "", kind.equals("rosi") ? by + month : "", String.join("~", supsOn())); }
+
+    // ---------------------------------------------------------------- suppliers
+    private java.util.List<String> supsOn() {
+        if (kind.equals("turnover")) return new java.util.ArrayList<>();
+        java.util.List<String> on = new java.util.ArrayList<>(sups.getOrDefault(store, new java.util.ArrayList<>()));
+        java.util.Collections.sort(on); return on;
+    }
+    static String supLabel(java.util.List<String> on) {
+        return on == null || on.isEmpty() ? "All suppliers" : on.size() == 1 ? on.get(0) : on.size() + " suppliers";
+    }
+    private android.content.SharedPreferences prefs() { return a.getPreferences(android.content.Context.MODE_PRIVATE); }
+    /** The shop's suppliers as [name, items], from its last range or order answer on this phone. */
+    private java.util.List<String[]> supList() {
+        java.util.List<String[]> out = new java.util.ArrayList<>();
+        try {
+            JSONArray l = new JSONArray(prefs().getString("suppliers." + store, "[]"));
+            for (int i = 0; i < l.length(); i++) { JSONObject o = l.optJSONObject(i); if (o != null) out.add(new String[]{o.optString("name"), o.optString("items")}); }
+        } catch (Exception ignored) { }
+        return out;
+    }
+    private void keepSupList(String id, JSONObject r) {
+        JSONArray l = r == null ? null : r.optJSONArray("supplier_list");
+        if (l == null || l.length() == 0) return;
+        JSONArray keep = new JSONArray();
+        try { for (int i = 0; i < l.length(); i++) { JSONObject o = l.optJSONObject(i); if (o != null) keep.put(new JSONObject().put("name", o.optString("name")).put("items", o.optInt("items"))); } }
+        catch (Exception ignored) { }
+        prefs().edit().putString("suppliers." + id, keep.toString()).apply();
+    }
+    private void pickSuppliers() {
+        java.util.List<String[]> list = supList();
+        java.util.List<String> on = sups.getOrDefault(store, new java.util.ArrayList<>());
+        for (String n : on) { boolean known = false; for (String[] x : list) if (x[0].equals(n)) known = true; if (!known) list.add(0, new String[]{n, ""}); }
+        if (list.isEmpty()) {
+            Ui.dialog(a).setTitle("Suppliers").setMessage("This shop's suppliers show here after its first range or order report. Run one for all suppliers first.")
+                    .setPositiveButton("OK", null).show();
+            return;
+        }
+        String[] names = new String[list.size()]; boolean[] ticked = new boolean[list.size()];
+        for (int i = 0; i < names.length; i++) { names[i] = list.get(i)[0] + (list.get(i)[1].isEmpty() ? "" : "  (" + list.get(i)[1] + ")"); ticked[i] = on.contains(list.get(i)[0]); }
+        Ui.dialog(a).setTitle("Suppliers: tick one or several")
+                .setMultiChoiceItems(names, ticked, (d, w, c) -> ticked[w] = c)
+                .setPositiveButton("Use", (d, w) -> {
+                    java.util.List<String> pick = new java.util.ArrayList<>();
+                    for (int i = 0; i < ticked.length; i++) if (ticked[i]) pick.add(list.get(i)[0]);
+                    sups.put(store, pick); render(); })
+                .setNeutralButton("All suppliers", (d, w) -> { sups.put(store, new java.util.ArrayList<>()); render(); })
+                .setNegativeButton("Cancel", null).show();
+    }
 
     void render() {
         a.setBar("Reports", false);
@@ -61,8 +116,10 @@ final class ReportsScreen {
         LocalDate today = PastData.today();
         chips.add(HistoryMath.range(new String[]{from, to}, today), this::pickDates);
         if (kind.equals("order")) chips.add(cover.isEmpty() ? "Cover: the shop's" : "Cover: " + cover + " days", this::pickCover);
+        if (!kind.equals("turnover")) chips.add("Suppliers: " + supLabel(supsOn()), this::pickSuppliers);
         if (kind.equals("rosi")) {
-            chips.add(by.equals("dept") ? "By department" : "By group", () -> pick("By", new String[][]{{"group", "Group"}, {"dept", "Department"}}, by, v -> { by = v; render(); }));
+            chips.add(by.equals("dept") ? "By department" : by.equals("supplier") ? "By supplier" : "By group",
+                    () -> pick("By", new String[][]{{"group", "Group"}, {"dept", "Department"}, {"supplier", "Supplier"}}, by, v -> { by = v; render(); }));
             chips.add(month ? "Month sheet (× 12)" : "Annualised by days", () -> { month = !month; render(); });
         }
         page.addView(Ui.primary(a, "Run " + (kind.equals("rosi") ? "ROSI" : HistoryMath.label(KINDS, kind).toLowerCase(java.util.Locale.ROOT)), this::run), Ui.fill(a, -1));
@@ -88,6 +145,7 @@ final class ReportsScreen {
         JSONObject box = new JSONObject();
         try { box.put("state", "asking").put("started", System.currentTimeMillis()); } catch (Exception ignored) { }
         results.put(k, box);
+        sup1 = "";
         ask(k, box, 0);
         render();
     }
@@ -97,11 +155,14 @@ final class ReportsScreen {
             p.put("from", from).put("to", to);
             if (kind.equals("order") && !cover.isEmpty()) p.put("cover_days", Integer.parseInt(cover));
             if (kind.equals("rosi")) { p.put("by", by); if (month) p.put("month_mode", true); }
+            java.util.List<String> on = supsOn();
+            if (!on.isEmpty()) p.put("suppliers", new JSONArray(on));
         } catch (Exception ignored) { }
         return p;
     }
     private void ask(String k, JSONObject box, int tries) {
         String id = store, what = kind;
+        boolean picked = !supsOn().isEmpty();
         JSONObject body = new JSONObject();
         try { body.put("params", params()); } catch (Exception ignored) { }
         a.linkRequest("POST", "/api/stores/" + id + "/" + what, body, data -> {
@@ -113,12 +174,16 @@ final class ReportsScreen {
                     if (showing()) s.redraw();
                     return;
                 }
-                if (status.equals("ok")) box.put("state", "ok").put("result", data.optJSONObject("result"));
+                JSONObject res = data.optJSONObject("result");
+                if (status.equals("ok") && picked && res != null && !res.has("include_suppliers"))   // Reporter before 1.9.107 ignores suppliers
+                    box.put("state", "error").put("error", "This store's Koenekt Reporter cannot pick suppliers yet (that comes with 1.9.107), so it ran the report for the whole shop. Choose All suppliers to see that, or wait for the update.");
+                else if (status.equals("ok")) { box.put("state", "ok").put("result", data.optJSONObject("result")); keepSupList(id, data.optJSONObject("result")); }
                 else if (status.equals("offline")) box.put("state", "error").put("error", "The shop PC is offline. Reports run on the shop PC, so it must be on with Koenekt Reporter running.");
                 else {
                     String err = data.optString("error", "The shop PC could not run this report.");
                     if (status.equals("pending")) err = "The shop PC has not finished. Try again in a few minutes.";
                     else if (err.contains("cannot answer")) err = "This store's Koenekt Reporter is older than 1.9.106, which brings reports to the app. It updates itself overnight.";
+                    else if (picked && err.contains("suppliers")) err = "This store's Koenekt Reporter cannot pick suppliers yet (that comes with 1.9.107). Choose All suppliers to run it for the whole shop.";
                     box.put("state", "error").put("error", err);
                 }
             } catch (Exception ignored) { }
@@ -135,6 +200,7 @@ final class ReportsScreen {
     private void show(LinearLayout page, JSONObject r) {
         LocalDate today = PastData.today();
         page.addView(Ui.text(a, r.optString("name") + " · " + HistoryMath.range(new String[]{r.optString("date_from").substring(0, 10), r.optString("date_to").substring(0, 10)}, today)
+                + (r.optJSONArray("include_suppliers") != null ? " · " + supLabel(names(r.optJSONArray("include_suppliers"))) : "")
                 + (r.optString("made_at").length() >= 16 ? " · run on the shop PC at " + r.optString("made_at").substring(11, 16) : ""), 13, Ui.MUTED));
         Ui.gap(page, 10);
         switch (r.optString("report", kind)) {
@@ -144,6 +210,12 @@ final class ReportsScreen {
             default: turnover(page, r);
         }
     }
+    private static java.util.List<String> names(JSONArray l) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (int i = 0; l != null && i < l.length(); i++) out.add(l.optString(i));
+        return out;
+    }
+    private static String sup(JSONObject d) { String v = d.optString("supplier"); return v.isEmpty() ? "(no supplier)" : v; }
     private static double n(JSONObject o, String k) { return StoresScreen.num(o, k); }
     private static String money(JSONObject o, String k) { return StoreMath.money(n(o, k)); }
     private static String pct(double v) { return Double.isNaN(v) ? "—" : String.format(java.util.Locale.ROOT, "%.1f%%", v); }
@@ -161,7 +233,8 @@ final class ReportsScreen {
         LinearLayout card = Ui.card(a); card.addView(Ui.label(a, title)); Ui.gap(card, 6);
         page.addView(card, Ui.fill(a, -1)); Ui.gap(page, 12); return card;
     }
-    private void line(LinearLayout card, String title, String sub, String value) {
+    private void line(LinearLayout card, String title, String sub, String value) { line(card, title, sub, value, null); }
+    private void line(LinearLayout card, String title, String sub, String value, Runnable tap) {
         card.addView(Ui.divider(a, 0));
         LinearLayout r = Ui.row(a); r.setPadding(0, dp(8), 0, dp(8)); r.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout words = Ui.column(a);
@@ -169,6 +242,7 @@ final class ReportsScreen {
         if (sub != null && !sub.isEmpty()) words.addView(Ui.text(a, sub, 12.5f, Ui.MUTED));
         r.addView(words, new LinearLayout.LayoutParams(0, -2, 1));
         TextView v = Ui.text(a, value, 14, Ui.INK); v.setTypeface(Ui.MONO); v.setPadding(dp(8), 0, 0, 0); r.addView(v);
+        if (tap != null) { r.setClickable(true); r.setFocusable(true); r.setOnClickListener(x -> tap.run()); t.setTextColor(Ui.BRAND); }
         card.addView(r);
     }
     private void more(LinearLayout card, int total) {
@@ -192,7 +266,7 @@ final class ReportsScreen {
                 line(c, HistoryMath.nice(d.optString("date").substring(0, 10), PastData.today()) + " " + d.optString("weekday"),
                         "GP " + money(d, "gp_value") + " · " + pct(n(d, "gp_pct")) + (d.optString("holiday").isEmpty() ? "" : " · " + d.optString("holiday")), money(d, "turnover")); }
         }
-        for (String[] part : new String[][]{{"departments", "Departments"}, {"groups", "Groups"}}) {
+        for (String[] part : new String[][]{{"departments", "Departments"}, {"groups", "Groups"}, {"suppliers", "Suppliers"}}) {
             JSONArray list = r.optJSONArray(part[0]); if (list == null || list.length() == 0) continue;
             LinearLayout c = section(page, part[1]);
             for (int i = 0; i < list.length(); i++) { JSONObject d = list.optJSONObject(i);
@@ -209,7 +283,8 @@ final class ReportsScreen {
             LinearLayout c = section(page, "Items, best sellers first");
             int show = all ? items.length() : Math.min(SHOW, items.length());
             for (int i = 0; i < show; i++) { JSONObject d = items.optJSONObject(i);
-                line(c, d.optString("name"), d.optString("itemno") + " · " + StoreMath.qty(n(d, "qty")) + " sold · GP " + money(d, "gp_value") + " · " + pct(n(d, "gp_pct")), money(d, "incl")); }
+                line(c, d.optString("name"), d.optString("itemno") + " · " + StoreMath.qty(n(d, "qty")) + " sold · GP " + money(d, "gp_value") + " · " + pct(n(d, "gp_pct"))
+                        + (d.optString("supplier").isEmpty() ? "" : " · " + d.optString("supplier")), money(d, "incl")); }
             more(c, items.length());
             if (r.optInt("items_total") > items.length())
                 c.addView(Ui.text(a, "The " + items.length() + " best sellers of " + r.optInt("items_total") + " lines are here; the full list is in the Range report on the shop PC.", 12.5f, Ui.MUTED));
@@ -220,14 +295,28 @@ final class ReportsScreen {
         tiles(page, new String[][]{{"Lines to order", StoreMath.count(n(r, "lines"))}, {"Order value", money(r, "order_value")},
                 {"Sold out while selling", StoreMath.count(n(r, "stockouts"))}, {"Cover", r.optInt("cover_days") + " days"}});
         if (r.optBoolean("ignore_soh")) { page.addView(Ui.notice(a, "Stock on hand is ignored: every line is ordered for full cover.", false)); Ui.gap(page, 12); }
-        JSONArray rows = r.optJSONArray("rows");
+        JSONArray bys = r.optJSONArray("by_supplier");
+        if (bys != null && bys.length() > 1) {
+            LinearLayout c = section(page, "By supplier");
+            c.addView(Ui.text(a, "Tap a supplier to see only its order, for example one milk run.", 13, Ui.MUTED));
+            for (int i = 0; i < bys.length(); i++) { JSONObject d = bys.optJSONObject(i); String nm = d.optString("name");
+                line(c, (nm.equals(sup1) ? "✓ " : "") + nm, StoreMath.count(n(d, "lines")) + " lines" + (n(d, "stockouts") > 0 ? " · " + StoreMath.count(n(d, "stockouts")) + " sold out" : ""),
+                        money(d, "order_value"), () -> { sup1 = nm.equals(sup1) ? "" : nm; all = false; render(); }); }
+        }
+        JSONArray rows0 = r.optJSONArray("rows"), rows = null;
+        if (rows0 != null) {
+            rows = new JSONArray(); double val = 0;
+            for (int i = 0; i < rows0.length(); i++) { JSONObject d = rows0.optJSONObject(i);
+                if (d != null && (sup1.isEmpty() || sup(d).equals(sup1))) { rows.put(d); val += Double.isNaN(n(d, "order_value")) ? 0 : n(d, "order_value"); } }
+            if (!sup1.isEmpty()) { page.addView(Ui.notice(a, sup1 + ": " + rows.length() + " lines, " + StoreMath.money(val) + ". Tap it again under By supplier to see every supplier.", false)); Ui.gap(page, 12); }
+        }
         if (rows != null) {
-            LinearLayout c = section(page, "Suggested order, most urgent first");
+            LinearLayout c = section(page, (sup1.isEmpty() ? "Suggested order" : sup1) + ", most urgent first");
             int show = all ? rows.length() : Math.min(SHOW, rows.length());
             for (int i = 0; i < show; i++) { JSONObject d = rows.optJSONObject(i);
                 double cov = n(d, "cover");
                 line(c, d.optString("name") + (d.optBoolean("stockout") ? " · sold out" : ""),
-                        d.optString("dept") + " · on hand " + StoreMath.qty(n(d, "soh")) + " · " + (Double.isNaN(n(d, "rate")) ? "—" : String.format(java.util.Locale.ROOT, "%.2f", n(d, "rate"))) + " a day"
+                        (sup1.isEmpty() && !d.optString("supplier").isEmpty() ? d.optString("supplier") + " · " : "") + d.optString("dept") + " · on hand " + StoreMath.qty(n(d, "soh")) + " · " + (Double.isNaN(n(d, "rate")) ? "—" : String.format(java.util.Locale.ROOT, "%.2f", n(d, "rate"))) + " a day"
                                 + (Double.isNaN(cov) ? "" : " · " + Math.round(cov) + " days left") + " · " + money(d, "order_value"),
                         StoreMath.qty(n(d, "suggest")));
             }
@@ -251,7 +340,7 @@ final class ReportsScreen {
         page.addView(Ui.text(a, "ROSI = stock turns × GP %. It rewards stock that earns a margin and also moves.", 13, Ui.MUTED)); Ui.gap(page, 12);
         JSONArray rows = r.optJSONArray("rows");
         if (rows == null) return;
-        LinearLayout c = section(page, ("dept".equals(r.optString("by")) ? "By department" : "By group") + ", best first");
+        LinearLayout c = section(page, ("dept".equals(r.optString("by")) ? "By department" : "supplier".equals(r.optString("by")) ? "By supplier" : "By group") + ", best first");
         for (int i = 0; i < rows.length(); i++) { JSONObject d = rows.optJSONObject(i);
             line(c, d.optString("name"), "Stock " + money(d, "stock") + " · GP " + pct(n(d, "gp_pct")) + " · "
                     + (Double.isNaN(n(d, "turns")) ? "—" : String.format(java.util.Locale.ROOT, "%.1f", n(d, "turns"))) + " turns",

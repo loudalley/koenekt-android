@@ -1,5 +1,16 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
+Last updated: **10 November 2026, Claude (Windows PC) — reports per supplier (code only, NOT released).** William:
+"all reports ... need to be able to do per supplier, especially order reports for milk runs", one supplier or several,
+and "pause all uploads we will accumulate all changes and submit once": no build/upload/Play/F-Droid/Drive/website
+until he says. `ReportsScreen`: a "Suppliers: …" chip on Range, Ordering and ROSI opens a tick list (one or several;
+"All suppliers" clears it); the list is the shop's `supplier_list` from its last range/order answer, kept per store in
+the activity's preferences. Params `suppliers`; ROSI "By supplier"; Range shows a Suppliers section and each item's
+supplier; Ordering shows "By supplier" (tap a supplier to see only its lines, for a milk run). An answer to a supplier
+question without `include_suppliers` (Reporter before 1.9.107 ignores suppliers) is shown as an error, never as the
+whole shop. Compiles (`compileDebugJavaWithJavac`); not run on the emulator. Needs Reporter 1.9.107 and the next
+relay bundle (Reporter repo handoff, 10 Nov "reports PER SUPPLIER").
+
 Last updated: **10 November 2026, Claude (Windows PC) — version 1.10.1 (17), built, NOT released: fixes My stores
 jumping on an account with many stores (pages jumped back and forth as live figures came in, the list re-sorted under
 the finger so a tap opened the wrong store, a till page closed when its till skipped a read). Replaces the unreleased
