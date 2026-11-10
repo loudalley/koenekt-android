@@ -3,7 +3,13 @@
 Last updated: **10 November 2026, Claude (Windows PC) — version 1.10.1 (17), built, NOT released: fixes My stores
 jumping on an account with many stores (pages jumped back and forth as live figures came in, the list re-sorted under
 the finger so a tap opened the wrong store, a till page closed when its till skipped a read). Replaces the unreleased
-1.10.0 (16); same release conditions (Reporter 1.9.106 relay on srv1 first).** Details in the 1.10.1 section below.
+1.10.0 (16).** RELEASED 10 Nov at William's word ("release it everywhere now"), before the 1.9.106 relay is on
+srv1: website (koenekt.co.za/downloads/files/Koenekt.apk = 4dd23893…, deploy 20261110081446, Android text now names
+the dashboard, comparisons and reports), F-Droid (published and pushed), Google Drive (APK). Google Play: production
+release 17 (1.10.1) saved with the 17.txt notes (only warning: no deobfuscation file); NOT yet submitted: Publishing
+overview's quick checks flag "Incomplete app-level trader status declaration" and sending needs the owner to complete
+it or choose "Proceed anyway" himself (an acknowledgement the agent may not give), then "Submit 1 change for review".
+Details in the 1.10.1 section below.
 
 Last updated: **10 November 2026, Claude (Windows PC) — version 1.10.0 (16), built, NOT released: My stores in
 sections as on the website (Dashboard, Live, Compare, Reports, Groups). Needs the Reporter 1.9.106 Link relay on srv1
