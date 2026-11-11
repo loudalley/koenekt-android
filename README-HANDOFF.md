@@ -1,5 +1,19 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
+Last updated: **11 November 2026 (later), Claude (Windows PC) — version 1.10.2 (18) RELEASED to GitHub, F-Droid,
+Google Drive and the website at William's word ("deploy all"); Google Play NOT done.** Built from the clean tree at
+`d07a81b` (`assembleRelease bundleRelease lintDebug`, lint "No issues found"; PolicyChecks 123, StoreChecks 58; same
+upload certificate as 1.10.1, 3E:3A:09…): `dist/1.10.2/Koenekt-1.10.2.apk`
+0fe35e9c8fe3209b48efca7a1fac1c42e6698eb6ccb3e0f8361e13ebabb8b6c4, `Koenekt-1.10.2.aab`
+2a5fe3d1892fa97bc0b4c127b706a14580b07c750946931d0afce38dd654d89c; notes `changelogs/18.txt` (408 characters). Holds:
+reports per supplier, the dashboard changes below, and one login across several accounts (`bd157e9`).
+F-Droid: `tools/fdroid_repo.py publish --push` (koenekt-fdroid `3545798`). Drive: `My Drive/Koenekt Android/Koenekt-1.10.2.apk`
+(same hash). Website: `koenekt.co.za/downloads/files/Koenekt.apk` = the same hash (website release 20261111080835).
+**Play: upload `dist/1.10.2/Koenekt-1.10.2.aab` as release 18 with the 18.txt notes; 1.10.1 (17) may still be waiting for
+the owner's submit there.** Not run on the emulator or a phone. `9aad57b` (after the build, for the NEXT version): a
+supplier report whose answer does not name the suppliers asked for is shown as an error (an older relay drops the
+choice and a 1.9.107 PC then answers for the whole shop; the gap closes when relay bundle 20261111 is on srv1).
+
 Last updated: **11 November 2026, Claude (Windows PC) — dashboard makes more sense (code only, NOT released; the
 release pause of 10 Nov still stands).** William: "make ... the dashboards on my shops on the app and web make as
 much sense as possible". Same three changes as the website (koenekt-website portal-more.js), rule in the Reporter
