@@ -175,8 +175,8 @@ final class ReportsScreen {
                     return;
                 }
                 JSONObject res = data.optJSONObject("result");
-                if (status.equals("ok") && picked && res != null && !res.has("include_suppliers"))   // Reporter before 1.9.107 ignores suppliers
-                    box.put("state", "error").put("error", "This store's Koenekt Reporter cannot pick suppliers yet (that comes with 1.9.107), so it ran the report for the whole shop. Choose All suppliers to see that, or wait for the update.");
+                if (status.equals("ok") && picked && res != null && (res.optJSONArray("include_suppliers") == null || res.optJSONArray("include_suppliers").length() == 0))   // an older Reporter, or an older relay, dropped the suppliers
+                    box.put("state", "error").put("error", "This report came back for the whole shop, not for the suppliers you chose: this store needs Koenekt Reporter 1.9.107, or the Koenekt Link service has not been updated yet. Choose All suppliers to see the whole shop, or try again later.");
                 else if (status.equals("ok")) { box.put("state", "ok").put("result", data.optJSONObject("result")); keepSupList(id, data.optJSONObject("result")); }
                 else if (status.equals("offline")) box.put("state", "error").put("error", "The shop PC is offline. Reports run on the shop PC, so it must be on with Koenekt Reporter running.");
                 else {
