@@ -108,6 +108,27 @@ public final class HistoryMath {
         if (m == Metric.GP_PCT) return x - y;
         return y == 0 ? Double.NaN : 100 * (x - y) / Math.abs(y);
     }
+    /**
+     * The two periods a change is worked out on: {this period, the one before}, or null when there is nothing fair to
+     * compare. A period that ends today holds part of a day while the days it is compared with are whole, so at nine
+     * in the morning "month to date" always looked behind last year. The figure shown still includes today; the
+     * change compares the days that are over (up to yesterday) with the same days before. Nothing is compared on a
+     * period's first day. Same rule as the website (portal-more.js fair) and docs/LINK-REPORTS-API.md.
+     */
+    public static String[][] fair(String[] p, String[] c, LocalDate today) {
+        if (c == null) return null;
+        if (!p[1].equals(today.toString())) return new String[][]{p, c};
+        if (p[0].equals(p[1])) return null;
+        String[] done = {p[0], today.minusDays(1).toString()};
+        boolean periodBefore = LocalDate.parse(c[1]).plusDays(1).toString().equals(p[0]);   // it ends the day before p starts
+        return new String[][]{done, against(done, periodBefore ? "prev_period" : "prev_year")};
+    }
+    /** change() on the fair periods; NaN when there is no comparison. */
+    public static double delta(History h, Collection<String> ids, String[] p, String[] c, LocalDate today, Metric m, boolean owner) {
+        String[][] f = fair(p, c, today);
+        if (f == null) return Double.NaN;
+        return change(agg(h, ids, f[0][0], f[0][1], owner), agg(h, ids, f[1][0], f[1][1], owner), m);
+    }
     /** +1 better, -1 worse, 0 neither (or a level such as stock). */
     public static int verdict(double change, Metric m) {
         if (Double.isNaN(change) || Math.abs(change) < 0.05 || m.neutral()) return 0;
@@ -194,11 +215,11 @@ public final class HistoryMath {
 
     /** The dashboard every owner starts with (shared with the website; null from the relay means this one). */
     public static final String DEFAULT_LAYOUT = "{\"version\":1,\"period\":\"mtd\",\"compare\":\"prev_year\",\"today\":true,\"tiles\":["
+            + "{\"id\":\"l1\",\"kind\":\"live\",\"size\":\"l\"},"        // today first: it is the first thing an owner asks
             + "{\"id\":\"k1\",\"kind\":\"kpi\",\"metric\":\"turnover\",\"scope\":{\"type\":\"all\"}},"
             + "{\"id\":\"k2\",\"kind\":\"kpi\",\"metric\":\"gp_pct\",\"scope\":{\"type\":\"all\"}},"
             + "{\"id\":\"k3\",\"kind\":\"kpi\",\"metric\":\"gp_value\",\"scope\":{\"type\":\"all\"}},"
             + "{\"id\":\"k4\",\"kind\":\"kpi\",\"metric\":\"stock_excl\",\"scope\":{\"type\":\"all\"}},"
-            + "{\"id\":\"l1\",\"kind\":\"live\",\"size\":\"l\"},"
             + "{\"id\":\"t1\",\"kind\":\"trend\",\"metric\":\"turnover\",\"days\":30,\"scope\":{\"type\":\"all\"},\"size\":\"l\"},"
             + "{\"id\":\"r1\",\"kind\":\"ranking\",\"metric\":\"turnover\",\"by\":\"store\",\"size\":\"m\"},"
             + "{\"id\":\"r2\",\"kind\":\"ranking\",\"metric\":\"gp_pct\",\"by\":\"store\",\"size\":\"m\"},"

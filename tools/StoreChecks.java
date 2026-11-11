@@ -114,6 +114,18 @@ public class StoreChecks {
         check(live[0].equals("2026-11-01") && live[1].equals("2026-11-10"), "month to date with today runs to today");
         check(za.co.koenekt.app.HistoryMath.period("mtd", java.time.LocalDate.of(2026, 12, 1), true)[0].equals("2026-12-01"), "on the 1st, today alone");
         check(za.co.koenekt.app.HistoryMath.period("last_month", today, true)[1].equals("2026-10-31"), "a closed period ignores today");
+        // 11 Nov 2026: a period that runs to today is compared on its completed days, so a morning never looks behind
+        String[][] fairYear = za.co.koenekt.app.HistoryMath.fair(live, za.co.koenekt.app.HistoryMath.against(live, "prev_year"), today);
+        check(fairYear[0][0].equals("2026-11-01") && fairYear[0][1].equals("2026-11-09"), "to today: this side stops at yesterday");
+        check(fairYear[1][0].equals("2025-11-01") && fairYear[1][1].equals("2025-11-09"), "to today: last year stops at the same day");
+        String[][] fairBefore = za.co.koenekt.app.HistoryMath.fair(live, za.co.koenekt.app.HistoryMath.against(live, "prev_period"), today);
+        check(fairBefore[1][0].equals("2026-10-23") && fairBefore[1][1].equals("2026-10-31"), "to today: the period before is the nine days before");
+        String[] firstDay = za.co.koenekt.app.HistoryMath.period("mtd", java.time.LocalDate.of(2026, 12, 1), true);
+        check(za.co.koenekt.app.HistoryMath.fair(firstDay, za.co.koenekt.app.HistoryMath.against(firstDay, "prev_year"), java.time.LocalDate.of(2026, 12, 1)) == null, "nothing is compared on a period's firstDay day");
+        String[][] closed = za.co.koenekt.app.HistoryMath.fair(lm, za.co.koenekt.app.HistoryMath.against(lm, "prev_year"), today);
+        check(closed[0][1].equals("2026-10-31") && closed[1][1].equals("2025-10-31"), "a closed period is compared whole");
+        check(za.co.koenekt.app.HistoryMath.fair(live, null, today) == null, "no comparison asked, none made");
+        check(za.co.koenekt.app.HistoryMath.DEFAULT_LAYOUT.indexOf("\"kind\":\"live\"") < za.co.koenekt.app.HistoryMath.DEFAULT_LAYOUT.indexOf("\"kind\":\"kpi\""), "the standard dashboard opens with today");
         check(za.co.koenekt.app.HistoryMath.range(live, today).equals("1 Nov – today"), "today named");
         java.util.Map<String, za.co.koenekt.app.HistoryMath.Day> liveDays = new java.util.HashMap<>();
         liveDays.put("s2", day(1150, 1000, 700, Double.NaN)); liveDays.put("s9", day(230, 200, 150, Double.NaN));

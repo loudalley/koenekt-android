@@ -149,13 +149,15 @@ final class DashboardScreen {
         List<String> ids = s.past.scopeIds(t.optJSONObject("scope"));
         HistoryMath.History h = today() ? s.past.withToday() : s.past.history();
         if (kind.equals("kpi")) {
-            Agg now = HistoryMath.agg(h, ids, p[0], p[1], s.owner()), before = c == null ? null : HistoryMath.agg(h, ids, c[0], c[1], s.owner());
+            Agg now = HistoryMath.agg(h, ids, p[0], p[1], s.owner());
             box.addView(Ui.label(a, m.label));
             TextView v = Ui.title(a, now == null ? "—" : HistoryMath.format(now.value(m), m), 22); v.setSingleLine(true); Ui.gap(box, 6); box.addView(v); Ui.gap(box, 6);
-            double ch = HistoryMath.change(now, before, m);
+            double ch = HistoryMath.delta(h, ids, p, c, today, m, s.owner());
             box.addView(Ui.text(a, s.past.scopeName(t.optJSONObject("scope")) + " · " + HistoryMath.range(p, today), 12.5f, Ui.MUTED));
             String vs = layout().optString("compare", "prev_year");
-            if (!Double.isNaN(ch)) box.addView(changeView(ch, m, " vs " + ("prev_period".equals(t.optString("compare", vs)) ? "the period before" : "last year")));
+            // a period that runs to today is compared on its completed days (HistoryMath.fair)
+            if (!Double.isNaN(ch)) box.addView(changeView(ch, m, " vs " + ("prev_period".equals(t.optString("compare", vs)) ? "the period before" : "last year")
+                    + (p[1].equals(today.toString()) ? ", days completed" : "")));
         } else if (kind.equals("trend")) {
             int days = Math.max(1, t.optInt("days", 30)); LocalDate y = today() ? today : today.minusDays(1);
             String from = y.minusDays(days - 1).toString(), to = y.toString();
@@ -176,15 +178,16 @@ final class DashboardScreen {
             List<Metric> cols = new ArrayList<>();
             for (String k : PastData.strings(t.optJSONArray("metrics"))) if (metricOk(Metric.of(k), s.owner())) cols.add(Metric.of(k));
             for (PastData.Entity e : s.past.entities(by)) {
-                Agg now = HistoryMath.agg(h, e.ids, p[0], p[1], s.owner()), before = c == null ? null : HistoryMath.agg(h, e.ids, c[0], c[1], s.owner());
+                Agg now = HistoryMath.agg(h, e.ids, p[0], p[1], s.owner());
+                if (now == null) continue;        // no figures at all in the period: it was a row of dashes
                 box.addView(Ui.divider(a, 0));
                 LinearLayout r = Ui.column(a); r.setPadding(0, dp(8), 0, dp(8));
                 r.addView(Ui.title(a, e.name, 15));
                 StringBuilder b = new StringBuilder();
                 for (Metric k : cols) {
                     if (b.length() > 0) b.append('\n');
-                    b.append(k.label).append(" ").append(now == null ? "—" : HistoryMath.format(now.value(k), k));
-                    String ct = HistoryMath.changeText(HistoryMath.change(now, before, k), k);
+                    b.append(k.label).append(" ").append(HistoryMath.format(now.value(k), k));
+                    String ct = HistoryMath.changeText(HistoryMath.delta(h, e.ids, p, c, today, k, s.owner()), k);
                     if (!ct.isEmpty()) b.append(" (").append(ct).append(")");
                 }
                 r.addView(Ui.text(a, b.toString(), 13, Ui.MUTED));
@@ -222,8 +225,7 @@ final class DashboardScreen {
         for (PastData.Entity e : list) {
             Agg now = HistoryMath.agg(h, e.ids, p[0], p[1], s.owner());
             if (now == null || Double.isNaN(now.value(m))) continue;
-            Agg before = c == null ? null : HistoryMath.agg(h, e.ids, c[0], c[1], s.owner());
-            rows.add(new Object[]{e.name, now.value(m), HistoryMath.change(now, before, m)});
+            rows.add(new Object[]{e.name, now.value(m), HistoryMath.delta(h, e.ids, p, c, PastData.today(), m, s.owner())});
         }
         rows.sort((x, y) -> (m.lower ? 1 : -1) * Double.compare((double) x[1], (double) y[1]));
         if (rows.isEmpty()) { box.addView(Ui.text(a, "No figures for this period yet.", 13.5f, Ui.MUTED)); return; }

@@ -109,7 +109,7 @@ final class PeriodScreen {
         return Double.isNaN(v) ? (metric.lower ? Double.MAX_VALUE : -Double.MAX_VALUE) : v;
     }
     private LinearLayout figures(String name, List<String> ids, String[] p, String[] c, List<Metric> ms) {
-        Agg now = HistoryMath.agg(h, ids, p[0], p[1], s.owner()), before = c == null ? null : HistoryMath.agg(h, ids, c[0], c[1], s.owner());
+        Agg now = HistoryMath.agg(h, ids, p[0], p[1], s.owner());
         LinearLayout r = Ui.column(a); r.setPadding(0, dp(10), 0, dp(10));
         r.addView(Ui.title(a, name + (ids.size() > 1 ? "  ·  " + ids.size() + " stores" : ""), 15));
         if (now == null) { r.addView(Ui.text(a, "No days in this period yet.", 13, Ui.MUTED)); return r; }
@@ -118,7 +118,7 @@ final class PeriodScreen {
             double v = now.value(m); if (Double.isNaN(v)) continue;
             if (b.length() > 0) b.append("\n");
             b.append(m.label).append(": ").append(HistoryMath.format(v, m));
-            String ct = HistoryMath.changeText(HistoryMath.change(now, before, m), m);
+            String ct = HistoryMath.changeText(HistoryMath.delta(h, ids, p, c, PastData.today(), m, s.owner()), m);
             if (!ct.isEmpty()) b.append("  (").append(ct).append(")");
         }
         TextView t = Ui.text(a, b.toString(), 13, Ui.MUTED); r.addView(t);

@@ -1,5 +1,18 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
+Last updated: **11 November 2026, Claude (Windows PC) — dashboard makes more sense (code only, NOT released; the
+release pause of 10 Nov still stands).** William: "make ... the dashboards on my shops on the app and web make as
+much sense as possible". Same three changes as the website (koenekt-website portal-more.js), rule in the Reporter
+repo's docs/LINK-REPORTS-API.md:
+- The standard dashboard opens with the Live tile (today first), then the period figures (`HistoryMath.DEFAULT_LAYOUT`;
+  saved layouts are untouched).
+- **Like-for-like change.** A period that runs to today holds a part-day, and it was compared with whole days, so
+  every morning month to date looked behind last year. The figure still includes today; the up/down change is worked
+  out on completed days against the same days before (`HistoryMath.fair` / `delta`; Dashboard tiles, rankings, tables
+  and Compare). Nothing is compared on a period's first day. Tiles say "vs last year, days completed".
+- A table row with no figures at all in the period is left out (it was a row of dashes).
+StoreChecks 58 (7 new); `compileDebugJavaWithJavac` OK; not run on the emulator.
+
 Last updated: **10 November 2026, Claude (Windows PC) — reports per supplier (code only, NOT released).** William:
 "all reports ... need to be able to do per supplier, especially order reports for milk runs", one supplier or several,
 and "pause all uploads we will accumulate all changes and submit once": no build/upload/Play/F-Droid/Drive/website
