@@ -1,0 +1,5 @@
+My stores:
+• Reports per supplier: run Range, Ordering and ROSI for one supplier or several. Ordering shows each supplier's order on its own, handy for milk runs.
+• The dashboard opens with today's live sales, and the up/down change compares completed days, so a morning no longer looks behind.
+• One login can see stores from more than one account.
+Reports per supplier need Koenekt Reporter 1.9.107.
