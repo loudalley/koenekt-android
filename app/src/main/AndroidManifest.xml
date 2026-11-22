@@ -42,5 +42,10 @@
                 <data android:scheme="koenekt" android:host="join" />
             </intent-filter>
         </activity>
+        <!-- Report downloads (PDF, Excel, CSV) handed to the share sheet; read grants only -->
+        <provider android:name=".ExportProvider"
+            android:authorities="${applicationId}.exports"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>

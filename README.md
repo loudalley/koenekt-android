@@ -216,9 +216,11 @@ Build output:
 Checks:
 
 ```powershell
-javac -d app/build/policy-checks app/src/main/java/za/co/koenekt/app/AppPolicy.java app/src/main/java/za/co/koenekt/app/StoreMath.java tools/PolicyChecks.java tools/StoreChecks.java
+javac -encoding UTF-8 -d app/build/policy-checks app/src/main/java/za/co/koenekt/app/AppPolicy.java app/src/main/java/za/co/koenekt/app/StoreMath.java app/src/main/java/za/co/koenekt/app/HistoryMath.java tools/PolicyChecks.java tools/StoreChecks.java
 java -cp app/build/policy-checks PolicyChecks
 java -cp app/build/policy-checks StoreChecks
+javac -encoding UTF-8 -d app/build/export-checks-classes app/src/main/java/za/co/koenekt/app/ReportFiles.java tools/ExportChecks.java
+java -cp app/build/export-checks-classes za.co.koenekt.app.ExportChecks
 node tools/export-checks.cjs
 python tools/test_mobile_login.py -q
 python tools/test_mobile_updates.py -q

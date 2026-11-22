@@ -203,6 +203,17 @@ final class ReportsScreen {
                 + (r.optJSONArray("include_suppliers") != null ? " · " + supLabel(names(r.optJSONArray("include_suppliers"))) : "")
                 + (r.optString("made_at").length() >= 16 ? " · run on the shop PC at " + r.optString("made_at").substring(11, 16) : ""), 13, Ui.MUTED));
         Ui.gap(page, 10);
+        // Downloads (William, 22 Nov 2026): branded PDF, Excel and CSV, through the share sheet
+        LinearLayout dl = Ui.row(a);
+        String[][] fmts = {{"pdf", "PDF"}, {"xlsx", "Excel"}, {"csv", "CSV"}};
+        for (int i = 0; i < fmts.length; i++) {
+            String f = fmts[i][0];
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
+            if (i > 0) lp.leftMargin = dp(8);
+            dl.addView(i == 0 ? Ui.primary(a, fmts[i][1], () -> download(f, r)) : Ui.secondary(a, fmts[i][1], () -> download(f, r)), lp);
+        }
+        page.addView(dl, Ui.fill(a, -1));
+        Ui.gap(page, 12);
         switch (r.optString("report", kind)) {
             case "range": range(page, r); break;
             case "order": order(page, r); break;
@@ -210,6 +221,43 @@ final class ReportsScreen {
             default: turnover(page, r);
         }
     }
+    /** Build the file off the main thread, then offer it to the share sheet (Save to Files, Drive, WhatsApp, email). */
+    private void download(String fmt, JSONObject r) {
+        String what = r.optString("report", kind), supplier = what.equals("order") ? sup1 : "";
+        JSONObject st = s.store(store);
+        String account = st != null && s.accounts().size() > 1 ? st.optString("account") : "";
+        android.widget.Toast.makeText(a, fmt.equals("pdf") ? "Making the PDF…" : fmt.equals("xlsx") ? "Making the Excel file…" : "Making the CSV…", android.widget.Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            try {
+                ReportFiles.Model m = ReportModel.build(what, r, supplier, account);
+                byte[] bytes;
+                String name;
+                if (fmt.equals("pdf")) { bytes = ReportPdf.build(a, m); name = ReportFiles.pdfName(m); }
+                else if (fmt.equals("xlsx")) { bytes = ReportFiles.xlsx(m); name = ReportFiles.xlsxName(m); }
+                else { bytes = ReportFiles.csv(m); name = ReportFiles.csvName(m); }
+                java.io.File d = ExportProvider.dir(a);
+                java.io.File[] old = d.listFiles();
+                if (old != null) for (java.io.File o : old) if (o.lastModified() < System.currentTimeMillis() - 3_600_000L) //noinspection ResultOfMethodCallIgnored
+                    o.delete();                                                        // keep the cache small: an hour is plenty for a share
+                java.io.File out = new java.io.File(d, name);
+                try (java.io.FileOutputStream w = new java.io.FileOutputStream(out)) { w.write(bytes); }
+                android.net.Uri uri = ExportProvider.uriFor(a, out);
+                timer.post(() -> {
+                    android.content.Intent send = new android.content.Intent(android.content.Intent.ACTION_SEND)
+                            .setType(ExportProvider.mime(name))
+                            .putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                            .putExtra(android.content.Intent.EXTRA_SUBJECT, name.replaceAll("\\.(pdf|xlsx|csv)$", ""))
+                            .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    send.setClipData(android.content.ClipData.newRawUri(name, uri));
+                    try { a.startActivity(android.content.Intent.createChooser(send, "Send or save the report")); }
+                    catch (android.content.ActivityNotFoundException e) { android.widget.Toast.makeText(a, "No app on this phone can take the file.", android.widget.Toast.LENGTH_LONG).show(); }
+                });
+            } catch (Exception e) {
+                timer.post(() -> android.widget.Toast.makeText(a, "Could not make the file: " + e.getMessage(), android.widget.Toast.LENGTH_LONG).show());
+            }
+        }).start();
+    }
+
     private static java.util.List<String> names(JSONArray l) {
         java.util.List<String> out = new java.util.ArrayList<>();
         for (int i = 0; l != null && i < l.length(); i++) out.add(l.optString(i));
