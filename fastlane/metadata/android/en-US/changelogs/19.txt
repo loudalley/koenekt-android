@@ -1,0 +1,3 @@
+My stores:
+• Every report downloads as a branded PDF, an Excel workbook or a CSV: tap PDF, Excel or CSV under the report and send it to Drive, WhatsApp, email or the printer.
+• A shop added on the shop PC shows in My stores within a minute (with Koenekt Reporter 1.9.108).
