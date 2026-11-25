@@ -36,12 +36,30 @@ version stays 1.10.3 (19) and `versionCode` is untouched.** William, after the s
   data in `C:\Temp\klayout`): owner login; Today; Stores Now, History (opens on month to date), Compare and back, Reports;
   More; Slips list, search, clear, another store, a till that cannot be read (notice, other tills still list), a shop PC
   offline, next page, a slip, back to the same place in the list, share as PDF and as picture (both files checked), dark mode.
-  **NOT run:** a People login (so the Staff tab, the staff-at-work card and Add employee are compiled but unseen); a staff
-  store login in the app (the relay test covers staff); the WhatsApp, WhatsApp Business and Telegram buttons (the emulator
+  **NOT run:** a People login (so the Staff tab, the staff-at-work card and Add employee are compiled but unseen); the WhatsApp, WhatsApp Business and Telegram buttons (the emulator
   has none of them, so only "Share slip", Email-less share sheet and Other were exercised); a real phone; a real till's slips
   through the app (the slip reading itself is kslipper's tested engine); TalkBack; a tablet.
-- Website My stores: a Slips page is being added to `C:\Projects\koenekt-website` (not deployed); see the next entry or the
-  session's report for its state.
+- **Slips-only logins (William, later on 25 Nov: "create users that only have access to specific shop slips, they register
+  with username and password and then it must also show sessions on the web and when last they logged in, we can also create
+  on the web, they must only see slips when they log in").** Commit `4a3e6b8`. The relay has a third role, `slips` (Reporter
+  branch `feat/link-slips`; API in its `docs/LINK-REPORTS-API.md`, last section). In the app: `StoresScreen.slipsOnly()`
+  (every store the login sees has role `slips`) gives Today with only "Find a slip" and Stores with the Slips section alone,
+  and no live figures are asked for; `JoinFlow` says "Join to see till slips"; `TeamFlow` invites "Staff" or "Slips only"
+  (then a store picker; `POST /api/invites {role, stores}`), shows each login's type, last sign-in and number of sessions, and
+  has "Sign out everywhere" (`/api/team/signout`, allowed in `AppPolicy.linkAllowed`; PolicyChecks 127). Emulator: a
+  slips-only test login (Today, Stores, slips of its two stores), a staff test login (no Reports, no GP, slips load), the
+  owner's Team list and a slips-only invite up to the code screen. The full list of sessions with devices and times is on
+  the website's Team page; the app shows the count.
+- **Website My stores** (`C:\Projects\koenekt-website`, which is NOT a git repository; NOT deployed): new
+  `site/assets/js/portal-slips.js` (Slips tab for every login: list, search, one slip drawn as printed, Print, Download
+  picture, Share, WhatsApp, Email) and `site/assets/js/portal-team.js` (Team tab for owners: logins with type, stores, last
+  sign-in and each session's device, since and last used; Sign out everywhere, Reset password, Remove; Invite someone with
+  "Staff" or "Slips only" and the stores; open invites with Revoke), small edits in `portal.js` (tabs, slips-only view),
+  two script tags in `site/portal/index.html`, rules appended to `site/assets/css/portal.css`. A slips-only login gets the
+  Slips tab alone. Built and tested by a helper agent against the local test relay (owner, staff, slips-only; 360px dark and
+  desktop light), and looked at once more by this session (Team and Slips pages). The files as they were before are in
+  `C:\Temp\klayout\website-before\` with their SHA-256 sums. Deploy with `deploy\deploy.ps1` only at William's word, and
+  only after srv1 has the new relay.
 - NEXT, each at William's word: (1) Reporter: merge `feat/link-slips`, bump to 1.9.113, pilot at Lumbrah, release;
   (2) srv1: install the new `link_relay.py` (William runs sudo); (3) Android: merge `feat/four-tabs`, bump versionCode to 20,
   build, release to GitHub, F-Droid, Drive, the website and Play; (4) website: deploy. A phone with the new app against the
