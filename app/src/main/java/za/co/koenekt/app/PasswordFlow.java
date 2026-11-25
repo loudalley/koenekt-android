@@ -71,7 +71,7 @@ final class PasswordFlow implements MainActivity.Flow {
     }
     private void fail(String message) { error = message; show(); }
 
-    /** Account → Delete my account: confirm with the password, then POST /api/me/delete. */
+    /** More → Delete my account: confirm with the password, then POST /api/me/delete. */
     static void confirmDelete(MainActivity a) {
         LinearLayout view = Ui.column(a); view.setPadding(a.dp(24), a.dp(20), a.dp(24), a.dp(4));
         view.addView(Ui.title(a, "Delete your account?", 20)); Ui.gap(view, 12);

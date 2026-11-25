@@ -18,7 +18,7 @@ public final class AppPolicy {
 
     /**
      * FLAG_SECURE (no screenshots, screen recording or recent-app previews): on in release builds
-     * unless this phone's owner turned on Account → Allow screenshots on this phone (off by default,
+     * unless this phone's owner turned on More → Allow screenshots on this phone (off by default,
      * turning it on asks for the phone's lock). Debug builds allow screenshots unless -PsecureScreens.
      */
     public static boolean protectScreen(boolean secureBuild, boolean screenshotsAllowedOnThisPhone) {
