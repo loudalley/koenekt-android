@@ -94,7 +94,7 @@ final class ReportsScreen {
     }
 
     void render() {
-        a.setBar("Reports", false);
+        a.setBar("Stores", false);
         LinearLayout page = a.page(); page.setPadding(dp(16), dp(4), dp(16), dp(28));
         if (!s.ready(page)) return;
         if (!s.owner()) { page.addView(s.message("Reports are for store owners.")); return; }

@@ -24,7 +24,8 @@ final class GroupsScreen {
     private int dp(float n) { return a.dp(n); }
 
     void render() {
-        a.setBar("Groups", false, Ui.iconButton(a, R.drawable.ic_add, "New group", () -> edit(null)));
+        a.setBar("Groups", true, Ui.iconButton(a, R.drawable.ic_add, "New group", () -> edit(null)));
+        a.onBack(s::closeGroups);   // opened from Customise
         LinearLayout page = a.page(); page.setPadding(dp(16), dp(4), dp(16), dp(28));
         if (!s.ready(page)) return;
         if (s.past.groups == null) { page.addView(Ui.loading(a)); s.past.needGroups(s::redraw); return; }

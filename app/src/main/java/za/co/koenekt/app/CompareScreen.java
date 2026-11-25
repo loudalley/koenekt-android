@@ -59,7 +59,7 @@ final class CompareScreen {
 
         List<Figures> list = StoreMath.rank(contenders(), metric);
         if (list.size() < 2) {
-            page.addView(s.message(byType ? "Give your stores types (My stores → Customise → Store types) to compare type against type."
+            page.addView(s.message(byType ? "Give your stores types (Stores → Now → Customise → Store types) to compare type against type."
                     : "Choose at least two stores to compare."));
             return;
         }

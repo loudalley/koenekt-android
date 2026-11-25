@@ -44,10 +44,11 @@ final class PeopleScreen {
     private int dp(float n) { return a.dp(n); }
 
     void show() {
-        if (a.can("people_hire")) a.setBar("People", false, Ui.iconButton(a, R.drawable.ic_add, "Add employee", a::startAddEmployee));
-        else a.setBar("People", false);
+        if (a.can("people_hire")) a.setBar("Staff", false, Ui.iconButton(a, R.drawable.ic_add, "Add employee", a::startAddEmployee));
+        else a.setBar("Staff", false);
         LinearLayout screen = Ui.column(a);
         LinearLayout header = Ui.column(a); header.setPadding(dp(16), 0, dp(16), dp(4));
+        a.staffSwitch(header, MainActivity.TAB_PEOPLE);
         LinearLayout search = Ui.row(a); search.setPadding(dp(14), 0, dp(6), 0);
         search.setBackground(Ui.outline(Ui.FIELD, Ui.BORDER_STRONG, 1, 2, a));
         search.addView(Ui.icon(a, R.drawable.ic_search, Ui.MUTED, 20));

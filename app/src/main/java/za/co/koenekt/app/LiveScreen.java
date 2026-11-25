@@ -40,9 +40,12 @@ final class LiveScreen {
     private int dp(float n) { return a.dp(n); }
 
     void show() {
-        a.setBar("Who's in", false, Ui.iconButton(a, R.drawable.ic_refresh, "Refresh", this::load));
+        if (a.can("people_hire")) a.setBar("Staff", false, Ui.iconButton(a, R.drawable.ic_add, "Add employee", a::startAddEmployee),
+                Ui.iconButton(a, R.drawable.ic_refresh, "Refresh", this::load));
+        else a.setBar("Staff", false, Ui.iconButton(a, R.drawable.ic_refresh, "Refresh", this::load));
         LinearLayout screen = Ui.column(a);
         LinearLayout header = Ui.column(a); header.setPadding(dp(16), 0, dp(16), dp(4));
+        a.staffSwitch(header, MainActivity.TAB_LIVE);
         HorizontalScrollView scroll = new HorizontalScrollView(a); scroll.setHorizontalScrollBarEnabled(false);
         chips = Ui.row(a); scroll.addView(chips); header.addView(scroll); Ui.gap(header, 14);
         tiles = Ui.row(a); header.addView(tiles); Ui.gap(header, 14);

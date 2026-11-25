@@ -25,12 +25,13 @@ import za.co.koenekt.app.StoreMath.Figures;
 import za.co.koenekt.app.StoreMath.Metric;
 
 /**
- * My stores, through the Koenekt Link relay, in sections as on the website:
- * Dashboard (the owner's own layout, saved on the relay; DashboardScreen), Live (today's till figures for every
- * store, customisable on the phone: tiles, stores shown, store types, grouping, sort order), Compare (past
- * periods, store against store, type or group; PeriodScreen), Reports (Range, Ordering, ROSI, Turnover run on the
- * shop PC; ReportsScreen, owners) and Groups (GroupsScreen, owners). Holds the shared live answers and refreshes
- * them every 60 s while Live or the Dashboard is open; never in the background.
+ * Stores, through the Koenekt Link relay, in three sections under one title:
+ * Now (key "live": today's till figures for every store, customisable on the phone: tiles, stores shown, store
+ * types, grouping, sort order), History (key "dash": the owner's own layout, saved on the relay, opening on month
+ * to date against last year; DashboardScreen; its Compare button opens "compare", store against store, type or
+ * group; PeriodScreen) and Reports (Range, Ordering, ROSI, Turnover run on the shop PC; ReportsScreen, owners).
+ * Groups (GroupsScreen, owners) opens from Customise. Holds the shared live answers and refreshes them every 60 s
+ * while Now, History or the Today tab is open; never in the background.
  */
 final class StoresScreen {
     static final int REFRESH_MS = 60_000;
@@ -50,8 +51,10 @@ final class StoresScreen {
     private Runnable view = this::render;     // what is on screen: the dashboard, one store or compare
     private StoreScreen storeScreen;
     private CompareScreen compareScreen;
-    /** dash, live, compare, reports or groups. */
+    /** live (Now), dash (History), compare (inside History), reports or groups (from Customise). */
     String section = "";
+    /** The Today tab is showing the live figures (see watchToday); no section of this screen is on screen. */
+    private boolean forToday;
     final PastData past = new PastData(this);
     private final DashboardScreen dashboard;
     private final PeriodScreen period;
@@ -98,12 +101,20 @@ final class StoresScreen {
     }
 
     // ------------------------------------------------------------------ data
-    /** Opens the dashboard and starts the 60-second refresh. */
+    /** Opens the section last shown (Now the first time) and starts the 60-second refresh. */
     void show() {
-        if (section.isEmpty()) section = owner() ? "dash" : "live";
-        storeScreen = null; compareScreen = null; view = sectionView();
+        if (section.isEmpty()) section = "live";
+        forToday = false; storeScreen = null; compareScreen = null; view = sectionView();
         start();
     }
+    /** The Today tab: draws with `render` now and again whenever live figures arrive, while Today is on screen. */
+    void watchToday(Runnable render) {
+        forToday = true; storeScreen = null; compareScreen = null; view = render;
+        start();
+    }
+    boolean listLoaded() { return listLoaded; }
+    String listError() { return listError; }
+    private boolean onScreen() { return forToday ? a.showingToday() : a.showingStores(); }
     private Runnable sectionView() {
         switch (section) {
             case "dash": return dashboard::render;
@@ -113,35 +124,28 @@ final class StoresScreen {
             default: return this::render;
         }
     }
-    /** Dashboard · Live · Compare · Reports · Groups, under the app bar of each section. */
+    /** Now · History · Reports, under the title of each section. Compare counts as History; Groups marks none. */
     void sections(LinearLayout page) {
-        String[][] all = {{"dash", "Dashboard"}, {"live", "Live"}, {"compare", "Compare"}, {"reports", "Reports"}, {"groups", "Groups"}};
-        HorizontalScrollView scroll = new HorizontalScrollView(a); scroll.setHorizontalScrollBarEnabled(false);
-        LinearLayout row = Ui.row(a); scroll.addView(row);
-        for (String[] sec : all) {
-            if (!owner() && (sec[0].equals("reports") || sec[0].equals("groups"))) continue;
-            boolean on = sec[0].equals(section);
-            LinearLayout cell = Ui.column(a); cell.setGravity(Gravity.CENTER_HORIZONTAL);
-            TextView t = Ui.text(a, sec[1], 12.5f, on ? Ui.INK : Ui.MUTED); Ui.mono(t, on); t.setPadding(dp(12), dp(10), dp(12), dp(8));
-            cell.addView(t);
-            android.view.View bar = new android.view.View(a); bar.setBackgroundColor(on ? Ui.LIME : android.graphics.Color.TRANSPARENT);
-            cell.addView(bar, new LinearLayout.LayoutParams(-1, dp(2)));
-            cell.setContentDescription(sec[1] + (on ? ", selected" : "")); cell.setClickable(true); cell.setFocusable(true);
-            cell.setBackground(Ui.pressable(Ui.shape(android.graphics.Color.TRANSPARENT, 0, a), 0, a));
-            final String key = sec[0];
-            cell.setOnClickListener(v -> openSection(key));
-            row.addView(cell);
-        }
-        page.addView(scroll);
-        page.addView(Ui.divider(a, 0)); Ui.gap(page, 14);
+        List<String[]> all = new ArrayList<>();
+        all.add(new String[]{"live", "Now"}); all.add(new String[]{"dash", "History"});
+        if (owner()) all.add(new String[]{"reports", "Reports"});
+        String here = section.equals("compare") ? "dash" : section;
+        String[] names = new String[all.size()]; int on = -1;
+        for (int i = 0; i < names.length; i++) { names[i] = all.get(i)[1]; if (all.get(i)[0].equals(here)) on = i; }
+        page.addView(Ui.segments(a, names, on, w -> openSection(all.get(w)[0])));
+        Ui.gap(page, 14);
     }
     void openSection(String key) {
         if (key.equals(section) && storeScreen == null && compareScreen == null) return;
+        if (!key.equals("groups") && !key.equals("compare")) lastMain = key;
         section = key; storeScreen = null; compareScreen = null; view = sectionView();
         start();
     }
+    /** The section Groups was opened from, to go back to. */
+    private String lastMain = "live";
+    void closeGroups() { openSection(lastMain); }
     /** Live answers are asked only for the sections that show them. */
-    private boolean wantsLive() { return section.equals("live") || storeScreen != null || compareScreen != null || (section.equals("dash") && dashboard.wantsLive())
+    private boolean wantsLive() { return forToday || section.equals("live") || storeScreen != null || compareScreen != null || (section.equals("dash") && dashboard.wantsLive())
             || (section.equals("compare") && period.withToday); }
     /** A section's data arrived: redraw whatever is on screen once the user leaves it alone for a moment. */
     void redraw() {
@@ -149,7 +153,7 @@ final class StoresScreen {
         redrawPending = true; timer.postDelayed(redrawTask, SETTLE_MS);
     }
     private void redrawWhenQuiet() {
-        if (!a.showingStores()) { redrawPending = false; return; }   // another tab is showing: it is drawn on return
+        if (!onScreen()) { redrawPending = false; return; }   // another tab is showing: it is drawn on return
         long wait = a.untilQuiet();
         if (wait > 0) { timer.postDelayed(redrawTask, wait); return; }
         redrawPending = false; a.redraw(view);
@@ -163,7 +167,7 @@ final class StoresScreen {
         refresh(me);
     }
     void refreshNow() { start(true); }
-    private boolean live(int me) { return me == run && a.showingStores(); }
+    private boolean live(int me) { return me == run && onScreen(); }
 
     private void refresh(int me) {
         a.linkRequest("GET", "/api/stores", null, data -> {
@@ -307,9 +311,9 @@ final class StoresScreen {
     // ------------------------------------------------------------------ dashboard
     private void render() {
         view = this::render;
-        a.setBar("Live", false,
+        a.setBar("Stores", false,
                 Ui.iconButton(a, R.drawable.ic_compare, "Compare stores", () -> openCompare(Metric.SALES)),
-                Ui.iconButton(a, R.drawable.ic_tune, "Customise dashboard", this::customise),
+                Ui.iconButton(a, R.drawable.ic_tune, "Customise", this::customise),
                 Ui.iconButton(a, R.drawable.ic_refresh, "Refresh", this::refreshNow));
         LinearLayout page = a.page(); page.setPadding(dp(16), dp(4), dp(16), dp(28));
         if (!ready(page)) return;
@@ -428,16 +432,18 @@ final class StoresScreen {
 
     // ------------------------------------------------------------------ customise
     private void customise() {
-        String[] items = {"Tiles on the dashboard", "Stores to show", "Store types", (dash.group ? "Turn off" : "Turn on") + " grouping by store type"};
-        Ui.dialog(a).setTitle("Customise My stores").setItems(items, (d, w) -> {
+        List<String> items = new ArrayList<>(List.of("Tiles on this page", "Stores to show", "Store types", (dash.group ? "Turn off" : "Turn on") + " grouping by store type"));
+        if (owner()) items.add("Groups of stores");
+        Ui.dialog(a).setTitle("Customise Stores").setItems(items.toArray(new String[0]), (d, w) -> {
             if (w == 0) pickTiles(); else if (w == 1) pickStores(); else if (w == 2) pickTypeStore();
-            else { dash.group = !dash.group; dash.save(); render(); }
+            else if (w == 3) { dash.group = !dash.group; dash.save(); render(); }
+            else openSection("groups");
         }).setNegativeButton("Close", null).show();
     }
     private void pickTiles() {
         List<Metric> ms = metrics(); String[] names = new String[ms.size()]; boolean[] on = new boolean[ms.size()];
         for (int i = 0; i < names.length; i++) { names[i] = ms.get(i).label; on[i] = dash.tiles.contains(ms.get(i)); }
-        Ui.dialog(a).setTitle("Tiles on the dashboard").setMultiChoiceItems(names, on, (d, w, checked) -> on[w] = checked)
+        Ui.dialog(a).setTitle("Tiles on this page").setMultiChoiceItems(names, on, (d, w, checked) -> on[w] = checked)
                 .setPositiveButton("Save", (d, w) -> {
                     dash.tiles.clear();
                     for (int i = 0; i < on.length; i++) if (on[i]) dash.tiles.add(ms.get(i));

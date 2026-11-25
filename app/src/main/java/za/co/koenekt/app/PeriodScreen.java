@@ -32,7 +32,8 @@ final class PeriodScreen {
     private int dp(float n) { return a.dp(n); }
 
     void render() {
-        a.setBar("Compare", false, Ui.iconButton(a, R.drawable.ic_refresh, "Refresh", () -> { s.past.forget(); s.refreshNow(); }));
+        a.setBar("Compare", true, Ui.iconButton(a, R.drawable.ic_refresh, "Refresh", () -> { s.past.forget(); s.refreshNow(); }));
+        a.onBack(() -> s.openSection("dash"));   // Compare is inside History
         LinearLayout page = a.page(); page.setPadding(dp(16), dp(4), dp(16), dp(28));
         if (!s.ready(page)) return;
         if (!DashboardScreen.metricOk(metric, s.owner())) metric = Metric.TURNOVER;
@@ -58,7 +59,7 @@ final class PeriodScreen {
         for (PastData.Entity e : all) if (!out.contains(e.key)) list.add(e);
         if (!all.isEmpty()) chips.add(list.size() + " of " + all.size(), () -> pickWho(all));
         if (!s.past.historyError.isEmpty()) { page.addView(Ui.notice(a, s.past.historyError, true)); Ui.gap(page, 12); }
-        page.addView(Ui.text(a, HistoryMath.range(p, today) + (c == null ? "" : " against " + HistoryMath.range(c, today)) + (p[1].equals(today.toString()) ? ". Today is live from the tills, updated every minute." : ". Past days only: today is on Live."), 13, Ui.MUTED));
+        page.addView(Ui.text(a, HistoryMath.range(p, today) + (c == null ? "" : " against " + HistoryMath.range(c, today)) + (p[1].equals(today.toString()) ? ". Today is live from the tills, updated every minute." : ". Past days only: today is on Now."), 13, Ui.MUTED));
         Ui.gap(page, 12);
         if (all.isEmpty()) {
             page.addView(s.message("group".equals(by) ? (s.owner() ? "No groups yet. Make groups of your stores on the Groups tab." : "Your store owner has not made any groups.") : "Nothing to compare."));

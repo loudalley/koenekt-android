@@ -37,6 +37,8 @@ final class Ui {
     static int BG, SURFACE, SURFACE2, LINE, BORDER_STRONG, FIELD, INK, MUTED;
     /** LIME is the accent fill (buttons, dots, bars); BRAND is the accent as text (links, selected tabs). */
     static int LIME, BRAND, ON_ACCENT, TINT, TINT_LINE;
+    // Measured (WCAG): BRAND as text is at least 4.5:1 on BG, SURFACE and TINT in both modes; BORDER_STRONG, the outline
+    // of fields and of buttons that open a choice, is at least 3:1; LINE is for dividers and card edges only.
     static int DANGER, DANGER_BG, DANGER_LINE, WARN, WARN_BG, WARN_LINE, OUT;
     static Typeface DISPLAY = Typeface.DEFAULT_BOLD, SANS = Typeface.DEFAULT, SANS_BOLD = Typeface.DEFAULT_BOLD,
             MONO = Typeface.MONOSPACE, MONO_BOLD = Typeface.MONOSPACE;
@@ -90,15 +92,15 @@ final class Ui {
     private static void palette(boolean d) {
         dark = d;
         if (d) {
-            BG = 0xFF1B1B1B; SURFACE = 0xFF242424; SURFACE2 = 0xFF2B2B2B; LINE = 0xFF3A3A3A; BORDER_STRONG = 0xFF4D4D4D;
+            BG = 0xFF1B1B1B; SURFACE = 0xFF242424; SURFACE2 = 0xFF2B2B2B; LINE = 0xFF3A3A3A; BORDER_STRONG = 0xFF777773;
             FIELD = 0xFF1F1F1F; INK = 0xFFF0F0EC; MUTED = 0xFFA8A8A4;
             LIME = 0xFF83CC17; BRAND = 0xFF9AD635; ON_ACCENT = 0xFF14181C; TINT = 0xFF26301A; TINT_LINE = 0xFF45602A;
             DANGER = 0xFFF3A497; DANGER_BG = 0xFF3A2320; DANGER_LINE = 0xFF6E3B33;
             WARN = 0xFFEBC86F; WARN_BG = 0xFF352C17; WARN_LINE = 0xFF6B5A2A;
         } else {
-            BG = 0xFFF7F7F4; SURFACE = 0xFFFFFFFF; SURFACE2 = 0xFFEFEFEA; LINE = 0xFFDCDCD5; BORDER_STRONG = 0xFFC4C4BC;
+            BG = 0xFFF7F7F4; SURFACE = 0xFFFFFFFF; SURFACE2 = 0xFFEFEFEA; LINE = 0xFFDCDCD5; BORDER_STRONG = 0xFF8A8A84;
             FIELD = 0xFFFFFFFF; INK = 0xFF262626; MUTED = 0xFF6B6B68;
-            LIME = 0xFF5FA300; BRAND = 0xFF4B8300; ON_ACCENT = 0xFF14181C; TINT = 0xFFEEF5E2; TINT_LINE = 0xFFC6DDA2;
+            LIME = 0xFF5FA300; BRAND = 0xFF427400; ON_ACCENT = 0xFF14181C; TINT = 0xFFEEF5E2; TINT_LINE = 0xFFC6DDA2;
             DANGER = 0xFF8A2E22; DANGER_BG = 0xFFFBE9E6; DANGER_LINE = 0xFFE8B7AE;
             WARN = 0xFF7A5200; WARN_BG = 0xFFFFF4D6; WARN_LINE = 0xFFEED493;
         }
@@ -128,7 +130,7 @@ final class Ui {
     }
     /** Mono capitals, as the site's labels. */
     static TextView label(Context c, CharSequence value) {
-        TextView t = text(c, value, 11.5f, MUTED); mono(t, true); return t;
+        TextView t = text(c, value, 12, MUTED); mono(t, true); return t;
     }
     static void mono(TextView t, boolean bold) {
         t.setTypeface(bold ? MONO_BOLD : MONO); t.setAllCaps(true); t.setLetterSpacing(0.08f);
@@ -206,10 +208,32 @@ final class Ui {
 
     /** Filter chip showing the current choice, e.g. "DEMO BAKERY ▾". */
     static TextView chip(Context c, String value, Runnable action) {
-        TextView t = text(c, value + "  ▾", 12.5f, INK); t.setTypeface(MONO); t.setLetterSpacing(0.02f);
+        TextView t = text(c, value + "  ▾", 13, INK); t.setTypeface(MONO); t.setLetterSpacing(0.02f);
         t.setSingleLine(true); t.setEllipsize(TextUtils.TruncateAt.END); t.setMaxWidth(dp(c, 220));
-        t.setPadding(dp(c, 12), dp(c, 8), dp(c, 12), dp(c, 8)); t.setGravity(Gravity.CENTER_VERTICAL); t.setMinHeight(dp(c, 40));
-        t.setBackground(pressable(outline(SURFACE, LINE, 1, RADIUS, c), RADIUS, c)); t.setOnClickListener(v -> action.run()); return t;
+        t.setPadding(dp(c, 12), dp(c, 8), dp(c, 12), dp(c, 8)); t.setGravity(Gravity.CENTER_VERTICAL); t.setMinHeight(dp(c, 48));
+        t.setBackground(pressable(outline(SURFACE, BORDER_STRONG, 1, RADIUS, c), RADIUS, c)); t.setOnClickListener(v -> action.run()); return t;
+    }
+
+    /**
+     * Switch under a screen title (Now · History · Reports; Who's in · Everyone): equal cells 48dp high, the chosen
+     * one in ink with a 2dp accent bar under it. A negative selection marks none.
+     */
+    static LinearLayout segments(Context c, String[] names, int selected, IntConsumer picked) {
+        LinearLayout box = column(c), row = row(c);
+        for (int i = 0; i < names.length; i++) {
+            boolean on = i == selected; final int which = i;
+            LinearLayout cell = column(c);
+            TextView t = text(c, names[i], 13, on ? INK : MUTED); mono(t, on); t.setLetterSpacing(0.04f);
+            t.setGravity(Gravity.CENTER); t.setSingleLine(true); t.setEllipsize(TextUtils.TruncateAt.END);
+            cell.addView(t, new LinearLayout.LayoutParams(-1, dp(c, 46)));
+            View bar = new View(c); bar.setBackgroundColor(on ? LIME : Color.TRANSPARENT);
+            cell.addView(bar, new LinearLayout.LayoutParams(-1, dp(c, 2)));
+            cell.setContentDescription(names[i] + (on ? ", selected" : "")); cell.setClickable(true); cell.setFocusable(true);
+            cell.setBackground(pressable(shape(Color.TRANSPARENT, 0, c), 0, c));
+            cell.setOnClickListener(v -> picked.accept(which));
+            row.addView(cell, new LinearLayout.LayoutParams(0, -2, 1));
+        }
+        box.addView(row, fill(c, -1)); box.addView(divider(c, 0)); return box;
     }
 
     /** Square tile with a person's initials. */
@@ -231,6 +255,10 @@ final class Ui {
 
     /** List row: leading view, title, optional subtitle, optional trailing text and chevron. */
     static LinearLayout listRow(Context c, View leading, String title, String subtitle, String trailing, Runnable action) {
+        return listRow(c, leading, title, subtitle, trailing, R.drawable.ic_chevron, action);
+    }
+    /** The same row with another trailing icon, e.g. ic_external for a row that opens a web page. */
+    static LinearLayout listRow(Context c, View leading, String title, String subtitle, String trailing, int endIcon, Runnable action) {
         LinearLayout r = row(c); r.setMinimumHeight(dp(c, 64)); r.setPadding(dp(c, 16), dp(c, 10), dp(c, 12), dp(c, 10));
         if (leading != null) { r.addView(leading); View s = new View(c); r.addView(s, new LinearLayout.LayoutParams(dp(c, 14), 1)); }
         LinearLayout words = column(c);
@@ -243,7 +271,7 @@ final class Ui {
             TextView tr = text(c, trailing, 13.5f, MUTED); tr.setTypeface(MONO); tr.setPadding(dp(c, 8), 0, 0, 0); r.addView(tr);
         }
         if (action != null) {
-            r.addView(icon(c, R.drawable.ic_chevron, MUTED, 20));
+            r.addView(icon(c, endIcon, MUTED, 20));
             r.setBackground(pressable(shape(Color.TRANSPARENT, 0, c), 0, c)); r.setOnClickListener(v -> action.run());
             r.setFocusable(true); r.setClickable(true);
         }

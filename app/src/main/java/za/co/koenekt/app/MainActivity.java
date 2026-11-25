@@ -73,7 +73,9 @@ import java.util.function.Consumer;
 
 /** Native navigation, sign-in and everyday screens; the remaining product workflows run in a restricted WebView. */
 public final class MainActivity extends Activity {
-    static final int TAB_HOME = 0, TAB_PEOPLE = 1, TAB_LIVE = 2, TAB_ACCOUNT = 3, TAB_UPDATES = 4;   // Updates is opened from Home, not the bottom bar
+    // Four bottom tabs: Today (TAB_HOME), Stores, Staff (two screens: Who's in = TAB_LIVE, Everyone = TAB_PEOPLE) and
+    // More (TAB_ACCOUNT). Reporter updates (TAB_UPDATES) opens from Today or More, not the bottom bar.
+    static final int TAB_HOME = 0, TAB_PEOPLE = 1, TAB_LIVE = 2, TAB_ACCOUNT = 3, TAB_UPDATES = 4;
     static final int TAB_STORES = 5;
     private static final int PICK_FILE = 20, SAVE_FILE = 21, DEVICE_UNLOCK = 22, CONFIRM_DEVICE = 23, MAX_EXPORT = 20 * 1024 * 1024;
     /** Preference (this phone only; backups are off): Account → Allow screenshots on this phone. */
@@ -97,6 +99,11 @@ public final class MainActivity extends Activity {
     private boolean operator = false, peopleSession = false, inWeb = false, busy = false;
     private boolean mustChangePassword;   // after an administrator's password reset
     private int epoch = 0, tab = TAB_HOME;
+    /** The Staff screen last shown, so the Staff tab returns to it. */
+    private int staffTab = TAB_LIVE;
+    /** Today's "Staff at work": -1 not asked yet, -2 could not be loaded. */
+    private int staffIn = -1, staffTotal;
+    private String staffCompany = "";
     private LinearLayout root, appBar, barActions, nav;
     private View navLine;
     private ImageView backButton;
@@ -208,18 +215,30 @@ public final class MainActivity extends Activity {
     /** Any of the three services: People, management (licence site) or My stores. */
     private boolean signedIn() { return peopleSession || operator || !linkToken.isEmpty(); }
     boolean showingStores() { return tab == TAB_STORES && !locked && !inWeb && flow == null && storesScreen != null; }
+    private boolean todayOnScreen() { return tab == TAB_HOME && !locked && !inWeb && flow == null && signedIn(); }
+    boolean showingToday() { return todayOnScreen() && storesScreen != null; }
+    private boolean hasStaff() { return hasTab(TAB_LIVE) || hasTab(TAB_PEOPLE); }
+    private int staffTarget() { return hasTab(staffTab) ? staffTab : hasTab(TAB_LIVE) ? TAB_LIVE : TAB_PEOPLE; }
+    /** Who's in · Everyone, at the top of both Staff screens when the login has both. */
+    void staffSwitch(LinearLayout into, int current) {
+        if (!(hasTab(TAB_LIVE) && hasTab(TAB_PEOPLE))) return;
+        into.addView(Ui.segments(this, new String[]{"Who's in", "Everyone"}, current == TAB_LIVE ? 0 : 1,
+                w -> showTab(w == 0 ? TAB_LIVE : TAB_PEOPLE)));
+        Ui.gap(into, 14);
+    }
     String linkRole() { return linkRole; }
     String linkUser() { return linkUser; }
     private void showNav(boolean visible) {
         nav.setVisibility(visible ? View.VISIBLE : View.GONE); navLine.setVisibility(visible ? View.VISIBLE : View.GONE);
         if (!visible) return;
         nav.removeAllViews();
-        int[] tabs = {TAB_HOME, TAB_STORES, TAB_PEOPLE, TAB_LIVE, TAB_ACCOUNT};
-        int[] icons = {R.drawable.ic_home, R.drawable.ic_store, R.drawable.ic_people, R.drawable.ic_live, R.drawable.ic_account};
-        String[] names = {"Home", "Stores", "People", "Who's in", "Account"};
+        int[] tabs = {TAB_HOME, TAB_STORES, TAB_LIVE, TAB_ACCOUNT};
+        int[] icons = {R.drawable.ic_home, R.drawable.ic_store, R.drawable.ic_people, R.drawable.ic_menu};
+        String[] names = {"Today", "Stores", "Staff", "More"};
         for (int i = 0; i < tabs.length; i++) {
-            if (!hasTab(tabs[i])) continue;
-            boolean selected = tabs[i] == tab;
+            final boolean staff = tabs[i] == TAB_LIVE;
+            if (staff ? !hasStaff() : !hasTab(tabs[i])) continue;
+            boolean selected = staff ? tab == TAB_LIVE || tab == TAB_PEOPLE : tabs[i] == tab;
             // The site's look: a 2dp accent bar over the selected tab, mono capitals underneath.
             LinearLayout cell = Ui.column(this); cell.setGravity(Gravity.CENTER_HORIZONTAL);
             View bar = new View(this); bar.setBackgroundColor(selected ? Ui.LIME : Color.TRANSPARENT);
@@ -227,12 +246,12 @@ public final class MainActivity extends Activity {
             ImageView icon = Ui.icon(this, icons[i], selected ? Ui.BRAND : Ui.MUTED, 24);
             ((LinearLayout.LayoutParams) icon.getLayoutParams()).topMargin = dp(8);
             cell.addView(icon);
-            TextView label = Ui.text(this, names[i], 10, selected ? Ui.BRAND : Ui.MUTED); Ui.mono(label, selected);
+            TextView label = Ui.text(this, names[i], 12, selected ? Ui.BRAND : Ui.MUTED); Ui.mono(label, selected);
             label.setLetterSpacing(0.04f); label.setMaxLines(1); label.setPadding(0, dp(5), 0, 0); label.setGravity(Gravity.CENTER);
             cell.addView(label);
-            cell.setContentDescription(names[i]); cell.setClickable(true); cell.setFocusable(true);
+            cell.setContentDescription(names[i] + (selected ? ", selected" : "")); cell.setClickable(true); cell.setFocusable(true);
             cell.setBackground(Ui.pressable(Ui.shape(Color.TRANSPARENT, 0, this), 0, this));
-            final int target = tabs[i]; cell.setOnClickListener(v -> showTab(target));
+            final int target = tabs[i]; cell.setOnClickListener(v -> showTab(staff ? staffTarget() : target));
             nav.addView(cell, new LinearLayout.LayoutParams(0, -2, 1));
         }
     }
@@ -243,6 +262,7 @@ public final class MainActivity extends Activity {
         if (peopleSession && mustChangePassword) { startPasswordChange(true); return; }
         if (!hasTab(which)) which = TAB_HOME;
         leaveWeb(); flow = null; tab = which;
+        if (which == TAB_LIVE || which == TAB_PEOPLE) staffTab = which;
         if (which == TAB_STORES) { if (storesScreen == null) storesScreen = new StoresScreen(this); showNav(true); storesScreen.show(); }
         else if (which == TAB_PEOPLE) { if (peopleScreen == null) peopleScreen = new PeopleScreen(this); showNav(true); peopleScreen.show(); }
         else if (which == TAB_LIVE) { if (liveScreen == null) liveScreen = new LiveScreen(this); showNav(true); liveScreen.show(); }
@@ -640,49 +660,151 @@ public final class MainActivity extends Activity {
         if (!signedIn()) { loginScreen(notice); return; }
         if (peopleSession && mustChangePassword) { startPasswordChange(true); return; }
         leaveWeb(); flow = null; tab = TAB_HOME; currentTitle = "Koenekt"; setBar(null, false); showNav(true);
+        if (hasTab(TAB_LIVE)) loadStaffCount();
+        if (hasTab(TAB_STORES)) {   // the same live figures as Stores → Now, refreshed every minute while Today is open
+            if (storesScreen == null) storesScreen = new StoresScreen(this);
+            storesScreen.watchToday(this::drawToday);
+        } else drawToday();
+    }
+
+    /**
+     * Today: what is happening now. Sales today (a store login), staff at work (People), anything that needs a look,
+     * and the one or two things done most. Only draws; home() starts the loading, and new figures redraw it in place.
+     */
+    private void drawToday() {
         LinearLayout page = page(); page.setPadding(dp(20), dp(24), dp(20), dp(28));
         ImageView logo = new ImageView(this); logo.setImageResource(Ui.logo()); logo.setAdjustViewBounds(true);
         logo.setContentDescription("Koenekt"); page.addView(logo, new LinearLayout.LayoutParams(dp(104), -2));
-        Ui.gap(page, 28);
+        Ui.gap(page, 24);
+        page.addView(Ui.label(this, new java.text.SimpleDateFormat("EEEE d MMMM", Locale.ENGLISH).format(new java.util.Date())));
+        Ui.gap(page, 6);
         String first = displayName.trim().isEmpty() ? "" : displayName.trim().split("\\s+")[0];
-        page.addView(Ui.title(this, greeting() + (first.isEmpty() ? "" : ",\n" + first), 30)); Ui.gap(page, 4);
-        page.addView(Ui.text(this, roleLabel, 15, Ui.MUTED)); Ui.gap(page, 24);
-        if (!notice.isEmpty()) { page.addView(Ui.notice(this, notice, false)); Ui.gap(page, 20); }
-        LinearLayout quick = Ui.row(this); quick.setGravity(Gravity.TOP);
-        if (hasTab(TAB_STORES)) addQuick(quick, R.drawable.ic_store, "My stores", "Live sales from the tills", () -> showTab(TAB_STORES));
-        if (peopleSession && can("people_hire") && quick.getChildCount() < 2) addQuick(quick, R.drawable.ic_add, "Add employee", "Name, company and clock PIN", this::startAddEmployee);
-        if (hasTab(TAB_LIVE) && quick.getChildCount() < 2) addQuick(quick, R.drawable.ic_live, "Who's in", "Live attendance right now", () -> showTab(TAB_LIVE));
-        if (hasTab(TAB_UPDATES) && quick.getChildCount() < 2) addQuick(quick, R.drawable.ic_update, "Reporter updates", "Shop PCs, update and pause", () -> showTab(TAB_UPDATES));
-        if (quick.getChildCount() > 0) { page.addView(quick); Ui.gap(page, 28); }
-        List<AppPolicy.Feature> tools = new ArrayList<>();
-        for (AppPolicy.Feature f : AppPolicy.features(caps, operator))
-            if (!(f.path().equals("/dashboard") && hasTab(TAB_LIVE))) tools.add(f);   // native Who's in replaces the web board
-        if (tools.isEmpty() && quick.getChildCount() == 0) {
+        page.addView(Ui.title(this, greeting() + (first.isEmpty() ? "" : ", " + first), 30)); Ui.gap(page, 20);
+        if (!notice.isEmpty()) { page.addView(Ui.notice(this, notice, false)); Ui.gap(page, 16); }
+        int shown = 0;
+        boolean stores = hasTab(TAB_STORES) && storesScreen != null;
+        if (stores) { salesCard(page); Ui.gap(page, 12); shown++; }
+        if (hasTab(TAB_LIVE)) { staffCard(page); Ui.gap(page, 12); shown++; }
+        if (stores) needsALook(page);
+        if (peopleSession && can("people_hire")) {
+            Ui.gap(page, 4); page.addView(Ui.secondary(this, "Add employee", this::startAddEmployee), Ui.fill(this, 52)); Ui.gap(page, 12); shown++;
+        }
+        if (hasTab(TAB_UPDATES)) {
+            LinearLayout card = listCard();
+            card.addView(Ui.listRow(this, null, "Reporter updates", "Shop PCs, update and pause", null, () -> showTab(TAB_UPDATES)));
+            page.addView(card); Ui.gap(page, 12); shown++;
+        }
+        if (shown > 0) return;
+        // A login whose work is all on the web pages finds them here as well as under More.
+        List<AppPolicy.Feature> pages = officePages();
+        if (pages.isEmpty() && !hasStaff()) {
             page.addView(Ui.text(this, "Your account has no enabled sections yet. Ask your workspace administrator to grant company access and permissions.", 16, Ui.INK));
             return;
         }
-        if (tools.isEmpty()) return;
-        page.addView(Ui.label(this, "Tools")); Ui.gap(page, 10);
+        if (!pages.isEmpty()) officeCard(page, pages);
+    }
+
+    private LinearLayout listCard() {
         LinearLayout card = Ui.column(this); card.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, this)); card.setClipToOutline(true);
-        for (int i = 0; i < tools.size(); i++) {
-            AppPolicy.Feature f = tools.get(i);
-            if (i > 0) card.addView(Ui.divider(this, 16));
-            card.addView(Ui.listRow(this, null, f.name(), f.description(), null,
-                    f.path().endsWith("#updates") ? () -> showTab(TAB_UPDATES) : () -> open(f)));   // native Reporter updates screen
+        return card;
+    }
+    private void addRow(LinearLayout card, View row) {
+        if (card.getChildCount() > 0) card.addView(Ui.divider(this, 16));
+        card.addView(row);
+    }
+
+    /** The People and licence web pages this login may open. Who's in is native, so its web board is left out. */
+    private List<AppPolicy.Feature> officePages() {
+        List<AppPolicy.Feature> out = new ArrayList<>();
+        for (AppPolicy.Feature f : AppPolicy.features(caps, operator))
+            if (!(f.path().equals("/dashboard") && hasTab(TAB_LIVE))) out.add(f);
+        return out;
+    }
+    private void officeCard(LinearLayout page, List<AppPolicy.Feature> pages) {
+        page.addView(Ui.label(this, "Office pages")); Ui.gap(page, 4);
+        page.addView(Ui.text(this, "These open as web pages inside the app.", 13, Ui.MUTED)); Ui.gap(page, 10);
+        LinearLayout card = listCard();
+        for (AppPolicy.Feature f : pages) {
+            if (f.path().endsWith("#updates"))   // Reporter updates has its own screen in the app
+                addRow(card, Ui.listRow(this, null, f.name(), f.description(), null, () -> showTab(TAB_UPDATES)));
+            else addRow(card, Ui.listRow(this, null, f.name(), f.description(), null, R.drawable.ic_external, () -> open(f)));
         }
         page.addView(card);
     }
-    private void addQuick(LinearLayout row, int icon, String title, String subtitle, Runnable action) {
-        LinearLayout tile = Ui.card(this); tile.setMinimumHeight(dp(132));
-        ImageView i = Ui.icon(this, icon, Ui.BRAND, 44); i.setPadding(dp(10), dp(10), dp(10), dp(10));
-        i.setBackground(Ui.outline(Ui.TINT, Ui.TINT_LINE, 1, 2, this));
-        tile.addView(i); Ui.gap(tile, 14); tile.addView(Ui.title(this, title, 17)); Ui.gap(tile, 2);
-        tile.addView(Ui.text(this, subtitle, 13, Ui.MUTED));
-        tile.setBackground(Ui.pressable(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, this), 20, this));
-        tile.setClickable(true); tile.setFocusable(true); tile.setContentDescription(title + ". " + subtitle); tile.setOnClickListener(v -> action.run());
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, -2, 1);
-        if (row.getChildCount() > 0) p.leftMargin = dp(12);
-        row.addView(tile, p);
+
+    private LinearLayout todayCard(String label, String value, String sub, boolean tinted, Runnable action) {
+        LinearLayout card = Ui.column(this); card.setPadding(dp(18), dp(16), dp(14), dp(16));
+        card.setBackground(Ui.pressable(Ui.outline(tinted ? Ui.TINT : Ui.SURFACE, tinted ? Ui.TINT_LINE : Ui.LINE, 1, 2, this), 2, this));
+        LinearLayout head = Ui.row(this);
+        TextView l = Ui.label(this, label); if (tinted) l.setTextColor(Ui.BRAND);
+        head.addView(l, new LinearLayout.LayoutParams(0, -2, 1));
+        head.addView(Ui.icon(this, R.drawable.ic_chevron, tinted ? Ui.BRAND : Ui.MUTED, 20));
+        card.addView(head); Ui.gap(card, 8);
+        TextView v = Ui.title(this, value, tinted ? 40 : 30); v.setSingleLine(true);
+        v.setAutoSizeTextTypeUniformWithConfiguration(20, tinted ? 47 : 35, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
+        card.addView(v, Ui.fill(this, tinted ? 52 : 40));
+        if (!sub.isEmpty()) { Ui.gap(card, 6); card.addView(Ui.text(this, sub, 14, tinted ? Ui.INK : Ui.MUTED)); }
+        card.setContentDescription(label + ". " + value + ". " + sub); card.setClickable(true); card.setFocusable(true);
+        card.setOnClickListener(x -> action.run());
+        return card;
+    }
+    private void salesCard(LinearLayout page) {
+        StoresScreen s = storesScreen;
+        List<StoreMath.Figures> all = s.all();
+        StoreMath.Figures total = StoreMath.total("All", all);
+        int live = 0;
+        for (StoreMath.Figures f : all) if ("ok".equals(s.state.get(f.id))) live++;
+        String at = StoreMath.clock(total.asOf), value, sub;
+        if (!s.listLoaded()) { value = "\u2026"; sub = s.listError().isEmpty() ? "Asking the shop PCs" : s.listError(); }
+        else if (all.isEmpty()) { value = "No stores yet"; sub = "A store appears once its shop PC is approved for your login."; }
+        else {
+            value = Double.isNaN(total.sales) ? "\u2026" : StoreMath.money(total.sales);
+            sub = live + " of " + all.size() + (all.size() == 1 ? " store" : " stores") + " live"
+                    + (Double.isNaN(total.receipts) ? "" : " \u00b7 " + StoreMath.count(total.receipts) + " receipts");
+        }
+        page.addView(todayCard("Sales today" + (at.isEmpty() ? "" : " \u00b7 " + at), value, sub, true, () -> showTab(TAB_STORES)));
+    }
+    private void staffCard(LinearLayout page) {
+        String value = staffIn >= 0 ? staffIn + " of " + staffTotal : staffIn == -2 ? "\u2013" : "\u2026";
+        String sub = staffIn >= 0 ? staffCompany : staffIn == -2 ? "Could not be loaded. Open Who's in to try again." : "";
+        page.addView(todayCard("Staff at work", value, sub, false, () -> showTab(TAB_LIVE)));
+    }
+    /** Stores whose PC is offline, whose tills were not all read, or that answered with an error. */
+    private void needsALook(LinearLayout page) {
+        StoresScreen s = storesScreen;
+        if (!s.listLoaded()) return;
+        LinearLayout card = listCard(); int more = 0;
+        for (StoreMath.Figures f : s.all()) {
+            String st = s.state.getOrDefault(f.id, "asking");
+            JSONObject row = s.store(f.id);
+            boolean offline = st.equals("offline") || (row != null && !row.optBoolean("online") && !f.answered);
+            String what = offline || st.equals("gone") || st.startsWith("error: ") ? s.line(f)
+                    : f.answered && f.tillsRead < f.tillsTotal ? (f.tillsTotal - f.tillsRead) + " of " + f.tillsTotal + (f.tillsTotal == 1 ? " till" : " tills") + " not read" : null;
+            if (what == null) continue;
+            if (card.getChildCount() >= 9) { more++; continue; }   // five rows and their dividers
+            addRow(card, Ui.listRow(this, null, f.name, what, null, () -> {
+                storesScreen.section = "live"; showTab(TAB_STORES); if (storesScreen != null) storesScreen.openStore(f.id);
+            }));
+        }
+        if (card.getChildCount() == 0) return;
+        if (more > 0) addRow(card, Ui.listRow(this, null, "And " + more + " more", "See them all in Stores", null, () -> showTab(TAB_STORES)));
+        page.addView(Ui.label(this, "Needs a look")); Ui.gap(page, 8); page.addView(card); Ui.gap(page, 12);
+    }
+    /** Staff at work for the company last used on Who's in; asked once each time Today opens. */
+    private void loadStaffCount() {
+        loadCompanies(list -> {
+            if (list.isEmpty()) return;
+            Company c = list.get(Math.min(companyIndex(list), list.size() - 1));
+            request("/api/dashboard/live?url=" + query(c.url) + "&presence=all", null, data -> {
+                int in = 0, total = 0; JSONArray rows = data.optJSONArray("people");
+                if (rows != null) for (int i = 0; i < rows.length(); i++) {
+                    JSONObject p = rows.optJSONObject(i); if (p == null) continue;
+                    total++; if (p.optBoolean("at_work")) in++;
+                }
+                staffIn = in; staffTotal = total; staffCompany = list.size() > 1 ? c.name : "";
+                if (todayOnScreen()) redraw(this::drawToday);
+            }, message -> { if (staffIn < 0) { staffIn = -2; if (todayOnScreen()) redraw(this::drawToday); } });
+        }, message -> { if (staffIn < 0) { staffIn = -2; if (todayOnScreen()) redraw(this::drawToday); } });
     }
     private static String greeting() {
         int hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY);
@@ -690,7 +812,7 @@ public final class MainActivity extends Activity {
     }
 
     private void accountTab() {
-        tab = TAB_ACCOUNT; currentTitle = "Account"; setBar("Account", false); showNav(true);
+        tab = TAB_ACCOUNT; currentTitle = "More"; setBar("More", false); showNav(true);
         LinearLayout page = page();
         LinearLayout who = Ui.row(this); who.addView(Ui.avatar(this, displayName, 56));
         LinearLayout words = Ui.column(this); words.setPadding(dp(16), 0, 0, 0);
@@ -698,39 +820,41 @@ public final class MainActivity extends Activity {
         String host = Uri.parse(peopleSession ? workspace : operator ? AppPolicy.ADMIN : AppPolicy.link()).getHost();
         if (host != null) words.addView(Ui.text(this, host, 13, Ui.MUTED));
         who.addView(words, new LinearLayout.LayoutParams(0, -2, 1)); page.addView(who); Ui.gap(page, 24);
-        page.addView(Ui.label(this, "Appearance")); Ui.gap(page, 8);
+
+        // Your logins: the store login (My stores) and the People login, each with what can be done to it.
+        page.addView(Ui.label(this, "Your logins")); Ui.gap(page, 8);
+        LinearLayout logins = listCard();
+        if (linkToken.isEmpty()) {
+            addRow(logins, Ui.listRow(this, null, "Join My stores with a code", "From an invite: choose your own login", null, () -> startJoin(null)));
+            addRow(logins, Ui.listRow(this, null, "Connect My stores", "Sign in with a store login you already have", null, this::connectStores));
+        } else {
+            if ("owner".equals(linkRole)) addRow(logins, Ui.listRow(this, null, "Team", "Invite staff, reset codes, remove logins", null, this::startTeam));
+            addRow(logins, Ui.listRow(this, null, "Change store password", "For " + linkUser + "; other phones are signed out", null, this::changeStorePassword));
+            addRow(logins, Ui.listRow(this, null, "My stores: " + linkUser, "Sign out of My stores on this phone", null, this::disconnectStores));
+        }
+        boolean ownAccount = peopleSession && !role.equals("master");   // master's login is managed by Koenekt
+        if (ownAccount) addRow(logins, Ui.listRow(this, null, "Change password", "Other phones and browsers will need the new one", null, () -> startPasswordChange(false)));
+        addRow(logins, Ui.listRow(this, null, "Refresh access", "Reload your companies and permissions", null, this::refreshAccess));
+        page.addView(logins); Ui.gap(page, 24);
+
+        List<AppPolicy.Feature> pages = officePages();
+        if (!pages.isEmpty()) { officeCard(page, pages); Ui.gap(page, 24); }
+
+        page.addView(Ui.label(this, "This phone")); Ui.gap(page, 8);
         page.addView(appearanceSwitch()); Ui.gap(page, 8);
         String how = Ui.LIGHT.equals(appearance) ? "Always light." : Ui.DARK_MODE.equals(appearance) ? "Always dark."
                 : "Follows your phone: " + (Ui.dark ? "dark" : "light") + " now.";
-        page.addView(Ui.text(this, how, 13, Ui.MUTED)); Ui.gap(page, 24);
-        LinearLayout card = Ui.column(this); card.setBackground(Ui.outline(Ui.SURFACE, Ui.LINE, 1, 20, this)); card.setClipToOutline(true);
-        card.addView(Ui.listRow(this, null, "Refresh access", "Reload your companies and permissions", null, this::refreshAccess));
-        card.addView(Ui.divider(this, 16));
-        if (linkToken.isEmpty()) {
-            card.addView(Ui.listRow(this, null, "Join My stores with a code", "From an invite: choose your own login", null, () -> startJoin(null)));
-            card.addView(Ui.divider(this, 16));
-            card.addView(Ui.listRow(this, null, "Connect My stores", "Sign in with a store login you already have", null, this::connectStores));
-        } else {
-            if ("owner".equals(linkRole)) {
-                card.addView(Ui.listRow(this, null, "Team", "Invite staff, reset codes, remove logins", null, this::startTeam));
-                card.addView(Ui.divider(this, 16));
-            }
-            card.addView(Ui.listRow(this, null, "Change store password", "For " + linkUser + "; other phones are signed out", null, this::changeStorePassword));
-            card.addView(Ui.divider(this, 16));
-            card.addView(Ui.listRow(this, null, "My stores: " + linkUser, "Sign out of My stores on this phone", null, this::disconnectStores));
-        }
-        card.addView(Ui.divider(this, 16));
-        boolean ownAccount = peopleSession && !role.equals("master");   // master's login is managed by Koenekt
-        if (ownAccount) {
-            card.addView(Ui.listRow(this, null, "Change password", "Other phones and browsers will need the new one", null, () -> startPasswordChange(false)));
-            card.addView(Ui.divider(this, 16));
-        }
-        if (secureBuild()) { card.addView(screenshotsRow()); card.addView(Ui.divider(this, 16)); }
-        card.addView(Ui.listRow(this, null, "About & privacy", "How this app protects your sign-in", null, this::about));
-        card.addView(Ui.divider(this, 16));
-        card.addView(Ui.listRow(this, null, "Privacy policy", "Opens in your browser", null, () -> openExternal(AppPolicy.PRIVACY_URL)));
-        page.addView(card); Ui.gap(page, 20);
-        TextView out = Ui.secondary(this, "Sign out", this::confirmSignOut); out.setTextColor(Ui.DANGER); page.addView(out, Ui.fill(this, 52));
+        page.addView(Ui.text(this, how, 13, Ui.MUTED)); Ui.gap(page, 12);
+        LinearLayout phone = listCard();
+        if (secureBuild()) addRow(phone, screenshotsRow());
+        addRow(phone, Ui.listRow(this, null, "About & privacy", "How this app protects your sign-in", null, this::about));
+        addRow(phone, Ui.listRow(this, null, "Privacy policy", "Opens in your browser", null, R.drawable.ic_external, () -> openExternal(AppPolicy.PRIVACY_URL)));
+        page.addView(phone); Ui.gap(page, 28);
+
+        // Signing out and deleting sit apart from everything else, under their own outline.
+        TextView out = Ui.secondary(this, "Sign out", this::confirmSignOut); out.setTextColor(Ui.DANGER);
+        out.setBackground(Ui.pressable(Ui.outline(Color.TRANSPARENT, Ui.DANGER, 1, 2, this), 2, this));
+        page.addView(out, Ui.fill(this, 52));
         if (ownAccount) {
             Ui.gap(page, 4);
             TextView delete = Ui.quiet(this, "Delete my account", () -> PasswordFlow.confirmDelete(this));
@@ -1124,7 +1248,7 @@ public final class MainActivity extends Activity {
             }
             return true;
         });
-        p.getMenu().add("Back to Home").setOnMenuItemClickListener(i -> { showTab(TAB_HOME); return true; });
+        p.getMenu().add("Back to Today").setOnMenuItemClickListener(i -> { showTab(TAB_HOME); return true; });
         p.show();
     }
 
@@ -1153,6 +1277,7 @@ public final class MainActivity extends Activity {
         linkLogout(); setLink(null, "");
         epoch++; operator = false; peopleSession = false; caps.clear(); notice = "";
         companies = null; peopleScreen = null; liveScreen = null; updatesScreen = null; flow = null; tab = TAB_HOME;
+        staffIn = -1; staffTab = TAB_LIVE;
         web.stopLoading(); web.loadUrl("about:blank"); web.clearHistory(); web.clearCache(true); web.clearFormData();
         WebStorage.getInstance().deleteAllData(); cancelExport();
         if (uploadCallback != null) { uploadCallback.onReceiveValue(null); uploadCallback = null; }
@@ -1536,7 +1661,7 @@ public final class MainActivity extends Activity {
         if (locked) return;
         progress.setVisibility(View.GONE);
         Ui.dialog(this).setTitle("Connection unavailable").setMessage(message)
-                .setPositiveButton("Retry", (d,w) -> web.reload()).setNegativeButton("Home", (d,w) -> home()).show();
+                .setPositiveButton("Retry", (d,w) -> web.reload()).setNegativeButton("Today", (d,w) -> home()).show();
     }
     private void handleBack() {
         if (locked) { finish(); return; }

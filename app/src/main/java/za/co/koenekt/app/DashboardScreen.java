@@ -72,8 +72,9 @@ final class DashboardScreen {
     }
 
     void render() {
-        a.setBar("Dashboard", false,
-                Ui.iconButton(a, R.drawable.ic_tune, edit ? "Done customising" : "Customise dashboard", () -> { edit = !edit; note = ""; render(); }),
+        a.setBar("Stores", false,
+                Ui.iconButton(a, R.drawable.ic_compare, "Compare stores", () -> s.openSection("compare")),
+                Ui.iconButton(a, R.drawable.ic_tune, edit ? "Done customising" : "Customise History", () -> { edit = !edit; note = ""; render(); }),
                 Ui.iconButton(a, R.drawable.ic_refresh, "Refresh", () -> { s.past.forget(); s.refreshNow(); }));
         LinearLayout page = a.page(); page.setPadding(dp(16), dp(4), dp(16), dp(28));
         if (!s.ready(page)) return;
@@ -201,7 +202,7 @@ final class DashboardScreen {
             mini(row, "Sales today", StoreMath.money(tot.sales)); mini(row, "Receipts", StoreMath.count(tot.receipts));
             if (s.owner()) mini(row, "GP % (est.)", StoreMath.format(tot, StoreMath.Metric.GP_PCT));
             Ui.gap(box, 6);
-            box.addView(Ui.quiet(a, "Open Live", () -> s.openSection("live")));
+            box.addView(Ui.quiet(a, "Open Now", () -> s.openSection("live")));
         }
         if (edit) editTools(box, t, index);
         return box;
