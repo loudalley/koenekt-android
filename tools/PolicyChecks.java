@@ -59,7 +59,7 @@ public class PolicyChecks {
         check(!AppPolicy.linkAllowed(AppPolicy.LINK + "/api/stores/a1b2c30000/slips/1"), "relay call refused: a path under slips");
         check(!AppPolicy.linkAllowed(AppPolicy.LINK + "/api/stores/a1b2c30000/slips?q=x"), "relay call refused: slips with a query");
         for (String path : new String[]{"join", "join/check", "me", "me/password", "me/delete", "invites", "invites/revoke",
-                "team", "team/remove", "team/reset"})
+                "team", "team/remove", "team/reset", "team/signout"})
             check(AppPolicy.linkAllowed(AppPolicy.LINK + "/api/" + path), "relay join/account call " + path);
         // Dashboard, Compare, Reports and Groups (Reporter 1.9.106 relay)
         for (String path : new String[]{"stores/a1b2c30000/range", "stores/a1b2c30000/order", "stores/a1b2c30000/rosi",

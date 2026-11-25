@@ -644,7 +644,7 @@ public final class MainActivity extends Activity {
         boolean storesOnly = person == null && !operator && !linkToken.isEmpty();
         displayName = person != null ? person.optString("display_name", person.optString("username")) : storesOnly ? linkUser : "Koenekt management";
         roleLabel = person != null ? person.optString("role_label", role) : storesOnly
-                ? ("owner".equals(linkRole) ? "My stores · owner" : "My stores · staff") : "Licences, customers and Reporter updates";
+                ? ("owner".equals(linkRole) ? "My stores · owner" : "slips".equals(linkRole) ? "My stores · slips only" : "My stores · staff") : "Licences, customers and Reporter updates";
         if (person != null) {
             JSONArray list = person.optJSONArray("caps");
             if (list != null) for (int i=0; i<list.length(); i++) caps.add(list.optString(i));
@@ -683,7 +683,9 @@ public final class MainActivity extends Activity {
         if (!notice.isEmpty()) { page.addView(Ui.notice(this, notice, false)); Ui.gap(page, 16); }
         int shown = 0;
         boolean stores = hasTab(TAB_STORES) && storesScreen != null;
-        if (stores) { salesCard(page); Ui.gap(page, 12); shown++; }
+        boolean slipsOnly = stores && storesScreen.slipsOnly();   // a login that may see till slips and nothing else
+        if (slipsOnly) shown++;                                   // its Today is the Find a slip button
+        else if (stores) { salesCard(page); Ui.gap(page, 12); shown++; }
         if (hasTab(TAB_LIVE)) { staffCard(page); Ui.gap(page, 12); shown++; }
         // The buttons sit above "Needs a look": that list comes and goes as stores answer, and a button must
         // not move under the finger.
@@ -695,7 +697,7 @@ public final class MainActivity extends Activity {
         if (peopleSession && can("people_hire")) {
             Ui.gap(page, 4); page.addView(Ui.secondary(this, "Add employee", this::startAddEmployee), Ui.fill(this, 52)); Ui.gap(page, 8); shown++;
         }
-        if (stores) { Ui.gap(page, 12); needsALook(page); }
+        if (stores && !slipsOnly) { Ui.gap(page, 12); needsALook(page); }
         if (hasTab(TAB_UPDATES)) {
             LinearLayout card = listCard();
             card.addView(Ui.listRow(this, null, "Reporter updates", "Shop PCs, update and pause", null, () -> showTab(TAB_UPDATES)));

@@ -117,7 +117,8 @@ final class JoinFlow implements MainActivity.Flow {
             card.addView(Ui.title(a, info.optString("reset"), 17));
         } else {
             boolean owner = "owner".equals(info.optString("role"));
-            card.addView(Ui.label(a, owner ? "Join as owner" : "Join as staff")); Ui.gap(card, 4);
+            boolean slipsOnly = "slips".equals(info.optString("role"));   // sees till slips of these stores, nothing else
+            card.addView(Ui.label(a, owner ? "Join as owner" : slipsOnly ? "Join to see till slips" : "Join as staff")); Ui.gap(card, 4);
             card.addView(Ui.text(a, owner ? "Live sales and gross profit" : "Live sales (no gross profit)", 14, Ui.MUTED));
             Ui.gap(card, 10);
             JSONArray stores = info.optJSONArray("stores");

@@ -58,9 +58,9 @@ final class TeamFlow implements MainActivity.Flow {
         a.setBar("Team", true, Ui.iconButton(a, R.drawable.ic_refresh, "Refresh", () -> { team = null; show(); }));
         a.onBack(() -> a.leaveFlow(MainActivity.TAB_ACCOUNT));
         LinearLayout page = a.page();
-        page.addView(Ui.text(a, "People with a My stores login for your stores. Staff see sales, not gross profit.", 15, Ui.MUTED));
+        page.addView(Ui.text(a, "People with a My stores login for your stores. Staff see sales, not gross profit. A slips-only login sees the till slips of the stores you choose and nothing else.", 15, Ui.MUTED));
         Ui.gap(page, 16);
-        page.addView(Ui.primary(a, "Invite staff", this::invite), Ui.fill(a, 54));
+        page.addView(Ui.primary(a, "Invite someone", this::invite), Ui.fill(a, 54));
         Ui.gap(page, 24);
         if (!error.isEmpty()) { page.addView(Ui.notice(a, error, true)); Ui.gap(page, 16); }
         if (loading || team == null) { if (error.isEmpty()) page.addView(Ui.loading(a)); return; }
@@ -70,12 +70,16 @@ final class TeamFlow implements MainActivity.Flow {
         for (int i = 0; i < team.length(); i++) {
             JSONObject t = team.optJSONObject(i); if (t == null) continue;
             String name = t.optString("username");
-            boolean staff = "staff".equals(t.optString("role")), me = name.equals(you);
-            String sub = (staff ? "Staff" : "Owner") + (me ? " · you" : "") + " · "
-                    + (t.isNull("last_login") ? "never signed in" : "signed in " + ago(t.optDouble("last_login")));
+            String role = t.optString("role");
+            boolean staff = "staff".equals(role) || "slips".equals(role), me = name.equals(you);
+            JSONArray sessions = t.optJSONArray("sessions");
+            int open = sessions == null ? 0 : sessions.length();
+            String sub = ("slips".equals(role) ? "Slips only" : "staff".equals(role) ? "Staff" : "Owner") + (me ? " · you" : "") + " · "
+                    + (t.isNull("last_login") ? "never signed in" : "signed in " + ago(t.optDouble("last_login")))
+                    + (sessions == null ? "" : open == 0 ? " · signed out" : " · " + open + (open == 1 ? " session" : " sessions"));
             if (card.getChildCount() > 0) card.addView(Ui.divider(a, 16));
             card.addView(Ui.listRow(a, Ui.avatar(a, name.replace('.', ' '), 40), name, sub, null,
-                    staff && !me ? () -> staffMenu(name) : null));
+                    staff && !me ? () -> staffMenu(name, t) : null));
         }
         page.addView(card);
 
@@ -85,7 +89,7 @@ final class TeamFlow implements MainActivity.Flow {
             JSONObject inv = invites.optJSONObject(i);
             if (inv == null || !"open".equals(inv.optString("status"))) continue;
             open++;
-            String label = inv.optString("label").isEmpty() ? "Staff invite" : inv.optString("label");
+            String label = inv.optString("label").isEmpty() ? ("slips".equals(inv.optString("role")) ? "Slips-only invite" : "Staff invite") : inv.optString("label");
             String sub = "Works until " + when(inv.optDouble("expires")) + " · "
                     + (inv.optInt("uses") - inv.optInt("uses_left")) + " of " + inv.optInt("uses") + " used";
             String id = inv.optString("id");
@@ -104,8 +108,18 @@ final class TeamFlow implements MainActivity.Flow {
 
     private void invite() {
         LinearLayout box = Ui.column(a); box.setPadding(dp(24), dp(8), dp(24), 0);
-        box.addView(Ui.text(a, "Makes a QR code and a code to type. The new staff member chooses their own username and password.", 14, Ui.MUTED));
+        box.addView(Ui.text(a, "Makes a QR code and a code to type. The person chooses their own username and password.", 14, Ui.MUTED));
         Ui.gap(box, 14);
+        box.addView(Ui.label(a, "What they may see")); Ui.gap(box, 4);
+        RadioGroup what = new RadioGroup(a);
+        String[] kinds = {"Staff: live sales and slips", "Slips only: till slips of the stores you choose"}; int[] kindIds = new int[kinds.length];
+        for (int i = 0; i < kinds.length; i++) {
+            RadioButton r = new RadioButton(a); r.setText(kinds[i]); r.setTextColor(Ui.INK); kindIds[i] = android.view.View.generateViewId(); r.setId(kindIds[i]);
+            r.setButtonTintList(ColorStateList.valueOf(Ui.LIME)); r.setMinHeight(dp(48));
+            what.addView(r);
+        }
+        what.check(kindIds[0]);
+        box.addView(what); Ui.gap(box, 10);
         EditText note = Ui.field(box, "Note for yourself", "e.g. Thandi, tills", Ui.textInput());
         box.addView(Ui.label(a, "Code works for")); Ui.gap(box, 4);
         RadioGroup group = new RadioGroup(a); group.setOrientation(RadioGroup.HORIZONTAL);
@@ -117,24 +131,67 @@ final class TeamFlow implements MainActivity.Flow {
         }
         group.check(ids[1]);
         box.addView(group);
-        Ui.dialog(a).setTitle("Invite staff").setView(box).setNegativeButton("Cancel", null)
-                .setPositiveButton("Make code", (d, w) -> {
-                    try {
-                        JSONObject body = new JSONObject().put("label", note.getText().toString().trim())
-                                .put("hours", group.getCheckedRadioButtonId() == ids[0] ? 24 : 48);
-                        a.linkRequest("POST", "/api/invites", body, data -> {
-                            shown = data; shownTitle = "Invite staff";
-                            shownFor = note.getText().toString().trim();
-                            team = null; show();
-                        }, message -> a.toast(message));
-                    } catch (Exception e) { a.toast("Could not make the invite."); }
+        Ui.dialog(a).setTitle("Invite someone").setView(box).setNegativeButton("Cancel", null)
+                .setPositiveButton("Next", (d, w) -> {
+                    String label = note.getText().toString().trim();
+                    int hours = group.getCheckedRadioButtonId() == ids[0] ? 24 : 48;
+                    if (what.getCheckedRadioButtonId() == kindIds[1]) pickStores(label, hours);
+                    else makeInvite("staff", null, label, hours);
                 }).show();
     }
+    /** A slips-only login must be given its stores. */
+    private void pickStores(String label, int hours) {
+        a.linkRequest("GET", "/api/stores", null, data -> {
+            JSONArray rows = data.optJSONArray("stores");
+            java.util.List<String> ids = new java.util.ArrayList<>(), names = new java.util.ArrayList<>();
+            if (rows != null) for (int i = 0; i < rows.length(); i++) {
+                JSONObject s = rows.optJSONObject(i);
+                if (s != null && "owner".equals(s.optString("role"))) { ids.add(s.optString("store")); names.add(s.optString("name")); }
+            }
+            if (ids.isEmpty()) { a.toast("You have no stores to give access to yet."); return; }
+            boolean[] on = new boolean[ids.size()];
+            Ui.dialog(a).setTitle("Slips of which stores?").setMultiChoiceItems(names.toArray(new String[0]), on, (d, w, checked) -> on[w] = checked)
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Make code", (d, w) -> {
+                        JSONArray chosen = new JSONArray();
+                        for (int i = 0; i < on.length; i++) if (on[i]) chosen.put(ids.get(i));
+                        if (chosen.length() == 0) { a.toast("Choose at least one store."); return; }
+                        makeInvite("slips", chosen, label, hours);
+                    }).show();
+        }, message -> a.toast(message));
+    }
+    private void makeInvite(String role, JSONArray stores, String label, int hours) {
+        try {
+            JSONObject body = new JSONObject().put("label", label).put("hours", hours).put("role", role);
+            if (stores != null) body.put("stores", stores);
+            a.linkRequest("POST", "/api/invites", body, data -> {
+                shown = data; shownTitle = "slips".equals(role) ? "Slips-only invite" : "Invite staff";
+                shownFor = label;
+                team = null; show();
+            }, message -> a.toast(message));
+        } catch (Exception e) { a.toast("Could not make the invite."); }
+    }
 
-    private void staffMenu(String name) {
-        Ui.choose(a, name, new String[]{"Give a reset code (new password)", "Remove from My stores"}, -1, which -> {
-            if (which == 0) resetCode(name); else remove(name);
+    private void staffMenu(String name, JSONObject row) {
+        JSONArray sessions = row.optJSONArray("sessions");
+        java.util.List<String> items = new java.util.ArrayList<>();
+        items.add("Give a reset code (new password)"); items.add("Remove from My stores");
+        if (sessions != null && sessions.length() > 0) items.add("Sign out everywhere (" + sessions.length() + ")");
+        Ui.choose(a, name, items.toArray(new String[0]), -1, which -> {
+            if (which == 0) resetCode(name); else if (which == 1) remove(name); else signOut(name);
         });
+    }
+
+    private void signOut(String name) {
+        Ui.dialog(a).setTitle("Sign " + name + " out everywhere?")
+                .setMessage("Every phone and browser using this login is signed out now. The login and its password stay; they can sign in again.")
+                .setPositiveButton("Sign out", (d, w) -> {
+                    try {
+                        a.linkRequest("POST", "/api/team/signout", new JSONObject().put("username", name), data -> {
+                            a.toast(name + " is signed out everywhere."); team = null; show();
+                        }, message -> a.toast(message));
+                    } catch (Exception e) { a.toast("Could not sign them out."); }
+                }).setNegativeButton("Cancel", null).show();
     }
 
     private void resetCode(String name) {
@@ -179,7 +236,7 @@ final class TeamFlow implements MainActivity.Flow {
         a.onBack(done);
         LinearLayout page = a.page();
         boolean reset = shownTitle.startsWith("Reset");
-        page.addView(Ui.title(a, reset ? "Give them this code" : "Show this to the new staff member", 24)); Ui.gap(page, 6);
+        page.addView(Ui.title(a, reset ? "Give them this code" : "Show this to the person you are inviting", 24)); Ui.gap(page, 6);
         if (!shownFor.isEmpty()) { page.addView(Ui.text(a, shownFor, 15, Ui.INK)); Ui.gap(page, 4); }
         page.addView(Ui.text(a, reset
                 ? "They open Koenekt, tap Join with a code, type it and choose a new password."

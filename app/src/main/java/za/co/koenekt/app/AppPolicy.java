@@ -56,7 +56,7 @@ public final class AppPolicy {
                     && queryOk && u.getRawFragment() == null
                     && path != null && path.matches("/api/(login|logout|stores|stores/[A-Za-z0-9_-]{4,64}/(live|range|order|rosi|turnover|slips)"
                     + "|history|groups|groups/delete|me/dashboard"
-                    + "|join|join/check|me|me/password|me/delete|invites|invites/revoke|team|team/remove|team/reset)");
+                    + "|join|join/check|me|me/password|me/delete|invites|invites/revoke|team|team/remove|team/reset|team/signout)");
         } catch (Exception e) { return false; }
     }
 

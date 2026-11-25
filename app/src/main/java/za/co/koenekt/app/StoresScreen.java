@@ -102,9 +102,23 @@ final class StoresScreen {
     }
 
     // ------------------------------------------------------------------ data
+    /**
+     * A slips-only login (the relay's role "slips"): it may see till slips of its stores and nothing else, so it
+     * gets the Slips section alone and no live figures are asked for. Before the store list is in, the login's own
+     * role says so; after that, every store it sees must be slips only.
+     */
+    boolean slipsOnly() {
+        if (!listLoaded || stores.isEmpty()) return "slips".equals(a.linkRole());
+        for (JSONObject s : stores) if (!"slips".equals(s.optString("role"))) return false;
+        return true;
+    }
+    /** May this login see live figures and history of this store? Not when it is slips only there. */
+    private boolean seesFigures(JSONObject s) { return !"slips".equals(s.optString("role")); }
+
     /** Opens the section last shown (Now the first time) and starts the 60-second refresh. */
     void show() {
         if (section.isEmpty()) section = "live";
+        if (slipsOnly()) section = "slips";
         forToday = false; storeScreen = null; compareScreen = null; view = sectionView();
         start();
     }
@@ -132,6 +146,10 @@ final class StoresScreen {
     }
     /** Now · Slips · History · Reports, under the title of each section. Compare counts as History; Groups marks none. */
     void sections(LinearLayout page) {
+        if (slipsOnly()) {   // one section only: no switch to show
+            if (!section.equals("slips")) { section = "slips"; view = slips::render; }
+            Ui.gap(page, 4); return;
+        }
         List<String[]> all = new ArrayList<>();
         all.add(new String[]{"live", "Now"}); all.add(new String[]{"slips", "Slips"}); all.add(new String[]{"dash", "History"});
         if (owner()) all.add(new String[]{"reports", "Reports"});
@@ -181,7 +199,7 @@ final class StoresScreen {
             listLoaded = true; listError = ""; stores.clear();
             JSONArray rows = data.optJSONArray("stores");
             if (rows != null) for (int i = 0; i < rows.length(); i++) if (rows.optJSONObject(i) != null) stores.add(rows.optJSONObject(i));
-            if (wantsLive()) for (JSONObject s : stores) if (dash.shows(s.optString("store"))) { due++; ask(me, s.optString("store"), 0); }
+            if (wantsLive()) for (JSONObject s : stores) if (dash.shows(s.optString("store")) && seesFigures(s)) { due++; ask(me, s.optString("store"), 0); }
             redraw();
         }, message -> { if (live(me)) { listError = message; redraw(); } });
         timer.postDelayed(() -> { if (live(me)) refresh(me); }, REFRESH_MS);
