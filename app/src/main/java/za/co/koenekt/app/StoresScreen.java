@@ -25,9 +25,9 @@ import za.co.koenekt.app.StoreMath.Figures;
 import za.co.koenekt.app.StoreMath.Metric;
 
 /**
- * Stores, through the Koenekt Link relay, in three sections under one title:
+ * Stores, through the Koenekt Link relay, in four sections under one title:
  * Now (key "live": today's till figures for every store, customisable on the phone: tiles, stores shown, store
- * types, grouping, sort order), History (key "dash": the owner's own layout, saved on the relay, opening on month
+ * types, grouping, sort order), Slips (find a till slip and send it on; SlipsScreen), History (key "dash": the owner's own layout, saved on the relay, opening on month
  * to date against last year; DashboardScreen; its Compare button opens "compare", store against store, type or
  * group; PeriodScreen) and Reports (Range, Ordering, ROSI, Turnover run on the shop PC; ReportsScreen, owners).
  * Groups (GroupsScreen, owners) opens from Customise. Holds the shared live answers and refreshes them every 60 s
@@ -60,6 +60,7 @@ final class StoresScreen {
     private final PeriodScreen period;
     private final ReportsScreen reports;
     private final GroupsScreen groupsScreen;
+    private final SlipsScreen slips;
     /**
      * New figures arrive one store at a time (dozens a minute on an account with many stores). They redraw the
      * page once, after a short pause, and never while the user is touching or scrolling it.
@@ -79,7 +80,7 @@ final class StoresScreen {
         a = activity; dash = new Dash(activity);
         // after `a`: each section keeps the activity
         dashboard = new DashboardScreen(this); period = new PeriodScreen(this);
-        reports = new ReportsScreen(this); groupsScreen = new GroupsScreen(this);
+        reports = new ReportsScreen(this); groupsScreen = new GroupsScreen(this); slips = new SlipsScreen(this);
     }
     int dp(float n) { return a.dp(n); }
     /** Owner of its own account, or of any store it also sees in another account (the relay sends each store's role). */
@@ -115,19 +116,24 @@ final class StoresScreen {
     boolean listLoaded() { return listLoaded; }
     String listError() { return listError; }
     private boolean onScreen() { return forToday ? a.showingToday() : a.showingStores(); }
+    /** Is this section itself on screen (not Today, another section, one store or a comparison)? */
+    boolean showingSection(String key) {
+        return !forToday && a.showingStores() && section.equals(key) && storeScreen == null && compareScreen == null;
+    }
     private Runnable sectionView() {
         switch (section) {
             case "dash": return dashboard::render;
             case "compare": return period::render;
             case "reports": return reports::render;
             case "groups": return groupsScreen::render;
+            case "slips": return slips::render;
             default: return this::render;
         }
     }
-    /** Now · History · Reports, under the title of each section. Compare counts as History; Groups marks none. */
+    /** Now · Slips · History · Reports, under the title of each section. Compare counts as History; Groups marks none. */
     void sections(LinearLayout page) {
         List<String[]> all = new ArrayList<>();
-        all.add(new String[]{"live", "Now"}); all.add(new String[]{"dash", "History"});
+        all.add(new String[]{"live", "Now"}); all.add(new String[]{"slips", "Slips"}); all.add(new String[]{"dash", "History"});
         if (owner()) all.add(new String[]{"reports", "Reports"});
         String here = section.equals("compare") ? "dash" : section;
         String[] names = new String[all.size()]; int on = -1;

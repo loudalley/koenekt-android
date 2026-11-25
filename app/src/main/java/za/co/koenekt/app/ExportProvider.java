@@ -51,6 +51,7 @@ public final class ExportProvider extends ContentProvider {
         if (n.endsWith(".pdf")) return "application/pdf";
         if (n.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
         if (n.endsWith(".csv")) return "text/csv";
+        if (n.endsWith(".png")) return "image/png";
         return "application/octet-stream";
     }
 

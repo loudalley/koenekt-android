@@ -685,10 +685,17 @@ public final class MainActivity extends Activity {
         boolean stores = hasTab(TAB_STORES) && storesScreen != null;
         if (stores) { salesCard(page); Ui.gap(page, 12); shown++; }
         if (hasTab(TAB_LIVE)) { staffCard(page); Ui.gap(page, 12); shown++; }
-        if (stores) needsALook(page);
-        if (peopleSession && can("people_hire")) {
-            Ui.gap(page, 4); page.addView(Ui.secondary(this, "Add employee", this::startAddEmployee), Ui.fill(this, 52)); Ui.gap(page, 12); shown++;
+        // The buttons sit above "Needs a look": that list comes and goes as stores answer, and a button must
+        // not move under the finger.
+        if (stores) {   // the one thing asked for most: a customer's slip
+            Ui.gap(page, 4);
+            page.addView(Ui.primary(this, "Find a slip", () -> { storesScreen.section = "slips"; showTab(TAB_STORES); }), Ui.fill(this, 52));
+            Ui.gap(page, 8);
         }
+        if (peopleSession && can("people_hire")) {
+            Ui.gap(page, 4); page.addView(Ui.secondary(this, "Add employee", this::startAddEmployee), Ui.fill(this, 52)); Ui.gap(page, 8); shown++;
+        }
+        if (stores) { Ui.gap(page, 12); needsALook(page); }
         if (hasTab(TAB_UPDATES)) {
             LinearLayout card = listCard();
             card.addView(Ui.listRow(this, null, "Reporter updates", "Shop PCs, update and pause", null, () -> showTab(TAB_UPDATES)));
@@ -847,6 +854,11 @@ public final class MainActivity extends Activity {
         page.addView(Ui.text(this, how, 13, Ui.MUTED)); Ui.gap(page, 12);
         LinearLayout phone = listCard();
         if (secureBuild()) addRow(phone, screenshotsRow());
+        if (!linkToken.isEmpty() && SlipsScreen.whatsApps(this).size() > 1) {   // the phone has WhatsApp and WhatsApp Business
+            String pick = SlipsScreen.chosenWhatsApp(this);
+            addRow(phone, Ui.listRow(this, null, "Send slips with", pick.isEmpty() ? "Asks the first time" : SlipsScreen.appName(pick), null,
+                    () -> SlipsScreen.chooseWhatsApp(this, this::accountTab)));
+        }
         addRow(phone, Ui.listRow(this, null, "About & privacy", "How this app protects your sign-in", null, this::about));
         addRow(phone, Ui.listRow(this, null, "Privacy policy", "Opens in your browser", null, R.drawable.ic_external, () -> openExternal(AppPolicy.PRIVACY_URL)));
         page.addView(phone); Ui.gap(page, 28);

@@ -54,7 +54,7 @@ public final class AppPolicy {
             return u.getScheme() != null && u.getScheme().equals(base.getScheme()) && u.getRawUserInfo() == null
                     && base.getHost().equals(u.getHost()) && base.getPort() == u.getPort()
                     && queryOk && u.getRawFragment() == null
-                    && path != null && path.matches("/api/(login|logout|stores|stores/[A-Za-z0-9_-]{4,64}/(live|range|order|rosi|turnover)"
+                    && path != null && path.matches("/api/(login|logout|stores|stores/[A-Za-z0-9_-]{4,64}/(live|range|order|rosi|turnover|slips)"
                     + "|history|groups|groups/delete|me/dashboard"
                     + "|join|join/check|me|me/password|me/delete|invites|invites/revoke|team|team/remove|team/reset)");
         } catch (Exception e) { return false; }
