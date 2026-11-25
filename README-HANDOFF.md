@@ -1,6 +1,28 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **25 November 2026 (evening), Claude (Windows PC) — the four-tab layout and till slips are BUILT on branch
+Last updated: **25 November 2026 (night), Claude (Windows PC) — RELEASED 1.11.0 (20) at William's word ("now release the
+android app and deploy the website"): four tabs, till slips, slips-only logins.** `feat/four-tabs` is merged into `main`
+(`7f2121e`, pushed; the MAIN CHECKOUT's local `main` is behind because it holds another session's uncommitted
+`README-HANDOFF.md` and `docs/privacy.html`: pull there once those are settled).
+- Built in the worktree `C:/Projects/koenekt-android-layout` (`.signing` and `build/fdroid-venv` are junctions to the main
+  checkout, both ignored): `clean assembleRelease bundleRelease lintDebug`, lint no issues, PolicyChecks 127, StoreChecks 58,
+  ExportChecks 25. Upload certificate 3E:3A:09... as before. `dist/1.11.0/Koenekt-1.11.0.apk`
+  ad4b90fd73db37864c718694869adc360d3836b2a2f9c78cf781145a869d7d39, `Koenekt-1.11.0.aab`
+  f4e3ecea8991f1898ca563b6e9b5c0dc77d4f9fd328b4f68c775be1f6df2ab97 (also copied to the main checkout's `dist/1.11.0/`). Notes
+  `changelogs/20.txt`; `full_description.txt` mentions Today, till slips and slips-only logins.
+- Where it is: GitHub `main`; F-Droid `tools/fdroid_repo.py publish --push` (koenekt-fdroid `972488d`, the live index shows
+  1.11.0); Drive `My Drive/Koenekt Android/Koenekt-1.11.0.apk` (same hash); website release 20261125212221 serves the same
+  APK (downloaded back, same hash) and the downloads page mentions till slips. Google Play: see the end of this entry.
+- The release build itself was not run on a phone or the emulator; the debug build of the same code was (see below). The
+  privacy policy page (`docs/privacy.html`) was NOT changed: it has another session's unpublished draft. The app's About
+  text now says a slip's file stays in the app's cache for up to an hour.
+- Server side, same evening: the relay with slips, slips-only logins and sessions is INSTALLED on srv1 (William ran bundle
+  `koenekt-link-stage-20261125.zip`, "done, all OK"; from this PC the slips route answers 401, not 404). Reporter 1.9.113 is
+  on `master` and was being published to the Lumbrah pilot (see the Reporter handoff for the result). The website's Slips
+  and Team pages went live at 21:12 with another session's deploy (release 20261125211257) and are in 20261125212221 too.
+  Slips need a shop PC on Reporter 1.9.113: until a shop has it, the app says that shop's PC needs a newer Reporter.
+
+Earlier that evening: **the four-tab layout and till slips were BUILT on branch
 `feat/four-tabs` (worktree `C:\Projects\koenekt-android-layout`, off `main` efecff8). NOT merged, NOT released: the live
 version stays 1.10.3 (19) and `versionCode` is untouched.** William, after the second review: "oh yes thats fine lets roll"
 (layout approved, everyone may see slips for now, the REPRINT line stays).
