@@ -1,6 +1,53 @@
 # Koenekt Android — shared handoff for Codex, Cursor and Claude
 
-Last updated: **25 November 2026, Claude (Windows PC) — layout review and till slips: PROPOSAL ONLY, no code changed, nothing built
+Last updated: **25 November 2026 (evening), Claude (Windows PC) — the four-tab layout and till slips are BUILT on branch
+`feat/four-tabs` (worktree `C:\Projects\koenekt-android-layout`, off `main` efecff8). NOT merged, NOT released: the live
+version stays 1.10.3 (19) and `versionCode` is untouched.** William, after the second review: "oh yes thats fine lets roll"
+(layout approved, everyone may see slips for now, the REPRINT line stays).
+- Commits: `a892d77` (layout), `210ea9c` (slips). Bottom tabs are **Today, Stores, Staff, More** (`MainActivity.showNav`;
+  Staff is one tab over `LiveScreen` "Who's in" and `PeopleScreen` "Everyone" with `Ui.segments`; the tab constants keep their
+  numbers). **Today** (`home()` starts the loading, `drawToday()` only draws): sales today from the same live answers as Stores
+  (`StoresScreen.watchToday`), staff at work (one `/api/dashboard/live` call for the company last used), Find a slip, Add
+  employee, then "Needs a look" (PC offline, tills not read, errors; under the buttons so they never move under a finger).
+  **Stores**: one title, sections Now (`live`), Slips, History (`dash`; its Compare button opens `compare` with a back arrow),
+  Reports (owners); Groups opens from Customise. **More** (`accountTab()`): Your logins, Office pages (the web pages, with an
+  "opens a web page" arrow), This phone (appearance, screenshots, "Send slips with" when the phone has both WhatsApps, about,
+  privacy), then Sign out on its own and the delete links. `Ui`: `BRAND` light is `#427400`, `BORDER_STRONG` is `#8A8A84` /
+  `#777773` (fields and choice buttons), labels 12sp, chips 48dp, nav labels 12sp. Icons `ic_menu`, `ic_external` added;
+  `ic_live`, `ic_account`, `ic_update` removed (unused).
+- **Slips** (`SlipsScreen`, `SlipView`): one store's slips for a day, newest first, 100 at a time, one till or all, search on
+  the keyboard's Search key (it runs on the shop PC). A slip is drawn on a Canvas exactly as printed (40 columns, bold, double
+  height, white on black, the REPRINT line last; white paper in dark mode too; tap to zoom; its text is the content
+  description). The send bar stays put: "Send with WhatsApp" or "WhatsApp Business" with the installed app's own icon
+  (`com.whatsapp`, `com.whatsapp.w4b`; both installed: asks once, kept in prefs `slip_whatsapp`), Telegram
+  (`org.telegram.messenger`) when installed, Email (the phone's mail app, PDF), Other (picture or PDF to the share sheet);
+  with no WhatsApp the wide button is "Share slip". WhatsApp and Telegram get a PNG with a caption, email gets a PDF
+  (`PdfDocument`, 80 mm wide). Files go through `ExportProvider` (now also `.png`). Manifest has a `<queries>` block for the
+  three apps and `mailto:`. `AppPolicy.linkAllowed` allows `stores/<id>/slips` (PolicyChecks 126).
+- **Needs on the server side, also built and NOT installed:** Reporter branch `feat/link-slips`
+  (`C:\Projects\koenekt-daily-report-slips`, commit `b0da114`): `app/linkslips.py`, the `slips` action in `app/link.py` and
+  the relay rule in `server/link_relay.py` (owners and staff; answers 30 s in memory, never from disk, none when the PC is
+  offline), tests `tests/test_linkslips.py` (9) and `tests/test_link_slips_relay.py` (5), API in `docs/LINK-REPORTS-API.md`.
+  No Reporter version bump (the text says 1.9.113). Until a shop PC has that Reporter AND srv1 has the new relay, the app
+  says "This shop's PC needs a newer Koenekt Reporter" (older PC) or gets a 404 from the old relay (shown as an error).
+- Checks run: `assembleDebug lintDebug` (lint: no issues), PolicyChecks 126, StoreChecks 58, ExportChecks 25.
+  **Emulator** (`koenekt-test`, debug `-PdevLink=http://10.0.2.2:18611 -PdevOrigin=http://10.0.2.2:18999`, the real relay
+  code and the real `linkslips.run` on this PC with made-up shops and made-up slips; rig scripts in the session scratchpad,
+  data in `C:\Temp\klayout`): owner login; Today; Stores Now, History (opens on month to date), Compare and back, Reports;
+  More; Slips list, search, clear, another store, a till that cannot be read (notice, other tills still list), a shop PC
+  offline, next page, a slip, back to the same place in the list, share as PDF and as picture (both files checked), dark mode.
+  **NOT run:** a People login (so the Staff tab, the staff-at-work card and Add employee are compiled but unseen); a staff
+  store login in the app (the relay test covers staff); the WhatsApp, WhatsApp Business and Telegram buttons (the emulator
+  has none of them, so only "Share slip", Email-less share sheet and Other were exercised); a real phone; a real till's slips
+  through the app (the slip reading itself is kslipper's tested engine); TalkBack; a tablet.
+- Website My stores: a Slips page is being added to `C:\Projects\koenekt-website` (not deployed); see the next entry or the
+  session's report for its state.
+- NEXT, each at William's word: (1) Reporter: merge `feat/link-slips`, bump to 1.9.113, pilot at Lumbrah, release;
+  (2) srv1: install the new `link_relay.py` (William runs sudo); (3) Android: merge `feat/four-tabs`, bump versionCode to 20,
+  build, release to GitHub, F-Droid, Drive, the website and Play; (4) website: deploy. A phone with the new app against the
+  old relay or an old Reporter only loses Slips; everything else works as before.
+
+Earlier on 25 November: **Claude (Windows PC) — layout review and till slips: PROPOSAL ONLY, no code changed, nothing built
 or released; the live version stays 1.10.3 (19).** William: the app "looks complicated to use now, plus we want to be able to see till slips from it and whatsapp them
 directly from the app or telegram or mail". Six proposed screens were added to the design canvas "Koenekt app — site look mockups"
 (a third row, "Proposed: four tabs, with till slips": Today, Stores, Find a slip, A slip / send it, Staff, More); the two existing
