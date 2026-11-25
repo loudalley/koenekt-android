@@ -5,10 +5,12 @@ Sign in to your workspace to see your shops' sales live, manage staff, add new s
 Koenekt management accounts can also manage customers and licences and control Reporter updates across enrolled PCs.
 
 • Quick, three-step Add employee and a searchable People list
+• Today: sales now, staff at work and anything that needs a look, on one screen
 • Who's in: live attendance at a glance
+• Till slips: find any slip a till printed and send it on by WhatsApp, Telegram or email (needs Koenekt Reporter 1.9.113 on the shop's PC)
 • My stores: live till sales per shop, each till's cashier, voids and no-sale openings, and store-vs-store comparison (needs Koenekt Reporter on the shop's PC and a store login)
-• Join My stores with a QR code or a code to type, and choose your own username and password; owners invite and manage their staff
-• Screenshots blocked by default; allow them on your own phone in Account
+• Join My stores with a QR code or a code to type, and choose your own username and password; owners invite and manage their staff, including logins that see till slips only
+• Screenshots blocked by default; allow them on your own phone in More
 • Light, dark or follow your phone, in the same look as the Koenekt website
 • Existing Koenekt accounts and permissions
 • Remembered login protected by fingerprint or device PIN

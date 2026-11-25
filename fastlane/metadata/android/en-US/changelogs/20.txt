@@ -1,0 +1,7 @@
+A simpler app with four tabs:
+• Today: sales now, staff at work, what needs a look.
+• Stores: Now, Slips, History (month to date) and Reports.
+• Staff: Who's in and Everyone. More: logins, office pages, settings.
+Till slips (needs Koenekt Reporter 1.9.113 on the shop PC):
+• Find a slip, see it as printed, send it by WhatsApp, Telegram, email or any app.
+• Owners can invite a login that sees slips only, and sign a login out everywhere.

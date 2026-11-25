@@ -11,11 +11,11 @@ android {
         applicationId 'za.co.koenekt.app'
         minSdk 26
         targetSdk 36
-        versionCode 19
-        versionName '1.10.3'
+        versionCode 20
+        versionName '1.11.0'
         buildConfigField 'String', 'DEV_ORIGIN', '""'
         buildConfigField 'String', 'DEV_LINK', '""'
-        // Release builds block screenshots unless Account → Allow screenshots on this phone is on.
+        // Release builds block screenshots unless More → Allow screenshots on this phone is on.
         buildConfigField 'boolean', 'SECURE_SCREENS', 'true'
     }
     signingConfigs {
