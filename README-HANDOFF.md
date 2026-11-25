@@ -12,13 +12,13 @@ android app and deploy the website"): four tabs, till slips, slips-only logins.*
   `changelogs/20.txt`; `full_description.txt` mentions Today, till slips and slips-only logins.
 - Where it is: GitHub `main`; F-Droid `tools/fdroid_repo.py publish --push` (koenekt-fdroid `972488d`, the live index shows
   1.11.0); Drive `My Drive/Koenekt Android/Koenekt-1.11.0.apk` (same hash); website release 20261125212221 serves the same
-  APK (downloaded back, same hash) and the downloads page mentions till slips. **Google Play: NOT uploaded yet.** William's Chrome asked for the william@koenekt.co.za password at the Play Console; an agent must not type it. Once William has signed in there: Production, create release, upload `dist/1.11.0/Koenekt-1.11.0.aab`, notes from `changelogs/20.txt`, send for review.
+  APK (downloaded back, same hash) and the downloads page mentions till slips. **Google Play: production release 20 (1.11.0) uploaded from William's Chrome (william@koenekt.co.za, KoenektApps) after he signed in himself, with the 20.txt notes, full rollout, and sent for review at about 21:30 on 25 Nov** (Publishing overview showed "Changes in review"; one warning as always: no deobfuscation file). The store listing text on Play was NOT changed (only `fastlane/.../full_description.txt` in the repo).
 - The release build itself was not run on a phone or the emulator; the debug build of the same code was (see below). The
   privacy policy page (`docs/privacy.html`) was NOT changed: it has another session's unpublished draft. The app's About
   text now says a slip's file stays in the app's cache for up to an hour.
 - Server side, same evening: the relay with slips, slips-only logins and sessions is INSTALLED on srv1 (William ran bundle
   `koenekt-link-stage-20261125.zip`, "done, all OK"; from this PC the slips route answers 401, not 404). Reporter 1.9.113 is
-  on `master` and was being published to the Lumbrah pilot (see the Reporter handoff for the result). The website's Slips
+  on `master` and on the pilot channel for Lumbrah (`rel_1.9.113_113`, queued; not promoted). The website's Slips
   and Team pages went live at 21:12 with another session's deploy (release 20261125211257) and are in 20261125212221 too.
   Slips need a shop PC on Reporter 1.9.113: until a shop has it, the app says that shop's PC needs a newer Reporter.
 
